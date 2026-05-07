@@ -331,15 +331,23 @@ function renderPage() {
       ${template.description?`<div class="form-desc">${esc(template.description)}</div>`:''}
       <div class="meta-fields">
         <div>
-          <label class="field-label">Ingevuld door</label>
+          <label class="field-label">Ingevuld door <span class="req-star">*</span></label>
           <input class="field-input" id="f-filled-by" type="text" placeholder="Naam…" value="${esc(submission?.filled_by||'')}" oninput="scheduleSave()">
         </div>
         <div>
-          <label class="field-label">Organisatie</label>
+          <label class="field-label">Organisatie <span class="req-star">*</span></label>
           <input class="field-input" id="f-org" type="text" placeholder="Bedrijf…" value="${esc(submission?.organisation||'')}" oninput="scheduleSave()">
         </div>
         <div>
-          <label class="field-label">Datum</label>
+          <label class="field-label">Locatie <span class="req-star">*</span></label>
+          <input class="field-input" id="f-location" type="text" placeholder="Adres of locatienaam…" value="${esc(submission?.location||'')}" oninput="scheduleSave()">
+        </div>
+        <div>
+          <label class="field-label">Referentie / dossiernr. <span class="req-star">*</span></label>
+          <input class="field-input" id="f-ref" type="text" placeholder="bv. PRJ-2025-001…" value="${esc(submission?.reference||'')}" oninput="scheduleSave()">
+        </div>
+        <div>
+          <label class="field-label">Datum <span class="req-star">*</span></label>
           <input class="field-input" id="f-date" type="date" value="${submission?.created_at?submission.created_at.split('T')[0]:new Date().toISOString().split('T')[0]}" oninput="scheduleSave()">
         </div>
         <div>
@@ -427,7 +435,7 @@ function renderItem(secId, item) {
     return `<div class="followup-wrap" id="fu-${item.id}" style="display:${isTriggered?'block':'none'}">
       <div class="followup-label">Verduidelijking bij "${esc(item.followUp.trigger)}"</div>
       <textarea class="ff" rows="2" placeholder="Toelichting…" oninput="setFollowNote('${item.id}',this.value)">${esc(note)}</textarea>
-      ${item.followUp.photo ? photoUploadHtml(item.id+'_fu', ans.followPhotos||[]) : ''}
+      ${item.followUp.photo ? photoUploadHtml(item.id+'_fu', (answers[item.id+'_fu']||{}).photos||[]) : ''}
     </div>`;
   };
 
@@ -459,7 +467,7 @@ function renderItem(secId, item) {
       <div class="followup-wrap" id="fu-${item.id}" style="display:${scFollowTriggered?'block':'none'}">
         <div class="followup-label">Verduidelijking bij "${esc(ans.value||'')}"</div>
         <textarea class="ff" rows="2" placeholder="Beschrijf het probleem…" oninput="setFollowNote('${item.id}',this.value)">${esc(ans.followNote||'')}</textarea>
-        ${photoUploadHtml(item.id+'_fu', ans.followPhotos||[])}
+        ${photoUploadHtml(item.id+'_fu', (answers[item.id+'_fu']||{}).photos||[])}
       </div>`;
 
     el.innerHTML = `
@@ -527,6 +535,7 @@ function toggleCheck(secId, itemId) {
   }
   updateProgress();
   scheduleSave();
+  evalConditionals();
 }
 
 function setVal(id, val) { getAns(id).value = val; scheduleSave(); }
@@ -584,10 +593,16 @@ function evalConditionals() {
       const el = document.getElementById('item-' + item.id);
       if (!el) return;
       const srcAns = answers[item.showIf.itemId] || {};
-      const srcVal = srcAns.value || (srcAns.checked ? 'aangevinkt' : '');
+      // For check type: condition value is 'aangevinkt', match on checked=true
+      const srcItem = findItem(item.showIf.itemId);
+      let srcVal;
+      if (srcItem?.type === 'check') {
+        srcVal = srcAns.checked ? 'aangevinkt' : '';
+      } else {
+        srcVal = srcAns.value || '';
+      }
       const visible = srcVal === item.showIf.value;
       el.classList.toggle('cond-hidden', !visible);
-      // If hidden, clear its answer so it doesn't affect progress
       if (!visible && answers[item.id]) { answers[item.id].checked = false; answers[item.id].value = ''; }
     });
   });
@@ -688,11 +703,15 @@ async function saveNow() {
     cleanAnswers[k] = { checked: v.checked, value: v.value||'' };
   }
 
+  const location = document.getElementById('f-location')?.value||'';
+  const reference = document.getElementById('f-ref')?.value||'';
   const payload = {
     template_id: template?.id,
     template_name: template?.name,
     filled_by: filledBy,
     organisation: org,
+    location,
+    reference,
     notes,
     lang,
     answers: cleanAnswers,
@@ -718,7 +737,21 @@ async function saveNow() {
 }
 
 async function markComplete() {
-  // Check required fields
+  // Check mandatory header fields
+  const hdrMissing = [];
+  if (!document.getElementById('f-filled-by')?.value?.trim()) hdrMissing.push('Ingevuld door');
+  if (!document.getElementById('f-org')?.value?.trim())       hdrMissing.push('Organisatie');
+  if (!document.getElementById('f-location')?.value?.trim()) hdrMissing.push('Locatie');
+  if (!document.getElementById('f-ref')?.value?.trim())      hdrMissing.push('Referentie');
+  if (!document.getElementById('f-date')?.value?.trim())     hdrMissing.push('Datum');
+  if (hdrMissing.length) {
+    const w = document.getElementById('req-warning');
+    w.innerHTML = `<strong>Verplichte velden ontbreken in de header:</strong> ${hdrMissing.join(', ')}`;
+    w.style.display = 'block';
+    w.scrollIntoView({ behavior:'smooth', block:'center' });
+    return;
+  }
+  // Check required question fields
   const missing = [];
   (template.schema?.sections||[]).forEach(sec => sec.items.forEach(item => {
     if (item.required && !answers[item.id]?.checked) missing.push(item.label);
@@ -775,28 +808,48 @@ async function generatePDF() {
   const locale = t('locale');
   const dateStr = new Date().toLocaleDateString(locale, {day:'2-digit',month:'long',year:'numeric'});
 
-  doc.setFillColor(...G); doc.rect(0,0,pw,22,'F');
+  const pdfLocation  = document.getElementById('f-location')?.value || '';
+  const pdfReference = document.getElementById('f-ref')?.value || '';
+
+  // ── Header bar ──
+  doc.setFillColor(...G); doc.rect(0,0,pw,26,'F');
   doc.setTextColor(...W); doc.setFontSize(16); doc.setFont('helvetica','bold');
-  doc.text(template?.name||'Checklist', mg, 14);
+  doc.text(template?.name||'Checklist', mg, 12);
   doc.setFontSize(9); doc.setFont('helvetica','normal');
-  doc.text(org?(org+' · '+dateStr):dateStr, pw-mg, 14, {align:'right'});
-  y = 30;
+  doc.text(template?.category||'', mg, 20);
+  doc.text(dateStr, pw-mg, 20, {align:'right'});
+  y = 32;
 
-  if (author||note) {
-    doc.setFontSize(9); doc.setTextColor(...M);
-    if (author) { doc.text('Opgesteld door: '+author, mg, y); y+=5; }
-    if (note) { doc.text('Opmerking: '+note, mg, y); y+=5; }
-    y += 2;
+  // ── Info block: 2-column grid ──
+  doc.setFillColor(...L); doc.roundedRect(mg, y, cw, 26, 2, 2, 'F');
+  const col1x = mg+5, col2x = mg + cw/2 + 5;
+  doc.setFontSize(7.5); doc.setTextColor(...M); doc.setFont('helvetica','normal');
+
+  // Row 1
+  doc.text('Ingevuld door', col1x, y+7);
+  doc.text('Organisatie', col2x, y+7);
+  doc.setFontSize(9.5); doc.setTextColor(...D); doc.setFont('helvetica','bold');
+  doc.text(author||'—', col1x, y+14);
+  doc.text(org||'—', col2x, y+14);
+
+  // Row 2
+  doc.setFontSize(7.5); doc.setTextColor(...M); doc.setFont('helvetica','normal');
+  doc.text('Locatie', col1x, y+21);
+  doc.text('Referentie / dossier', col2x, y+21);
+  doc.setFontSize(9); doc.setTextColor(...D); doc.setFont('helvetica','bold');
+  const locLines = doc.splitTextToSize(pdfLocation||'—', cw/2-10);
+  doc.text(locLines[0]||'—', col1x, y+27);
+  doc.text(pdfReference||'—', col2x, y+27);
+  doc.setFont('helvetica','normal');
+
+  y = y + 34;
+
+  if (note) {
+    doc.setFontSize(9); doc.setTextColor(...M); doc.setFont('helvetica','italic');
+    doc.text('Opmerking: ' + note, mg, y); y += 6;
+    doc.setFont('helvetica','normal');
   }
-
-  let total=0, done=0;
-  (template.schema?.sections||[]).forEach(s=>s.items.forEach(i=>{total++;if(answers[i.id]?.checked)done++;}));
-  const pct=total?Math.round((done/total)*100):0;
-  doc.setFontSize(9); doc.setTextColor(...M);
-  doc.text(`${t('progress')}: ${done}/${total} (${pct}%)`, mg, y); y+=4;
-  doc.setFillColor(...L); doc.roundedRect(mg,y,cw,3,1.5,1.5,'F');
-  doc.setFillColor(...G); if(pct>0) doc.roundedRect(mg,y,cw*pct/100,3,1.5,1.5,'F');
-  y+=9;
+  y += 2;
 
   for (const sec of (template.schema?.sections||[])) {
     if (y > ph-30) { doc.addPage(); y=mg; }
