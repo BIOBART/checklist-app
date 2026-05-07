@@ -360,6 +360,10 @@ function renderPage() {
           <input class="field-input" id="f-location" type="text" placeholder="Adres of locatienaam…" value="${esc(submission?.location||'')}" oninput="scheduleSave()">
         </div>
         <div>
+          <label class="field-label">Klantnaam <span class="req-star">*</span></label>
+          <input class="field-input" id="f-customer" type="text" placeholder="Naam klant…" value="${esc(submission?.customer||'')}" oninput="scheduleSave()">
+        </div>
+        <div>
           <label class="field-label">Referentie / dossiernr. <span class="req-star">*</span></label>
           <input class="field-input" id="f-ref" type="text" placeholder="bv. PRJ-2025-001…" value="${esc(submission?.reference||'')}" oninput="scheduleSave()">
         </div>
@@ -722,6 +726,7 @@ async function saveNow() {
 
   const location = document.getElementById('f-location')?.value||'';
   const reference = document.getElementById('f-ref')?.value||'';
+  const customer = document.getElementById('f-customer')?.value||'';
   const payload = {
     template_id: template?.id,
     template_name: template?.name,
@@ -729,6 +734,7 @@ async function saveNow() {
     organisation: org,
     location,
     reference,
+    customer,
     notes,
     lang,
     answers: cleanAnswers,
@@ -758,8 +764,9 @@ async function markComplete() {
   const hdrMissing = [];
   if (!document.getElementById('f-filled-by')?.value?.trim()) hdrMissing.push('Ingevuld door');
   if (!document.getElementById('f-org')?.value?.trim())       hdrMissing.push('Organisatie');
-  if (!document.getElementById('f-location')?.value?.trim()) hdrMissing.push('Locatie');
-  if (!document.getElementById('f-ref')?.value?.trim())      hdrMissing.push('Referentie');
+  if (!document.getElementById('f-location')?.value?.trim())  hdrMissing.push('Locatie');
+  if (!document.getElementById('f-customer')?.value?.trim())  hdrMissing.push('Klantnaam');
+  if (!document.getElementById('f-ref')?.value?.trim())       hdrMissing.push('Referentie');
   if (!document.getElementById('f-date')?.value?.trim())     hdrMissing.push('Datum');
   if (hdrMissing.length) {
     const w = document.getElementById('req-warning');
@@ -839,8 +846,10 @@ async function generatePDF() {
 
   // ── Info block: 2 columns, each field on one line as "Label:   Value" ──
   // Define fields for each column
+  const pdfCustomer = document.getElementById('f-customer')?.value || '';
   const col1Fields = [
     { label: 'Ingevuld door', value: author||'—' },
+    { label: 'Klantnaam',     value: pdfCustomer||'—' },
     { label: 'Locatie',       value: pdfLocation||'—' },
   ];
   const col2Fields = [
@@ -1091,7 +1100,10 @@ async function generatePDF() {
     doc.text('Pagina '+i+' / '+pc, pw-mg, ph-4, {align:'right'});
   }
 
-  const fname=(template?.name||'checklist').replace(/\s+/g,'_').toLowerCase()+'.pdf';
+  const fnCustomer = (document.getElementById('f-customer')?.value||'').trim();
+  const fnRef = (document.getElementById('f-ref')?.value||'').trim();
+  const fnParts = [template?.name||'checklist', fnCustomer, fnRef].filter(Boolean);
+  const fname = fnParts.map(p => p.replace(/[^a-zA-Z0-9_\-]/g, '_')).join('_') + '.pdf';
   doc.save(fname);
   closePdfModal();
 }
