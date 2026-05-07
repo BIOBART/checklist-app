@@ -1162,13 +1162,94 @@ async function generatePDF() {
         continue;
       }
 
-      // Standard item: label left, checkbox right
+      // ── text / number / date: label + value, no checkbox ──
+      if (item.type === 'text' || item.type === 'number' || item.type === 'date') {
+        doc.setTextColor(...D); doc.setFontSize(10); doc.setFont('helvetica','normal');
+        const ll = doc.splitTextToSize(gl(item.label)+(item.required?' *':''), cw);
+        doc.text(ll, mg, y);
+        y += ll.length * 4.5;
+        if (ans.value) {
+          let displayVal = ans.value;
+          if (item.type === 'date') {
+            try {
+              const parts = ans.value.split('-').map(Number);
+              const months = {nl:['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'],
+                              en:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+                              fr:['jan','fev','mar','avr','mai','jun','jul','aou','sep','oct','nov','dec'],
+                              de:['Jan','Feb','Mar','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez']};
+              const ml = months[lang]||months.nl;
+              displayVal = parts[2] + ' ' + ml[parts[1]-1] + ' ' + parts[0];
+            } catch(e) { displayVal = ans.value.replace(/-/g,'/'); }
+          }
+          const unit = item.unit ? ' ' + item.unit : '';
+          doc.setFontSize(9); doc.setTextColor(...M);
+          doc.text('> ' + displayVal + unit, mg+4, y); y += 4.5;
+        }
+        y += 2; continue;
+      }
+
+      // ── signature: label + image, no checkbox ──
+      if (item.type === 'signature') {
+        doc.setTextColor(...D); doc.setFontSize(10); doc.setFont('helvetica','normal');
+        const ll = doc.splitTextToSize(gl(item.label)+(item.required?' *':''), cw);
+        doc.text(ll, mg, y);
+        y += ll.length * 4.5 + 1;
+        if (ans.value) {
+          const sigW=70, sigH=22;
+          if (y+sigH > ph-15) { doc.addPage(); y=mg; }
+          try { doc.addImage(ans.value,'PNG',mg,y,sigW,sigH); } catch(e){}
+          doc.setDrawColor(...L); doc.setLineWidth(0.3); doc.rect(mg,y,sigW,sigH);
+          y += sigH + 3;
+        } else {
+          // empty signature box
+          doc.setDrawColor(180,174,166); doc.setLineWidth(0.3);
+          doc.rect(mg, y, 70, 18);
+          y += 21;
+        }
+        y += 2; continue;
+      }
+
+      // ── radio: label + pills right, no checkbox ──
+      if (item.type === 'radio') {
+        doc.setTextColor(...D); doc.setFontSize(10); doc.setFont('helvetica','normal');
+        const ll = doc.splitTextToSize(gl(item.label)+(item.required?' *':''), cw*0.6);
+        doc.text(ll, mg, y);
+        if (ans.value) {
+          doc.setFontSize(9); doc.setTextColor(...M);
+          doc.text('> '+ans.value, mg+4, y + ll.length*4.5);
+        }
+        // draw option pills right-aligned
+        const ropts = item.options||['Ja','Nee','N/A'];
+        let rpx = pw - mg;
+        doc.setFontSize(8);
+        for (let ri = ropts.length-1; ri >= 0; ri--) {
+          const lbl = ropts[ri];
+          const tw = doc.getTextWidth(lbl);
+          const pillW = tw + 6;
+          rpx -= pillW;
+          if (ans.value === lbl) {
+            doc.setFillColor(...G); doc.setDrawColor(...G);
+            doc.roundedRect(rpx, y-3.5, pillW, 5, 1.5, 1.5, 'FD');
+            doc.setTextColor(...W);
+          } else {
+            doc.setFillColor(...W); doc.setDrawColor(180,174,166);
+            doc.roundedRect(rpx, y-3.5, pillW, 5, 1.5, 1.5, 'FD');
+            doc.setTextColor(...M);
+          }
+          doc.text(lbl, rpx+3, y);
+          rpx -= 3;
+        }
+        y += Math.max(ll.length,1)*4.5 + (ans.value ? 5 : 0) + 2;
+        continue;
+      }
+
+      // ── Standard item (check only): label left, checkbox right ──
       doc.setTextColor(...D);
       doc.setFontSize(10); doc.setFont('helvetica','normal');
       const ll = doc.splitTextToSize(gl(item.label)+(item.required?' *':''), cw-8);
       doc.text(ll, mg, y);
 
-      // Checkbox right-aligned, vertically centred on first line
+      // Checkbox right-aligned
       if (ans.checked) {
         doc.setFillColor(...G); doc.roundedRect(cbX, y-3.5, cbSize, cbSize, 1, 1, 'F');
         doc.setDrawColor(...W); doc.setLineWidth(0.8);
@@ -1178,42 +1259,7 @@ async function generatePDF() {
         doc.setFillColor(...W); doc.setDrawColor(180,174,166); doc.setLineWidth(0.4);
         doc.roundedRect(cbX, y-3.5, cbSize, cbSize, 1, 1, 'FD');
       }
-
-      y += ll.length * 4.5;
-
-      // Value fields (text, number, date, radio)
-      if ((item.type==='text'||item.type==='number'||item.type==='date') && ans.value) {
-        doc.setFontSize(9); doc.setTextColor(...M);
-        let displayVal = ans.value;
-        if (item.type === 'date' && ans.value) {
-          // Format ISO date to locale string safely (avoid jsPDF encoding issues)
-          try {
-            const [y2,m2,d2] = ans.value.split('-').map(Number);
-            const months = {nl:['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'],
-                            en:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
-                            fr:['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'],
-                            de:['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez']};
-            const ml = months[lang]||months.nl;
-            displayVal = d2 + ' ' + ml[m2-1] + ' ' + y2;
-          } catch(e) { displayVal = ans.value; }
-        }
-        const vl=doc.splitTextToSize('→ '+displayVal+(item.unit?' '+item.unit:''), cw-8);
-        vl.forEach(l=>{ if(y>ph-15){doc.addPage();y=mg;} doc.text(l,mg,y); y+=4.2; });
-      }
-      if (item.type==='radio' && ans.value) {
-        doc.setFontSize(9); doc.setTextColor(...M);
-        doc.text('→ '+ans.value, mg, y); y+=4.2;
-      }
-      // Signature in PDF
-      if (item.type === 'signature' && ans.value) {
-        doc.setFontSize(9); doc.setTextColor(...M);
-        doc.text('Handtekening:', mg, y); y+=3;
-        const sigW=70, sigH=22;
-        if (y+sigH > ph-15) { doc.addPage(); y=mg; }
-        try { doc.addImage(ans.value,'PNG',mg,y,sigW,sigH); } catch(e){}
-        doc.setDrawColor(...L); doc.setLineWidth(0.3); doc.rect(mg,y,sigW,sigH);
-        y+=sigH+3;
-      }
+      y += ll.length * 4.5 + 2;
 
       // follow-up note for radio/yesno items with followUp config
       if (ans.followNote && item.followUp?.trigger && ans.value===item.followUp.trigger) {
