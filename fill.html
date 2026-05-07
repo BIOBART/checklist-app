@@ -585,8 +585,12 @@ function evalConditionals() {
       if (!item.showIf?.itemId) return;
       const el = document.getElementById('item-' + item.id);
       if (!el) return;
+      // If no trigger value was configured, keep hidden (misconfigured rule)
+      if (!item.showIf.value) {
+        el.classList.add('cond-hidden');
+        return;
+      }
       const srcAns = answers[item.showIf.itemId] || {};
-      // For check type: condition value is 'aangevinkt', match on checked=true
       const srcItem = findItem(item.showIf.itemId);
       let srcVal;
       if (srcItem?.type === 'check') {
@@ -596,7 +600,10 @@ function evalConditionals() {
       }
       const visible = srcVal === item.showIf.value;
       el.classList.toggle('cond-hidden', !visible);
-      if (!visible && answers[item.id]) { answers[item.id].checked = false; answers[item.id].value = ''; }
+      if (!visible && answers[item.id]) {
+        answers[item.id].checked = false;
+        answers[item.id].value = '';
+      }
     });
   });
   updateProgress();
