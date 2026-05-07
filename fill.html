@@ -50,8 +50,6 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
 .field-input:focus { border-color:var(--accent); background:var(--surface); }
 .field-select { width:100%; font-family:'DM Sans',sans-serif; font-size:14px; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); color:var(--text); outline:none; cursor:pointer; }
 
-.lang-select { width:auto; font-size:13px; padding:6px 10px; }
-
 /* PROGRESS */
 .progress-wrap { margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border); }
 .progress-info { display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-bottom:6px; }
@@ -80,7 +78,7 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
 .checkbox svg { display:none; width:11px; height:11px; color:white; }
 .checkbox.checked svg { display:block; }
 .item-body { flex:1; min-width:0; }
-.item-label { font-size:14px; color:var(--text); -webkit-user-select:none; user-select:none; cursor:pointer; display:flex; align-items:center; gap:6px; }
+.item-label { font-size:14px; color:var(--text); user-select:none; cursor:pointer; display:flex; align-items:center; gap:6px; }
 .item-label.done { color:var(--light); text-decoration:line-through; text-decoration-color:var(--border-strong); }
 .req-star { color:var(--danger); font-size:12px; }
 .item-hint { font-size:12px; color:var(--light); margin-top:2px; }
@@ -141,8 +139,6 @@ textarea.ff:focus, input.ff:focus { border-color:var(--accent); background:var(-
 .toast.success { background:var(--accent); }
 .toast.error { background:var(--danger); }
 
-#lang-select { width:auto; font-size:13px; padding:6px 10px; }
-
 @media(max-width:600px){
   header { padding:0 1rem; }
   .container { padding:1rem 0.75rem 7rem; }
@@ -156,7 +152,7 @@ textarea.ff:focus, input.ff:focus { border-color:var(--accent); background:var(-
   <a href="index.html" class="logo"><div class="logo-dot"></div>Checklist</a>
   <div class="header-right">
     <div class="save-indicator" id="save-indicator">Opgeslagen</div>
-    <select class="field-select" id="lang-select" onchange="changeLang(this.value)" aria-label="Selecteer taal">
+    <select class="field-select" id="lang-select" onchange="changeLang(this.value)" style="width:auto;font-size:13px;padding:6px 10px;">
       <option value="nl">🇧🇪 NL</option>
       <option value="en">🇬🇧 EN</option>
       <option value="fr">🇫🇷 FR</option>
@@ -417,6 +413,26 @@ function renderItem(secId, item) {
       ${photos.length > 0 ? `<div style="font-size:11px;color:var(--light);margin-top:4px">${photos.length} ${t('photos')}</div>` : ''}
     </div>`;
 
+  // photo type has no checkbox — just label + upload
+  if (item.type === 'photo') {
+    el.innerHTML = `
+      <div class="item-body" style="padding-left:0">
+        <div class="item-label" style="cursor:default">
+          ${esc(item.label)}${item.required?`<span class="req-star">*</span>`:''}
+        </div>
+        ${photoSection}
+      </div>`;
+    return el;
+  }
+
+  // yesno type
+  if (item.type === 'yesno') {
+    const opts = ['Ja','Nee','N.v.t.'].map(o =>
+      `<div class="radio-opt${ans.value===o?' active':''}" onclick="setRadio('${item.id}','${esc(o)}')">${esc(o)}</div>`
+    ).join('');
+    fieldHtml = `<div class="radio-row">${opts}</div>`;
+  }
+
   el.innerHTML = `
     <div class="checkbox${checked?' checked':''}" onclick="toggleCheck('${secId}','${item.id}')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -427,7 +443,6 @@ function renderItem(secId, item) {
       </div>
       ${item.hint && item.type !== 'text' ? `<div class="item-hint">${esc(item.hint)}</div>` : ''}
       ${fieldHtml}
-      ${photoSection}
     </div>`;
   return el;
 }
@@ -607,6 +622,24 @@ function changeLang(l) { lang = l; scheduleSave(); }
 function openPdfModal() { document.getElementById('pdf-overlay').classList.add('open'); }
 function closePdfModal() { document.getElementById('pdf-overlay').classList.remove('open'); }
 
+function resizeImageForPdf(dataUrl, maxW=800, maxH=600) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let w=img.width, h=img.height;
+      if (w>maxW||h>maxH) { const r=Math.min(maxW/w,maxH/h); w=Math.round(w*r); h=Math.round(h*r); }
+      const canvas=document.createElement('canvas');
+      canvas.width=w; canvas.height=h;
+      const ctx=canvas.getContext('2d');
+      ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+      ctx.drawImage(img,0,0,w,h);
+      resolve(canvas.toDataURL('image/jpeg',0.88));
+    };
+    img.onerror=()=>resolve(dataUrl);
+    img.src=dataUrl;
+  });
+}
+
 async function generatePDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'mm', format:'a4' });
@@ -655,47 +688,94 @@ async function generatePDF() {
     for (const item of (sec.items||[])) {
       if (y > ph-20) { doc.addPage(); y=mg; }
       const ans = answers[item.id]||{};
-      // Checkbox
+      const cbSize = 5;
+      const cbX = pw - mg - cbSize;  // checkbox right-aligned
+
+      // Photo-only item: no checkbox, just label + photos
+      if (item.type === 'photo') {
+        doc.setTextColor(...D); doc.setFontSize(10); doc.setFont('helvetica','normal');
+        const ll = doc.splitTextToSize(item.label+(item.required?' *':''), cw);
+        doc.text(ll, mg, y);
+        y += ll.length * 4.5 + 1;
+        const photos = answers[item.id]?.photos||[];
+        if (photos.length > 0) {
+          const pw2=56, ph2=44, gap=5; let px=mg;
+          if (y+ph2 > ph-15) { doc.addPage(); y=mg; }
+          for (const photo of photos) {
+            if (px+pw2 > pw-mg) { px=mg; y+=ph2+gap; if(y+ph2>ph-15){doc.addPage();y=mg;px=mg;} }
+            try {
+              const imgData = await resizeImageForPdf(photo.data, 400, 300);
+              doc.addImage(imgData,'JPEG',px,y,pw2,ph2);
+            } catch(e){}
+            doc.setDrawColor(...L); doc.setLineWidth(0.3); doc.rect(px,y,pw2,ph2);
+            px+=pw2+gap;
+          }
+          y+=ph2+gap+2;
+        }
+        y+=3;
+        continue;
+      }
+
+      // yesno: label left, pills right, no checkbox
+      if (item.type === 'yesno') {
+        doc.setTextColor(...D); doc.setFontSize(10); doc.setFont('helvetica','normal');
+        const ll = doc.splitTextToSize(item.label+(item.required?' *':''), cw*0.65);
+        doc.text(ll, mg, y);
+        // Draw Ja / Nee / N.v.t. pills right-aligned
+        const pills = ['Ja','Nee','N.v.t.'];
+        let px2 = pw - mg;
+        const pillH = 5, pillPad = 3;
+        doc.setFontSize(8); doc.setFont('helvetica','normal');
+        for (let pi = pills.length-1; pi >= 0; pi--) {
+          const lbl = pills[pi];
+          const tw = doc.getTextWidth(lbl);
+          const pillW = tw + pillPad*2;
+          px2 -= pillW;
+          const selected = ans.value === lbl;
+          if (selected) {
+            doc.setFillColor(...G); doc.setDrawColor(...G);
+            doc.roundedRect(px2, y-3.5, pillW, pillH, 1.5, 1.5, 'FD');
+            doc.setTextColor(...W);
+          } else {
+            doc.setFillColor(...W); doc.setDrawColor(180,174,166);
+            doc.roundedRect(px2, y-3.5, pillW, pillH, 1.5, 1.5, 'FD');
+            doc.setTextColor(...M);
+          }
+          doc.text(lbl, px2+pillPad, y);
+          px2 -= 3;
+        }
+        y += Math.max(ll.length,1)*4.5+2;
+        continue;
+      }
+
+      // Standard item: label left, checkbox right
+      doc.setTextColor(...D);
+      doc.setFontSize(10); doc.setFont('helvetica','normal');
+      const ll = doc.splitTextToSize(item.label+(item.required?' *':''), cw-8);
+      doc.text(ll, mg, y);
+
+      // Checkbox right-aligned, vertically centred on first line
       if (ans.checked) {
-        doc.setFillColor(...G); doc.roundedRect(mg,y-3.5,5,5,1,1,'F');
+        doc.setFillColor(...G); doc.roundedRect(cbX, y-3.5, cbSize, cbSize, 1, 1, 'F');
         doc.setDrawColor(...W); doc.setLineWidth(0.8);
-        doc.line(mg+1,y-0.8,mg+2.2,y+0.6); doc.line(mg+2.2,y+0.6,mg+4,y-1.8);
+        doc.line(cbX+1, y-0.8, cbX+2.2, y+0.6);
+        doc.line(cbX+2.2, y+0.6, cbX+4, y-1.8);
       } else {
         doc.setFillColor(...W); doc.setDrawColor(180,174,166); doc.setLineWidth(0.4);
-        doc.roundedRect(mg,y-3.5,5,5,1,1,'FD');
+        doc.roundedRect(cbX, y-3.5, cbSize, cbSize, 1, 1, 'FD');
       }
-      doc.setTextColor(ans.checked?160:D[0], ans.checked?155:D[1], ans.checked?148:D[2]);
-      doc.setFontSize(10); doc.setFont('helvetica','normal');
-      const ll = doc.splitTextToSize(item.label+(item.required?' *':''), cw-14);
-      doc.text(ll, mg+8, y);
-      if (ans.checked) {
-        doc.setDrawColor(180,174,166); doc.setLineWidth(0.3);
-        ll.forEach((_,li)=>{ const tw=doc.getTextWidth(ll[li]); doc.line(mg+8,y+li*4.5-0.5,mg+8+tw,y+li*4.5-0.5); });
-      }
-      y += ll.length*4.5;
 
+      y += ll.length * 4.5;
+
+      // Value fields (text, number, date, radio)
       if ((item.type==='text'||item.type==='number'||item.type==='date') && ans.value) {
         doc.setFontSize(9); doc.setTextColor(...M);
-        const vl=doc.splitTextToSize('→ '+ans.value+(item.unit?' '+item.unit:''), cw-14);
-        vl.forEach(l=>{ if(y>ph-15){doc.addPage();y=mg;} doc.text(l,mg+8,y); y+=4.2; });
+        const vl=doc.splitTextToSize('→ '+ans.value+(item.unit?' '+item.unit:''), cw-8);
+        vl.forEach(l=>{ if(y>ph-15){doc.addPage();y=mg;} doc.text(l,mg,y); y+=4.2; });
       }
       if (item.type==='radio' && ans.value) {
         doc.setFontSize(9); doc.setTextColor(...M);
-        doc.text('→ '+ans.value, mg+8, y); y+=4.2;
-      }
-
-      // Photos
-      const photos = answers[item.id]?.photos||[];
-      if (photos.length > 0) {
-        const pw2=42, ph2=32, gap=4; let px=mg+8;
-        if (y+ph2 > ph-15) { doc.addPage(); y=mg; }
-        for (const photo of photos) {
-          if (px+pw2 > pw-mg) { px=mg+8; y+=ph2+gap; if(y+ph2>ph-15){doc.addPage();y=mg;px=mg+8;} }
-          try { doc.addImage(photo.data,'JPEG',px,y,pw2,ph2,'','MEDIUM'); } catch(e){}
-          doc.setDrawColor(...L); doc.setLineWidth(0.3); doc.rect(px,y,pw2,ph2);
-          px+=pw2+gap;
-        }
-        y+=ph2+gap+2;
+        doc.text('→ '+ans.value, mg, y); y+=4.2;
       }
       y+=2;
     }
