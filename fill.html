@@ -279,6 +279,7 @@ async function loadTemplate() {
   const { data, error } = await sb.from('templates').select('*').eq('id', templateId).single();
   if (error || !data) { showError('Template niet gevonden.'); return; }
   template = data;
+  fixShowIfValues(template);
   lang = data.lang || 'nl';
   document.getElementById('lang-select').value = lang;
 }
@@ -293,11 +294,27 @@ async function loadSubmission() {
   // load template
   if (data.template_id) {
     const { data: tpl } = await sb.from('templates').select('*').eq('id', data.template_id).single();
-    if (tpl) template = tpl;
+    if (tpl) { template = tpl; fixShowIfValues(template); }
   }
   // load photos from storage paths
   await loadPhotos();
   renderPage();
+}
+
+// Fix any showIf rules where value is empty for check-type sources
+// (caused by old admin bug where value was never set)
+function fixShowIfValues(tpl) {
+  const allItems = (tpl.schema?.sections||[]).flatMap(s => s.items||[]);
+  (tpl.schema?.sections||[]).forEach(sec => {
+    (sec.items||[]).forEach(item => {
+      if (item.showIf?.itemId && !item.showIf.value) {
+        const srcItem = allItems.find(it => it.id === item.showIf.itemId);
+        if (srcItem?.type === 'check') {
+          item.showIf.value = 'aangevinkt';
+        }
+      }
+    });
+  });
 }
 
 async function loadPhotos() {
@@ -585,9 +602,9 @@ function evalConditionals() {
       if (!item.showIf?.itemId) return;
       const el = document.getElementById('item-' + item.id);
       if (!el) return;
-      // If no trigger value was configured, keep hidden (misconfigured rule)
+      // No trigger value = no valid rule → always visible
       if (!item.showIf.value) {
-        el.classList.add('cond-hidden');
+        el.classList.remove('cond-hidden');
         return;
       }
       const srcAns = answers[item.showIf.itemId] || {};
