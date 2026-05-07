@@ -327,14 +327,24 @@ function closeDelModal() { document.getElementById('del-overlay').classList.remo
 
 async function confirmDelete() {
   if (!deleteId) return;
-  // Delete photos from storage
+  // Delete photos from storage first
   const { data: photos } = await sb.from('photos').select('storage_path').eq('submission_id', deleteId);
   if (photos?.length) {
     const paths = photos.map(p => p.storage_path);
     await sb.storage.from(STORAGE_BUCKET).remove(paths);
   }
-  const { error } = await sb.from('submissions').delete().eq('id', deleteId);
-  if (error) { toast('Fout: '+error.message, 'error'); closeDelModal(); return; }
+  // Delete the submission — count verifies the RLS policy actually allowed it
+  const { error, count } = await sb.from('submissions').delete({ count: 'exact' }).eq('id', deleteId);
+  if (error) {
+    toast('Fout: ' + error.message, 'error');
+    closeDelModal();
+    return;
+  }
+  if (count === 0) {
+    toast('Verwijderen mislukt — controleer Supabase RLS policy voor submissions', 'error');
+    closeDelModal();
+    return;
+  }
   allData = allData.filter(r => r.id !== deleteId);
   updateCounts();
   applyFilters();
