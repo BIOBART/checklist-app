@@ -257,6 +257,13 @@ const TR = {
 let lang = 'nl';
 const t = k => (TR[lang]||TR.nl)[k]||k;
 
+// Resolve multilingual field: object {nl,en,fr,de} or plain string
+function gl(field) {
+  if (!field) return '';
+  if (typeof field === 'string') return field;
+  return field[lang] || field.nl || field.en || field.fr || field.de || '';
+}
+
 let template = null;
 let submission = null;
 let answers = {};    // { item_id: { checked, value, photos: [{data,path,name}] } }
@@ -407,7 +414,7 @@ function renderSection(sec) {
       <div class="section-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
       </div>
-      <div class="section-title">${esc(sec.title)}</div>
+      <div class="section-title">${esc(gl(sec.title))}</div>
       <div class="section-count" id="sc-${sec.id}">${done}/${(sec.items||[]).length}</div>
     </div>
     <div id="si-${sec.id}"></div>`;
@@ -457,7 +464,7 @@ function renderItem(secId, item) {
   if (item.type === 'photo') {
     el.innerHTML = `
       <div class="item-body" style="padding-left:0">
-        <div class="item-label" style="cursor:default">${esc(item.label)}${item.required?`<span class="req-star">*</span>`:''}</div>
+        <div class="item-label" style="cursor:default">${esc(gl(item.label))}${item.required?`<span class="req-star">*</span>`:''}</div>
         ${photoUploadHtml(item.id, photos)}
       </div>`;
     return el;
@@ -486,8 +493,8 @@ function renderItem(secId, item) {
 
     el.innerHTML = `
       <div class="item-body" style="padding-left:0">
-        <div class="item-label" style="cursor:default">${esc(item.label)}${item.required?`<span class="req-star">*</span>`:''}</div>
-        ${item.hint?`<div class="item-hint">${esc(item.hint)}</div>`:''}
+        <div class="item-label" style="cursor:default">${esc(gl(item.label))}${item.required?`<span class="req-star">*</span>`:''}</div>
+        ${gl(item.hint)?`<div class="item-hint">${esc(gl(item.hint))}</div>`:''}
         <div class="status-btns">${btns}</div>
         ${scFollowHtml}
       </div>`;
@@ -497,7 +504,7 @@ function renderItem(secId, item) {
   // ── Standard types ──
   let fieldHtml = '';
   if (item.type === 'text') {
-    fieldHtml = `<div class="field-wrap"><textarea class="ff" rows="2" placeholder="${esc(item.hint||'Typ hier…')}" oninput="setVal('${item.id}',this.value)">${esc(ans.value||'')}</textarea></div>`;
+    fieldHtml = `<div class="field-wrap"><textarea class="ff" rows="2" placeholder="${esc(gl(item.hint)||'Typ hier…')}" oninput="setVal('${item.id}',this.value)">${esc(ans.value||'')}</textarea></div>`;
   } else if (item.type === 'radio') {
     const opts = (item.options||['Ja','Nee','N/A']).map(o =>
       `<div class="radio-opt${ans.value===o?' active':''}" onclick="setRadio('${item.id}','${esc(o)}')">${esc(o)}</div>`
@@ -521,9 +528,9 @@ function renderItem(secId, item) {
     </div>
     <div class="item-body">
       <div class="item-label${checked?' done':''}" onclick="toggleCheck('${secId}','${item.id}')">
-        ${esc(item.label)}${item.required?`<span class="req-star">*</span>`:''}
+        ${esc(gl(item.label))}${item.required?`<span class="req-star">*</span>`:''}
       </div>
-      ${item.hint && item.type !== 'text' ? `<div class="item-hint">${esc(item.hint)}</div>` : ''}
+      ${gl(item.hint) && item.type !== 'text' ? `<div class="item-hint">${esc(gl(item.hint))}</div>` : ''}
       ${fieldHtml}
       ${followUpHtml(item)}
     </div>`;
@@ -778,7 +785,7 @@ async function markComplete() {
   // Check required question fields
   const missing = [];
   (template.schema?.sections||[]).forEach(sec => sec.items.forEach(item => {
-    if (item.required && !answers[item.id]?.checked) missing.push(item.label);
+    if (item.required && !answers[item.id]?.checked) missing.push(gl(item.label));
   }));
   if (missing.length) {
     document.getElementById('req-warning').style.display = 'block';
@@ -796,7 +803,11 @@ async function markComplete() {
   }
 }
 
-function changeLang(l) { lang = l; scheduleSave(); }
+function changeLang(l) {
+  lang = l;
+  scheduleSave();
+  renderPage();  // re-render so all labels/hints show in new language
+}
 
 // ── PDF ──
 function openPdfModal() { document.getElementById('pdf-overlay').classList.add('open'); }
@@ -913,7 +924,7 @@ async function generatePDF() {
     if (y > ph-30) { doc.addPage(); y=mg; }
     doc.setFillColor(...L); doc.roundedRect(mg,y,cw,8,2,2,'F');
     doc.setTextColor(...G); doc.setFontSize(10); doc.setFont('helvetica','bold');
-    doc.text(sec.title, mg+4, y+5.5);
+    doc.text(gl(sec.title), mg+4, y+5.5);
     const sd=sec.items.filter(i=>answers[i.id]?.checked).length;
     doc.setTextColor(...M); doc.setFontSize(8); doc.setFont('helvetica','normal');
     doc.text(`${sd}/${sec.items.length}`, pw-mg-2, y+5.5, {align:'right'});
@@ -940,7 +951,7 @@ async function generatePDF() {
         if (photos.length === 0) continue;  // no photos → skip label too
         if (y > ph-20) { doc.addPage(); y=mg; }
         doc.setTextColor(...M); doc.setFontSize(9); doc.setFont('helvetica','italic');
-        doc.text(item.label, mg, y);
+        doc.text(gl(item.label), mg, y);
         doc.setFont('helvetica','normal');
         y += 5;
         // Larger photos: up to 3 per row at 80x60mm
@@ -962,7 +973,7 @@ async function generatePDF() {
       // yesno: label left, pills right, no checkbox
       if (item.type === 'yesno') {
         doc.setTextColor(...D); doc.setFontSize(10); doc.setFont('helvetica','normal');
-        const ll = doc.splitTextToSize(item.label+(item.required?' *':''), cw*0.65);
+        const ll = doc.splitTextToSize(gl(item.label)+(item.required?' *':''), cw*0.65);
         doc.text(ll, mg, y);
         const pills = ['Ja','Nee','N.v.t.'];
         let px2 = pw - mg;
@@ -999,7 +1010,7 @@ async function generatePDF() {
       // statuscheck type
       if (item.type === 'statuscheck') {
         doc.setTextColor(...D); doc.setFontSize(10); doc.setFont('helvetica','normal');
-        const ll = doc.splitTextToSize(item.label+(item.required?' *':''), cw*0.55);
+        const ll = doc.splitTextToSize(gl(item.label)+(item.required?' *':''), cw*0.55);
         doc.text(ll, mg, y);
         // Status pills right-aligned
         const statuses = [
@@ -1054,7 +1065,7 @@ async function generatePDF() {
       // Standard item: label left, checkbox right
       doc.setTextColor(...D);
       doc.setFontSize(10); doc.setFont('helvetica','normal');
-      const ll = doc.splitTextToSize(item.label+(item.required?' *':''), cw-8);
+      const ll = doc.splitTextToSize(gl(item.label)+(item.required?' *':''), cw-8);
       doc.text(ll, mg, y);
 
       // Checkbox right-aligned, vertically centred on first line
