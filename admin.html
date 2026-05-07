@@ -109,6 +109,14 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
 .item-rule-check { display:flex; align-items:center; gap:4px; font-size:12px; color:var(--muted); cursor:pointer; white-space:nowrap; }
 .item-rule-check input { accent-color:var(--accent); }
 
+/* TRANSLATION TABS */
+.trans-tabs { display:flex; gap:2px; margin-bottom:0; }
+.trans-tab { padding:4px 10px; font-size:11px; font-family:'DM Sans',sans-serif; border:1px solid var(--border); border-bottom:none; border-radius:var(--radius) var(--radius) 0 0; cursor:pointer; background:var(--surface2); color:var(--muted); transition:all 0.1s; }
+.trans-tab.active { background:var(--surface); color:var(--text); font-weight:500; border-color:var(--border-strong); }
+.trans-panel { border:1px solid var(--border-strong); border-radius:0 var(--radius) var(--radius) var(--radius); padding:10px; background:var(--surface); display:flex; flex-direction:column; gap:6px; }
+.trans-panel.hidden { display:none; }
+.trans-field-label { font-size:11px; color:var(--light); margin-bottom:2px; }
+
 /* ADD ITEM ROW */
 .add-item-row { display:flex; gap:8px; padding:8px 0; flex-wrap:wrap; }
 .add-item-btn { font-size:12px; color:var(--muted); background:none; border:1px dashed var(--border-strong); border-radius:var(--radius); cursor:pointer; font-family:'DM Sans',sans-serif; display:flex; align-items:center; gap:4px; padding:5px 10px; transition:all 0.15s; }
@@ -357,8 +365,10 @@ function renderSections() {
     el.innerHTML = `
       <div class="sec-head">
         <span style="font-size:12px;color:var(--light);font-weight:500">§${si+1}</span>
-        <input class="sec-title-input" value="${esc(sec.title)}" placeholder="Sectietitel…"
-          oninput="sections[${si}].title=this.value">
+        <input class="sec-title-input" value="${esc(typeof sec.title==='object'?(sec.title.nl||sec.title.en||''):sec.title)}" placeholder="Sectietitel NL…" oninput="setSectionTitleLang(${si},'nl',this.value)" style="flex:0.35;min-width:120px">
+        <input class="sec-title-input" value="${esc(typeof sec.title==='object'?(sec.title.en||''):'' )}" placeholder="EN…" oninput="setSectionTitleLang(${si},'en',this.value)" style="flex:0.22;min-width:55px;color:var(--muted)">
+        <input class="sec-title-input" value="${esc(typeof sec.title==='object'?(sec.title.fr||''):'' )}" placeholder="FR…" oninput="setSectionTitleLang(${si},'fr',this.value)" style="flex:0.22;min-width:55px;color:var(--muted)">
+        <input class="sec-title-input" value="${esc(typeof sec.title==='object'?(sec.title.de||''):'' )}" placeholder="DE…" oninput="setSectionTitleLang(${si},'de',this.value)" style="flex:0.22;min-width:55px;color:var(--muted)">
         <button class="icon-btn" onclick="moveSection(${si},-1)" title="Omhoog" ${si===0?'disabled style="opacity:0.3"':''}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
         </button>
@@ -445,15 +455,12 @@ function renderItem(si, ii, item) {
                       item.type==='statuscheck' ? ['Niet OK','Onderdelen nodig'] :
                       (item.options||[]);
 
-  // Extra config fields (hint, options, unit)
+  // Extra config fields (options for radio, unit for number — hints now in trans panels)
   let extraHtml = '';
   if (item.type==='radio') {
     extraHtml = `<input class="item-options-input" placeholder="Opties gescheiden door komma, bv: Ja, Nee, N/A"
       value="${esc((item.options||[]).join(', '))}"
       onchange="sections[${si}].items[${ii}].options=this.value.split(',').map(s=>s.trim()).filter(Boolean);renderSections()">`;
-  } else if (item.type==='text'||item.type==='yesno') {
-    extraHtml = `<input class="item-options-input" placeholder="Hint / instructie (optioneel)"
-      value="${esc(item.hint||'')}" oninput="sections[${si}].items[${ii}].hint=this.value">`;
   } else if (item.type==='number') {
     extraHtml = `<input class="item-options-input" placeholder="Eenheid (optioneel, bv: kg, °C, mm)"
       value="${esc(item.unit||'')}" oninput="sections[${si}].items[${ii}].unit=this.value">`;
@@ -480,7 +487,7 @@ function renderItem(si, ii, item) {
       <span class="item-rule-label">Toon alleen als:</span>
       <select class="item-rule-select" onchange="setCondSrc(${si},${ii},this.value)">
         <option value="">— altijd zichtbaar —</option>
-        ${prevItems.map(p=>`<option value="${p.id}"${p.id===condSrcId?' selected':''}>${esc(p.label)}</option>`).join('')}
+        ${prevItems.map(p=>`<option value="${p.id}"${p.id===condSrcId?' selected':''}>${esc(typeof p.label==='object'?(p.label.nl||p.label.en||'?'):p.label)}</option>`).join('')}
       </select>
       ${condSrcId && condSrc?.type === 'check' ? `
         <span style="font-size:12px;color:var(--accent);background:var(--accent-bg);padding:4px 10px;border-radius:99px;white-space:nowrap">= aangevinkt</span>` :
@@ -493,11 +500,40 @@ function renderItem(si, ii, item) {
   const isFirst = ii === 0;
   const isLast  = ii === sections[si].items.length - 1;
 
+  // Build multilingual label — support both string and object
+  const labelObj = (typeof item.label === 'object' && item.label) ? item.label : { nl: item.label||'', en:'', fr:'', de:'' };
+  const hintObj  = (typeof item.hint  === 'object' && item.hint)  ? item.hint  : { nl: item.hint ||'', en:'', fr:'', de:'' };
+  const LANGS = ['nl','en','fr','de'];
+  const LANG_FLAGS = {nl:'🇧🇪 NL', en:'🇬🇧 EN', fr:'🇫🇷 FR', de:'🇩🇪 DE'};
+
+  // Need hint input for text/yesno/number types
+  const hasHint = ['text','yesno','number'].includes(item.type);
+
+  const transTabsHtml = LANGS.map(l =>
+    `<div class="trans-tab${l==='nl'?' active':''}" onclick="switchTransTab(this,'trans-${si}-${ii}')">${LANG_FLAGS[l]}</div>`
+  ).join('');
+
+  const transPanelsHtml = LANGS.map(l => `
+    <div class="trans-panel${l==='nl'?'':' hidden'}" id="trans-${si}-${ii}-${l}">
+      <div>
+        <div class="trans-field-label">Vraagtekst ${LANG_FLAGS[l]}</div>
+        <input class="item-label-input" style="width:100%" value="${esc(labelObj[l]||'')}" placeholder="Vraagtekst in ${l}…"
+          oninput="setItemLang(${si},${ii},'label','${l}',this.value)">
+      </div>
+      ${hasHint ? `<div>
+        <div class="trans-field-label">Hint / instructie ${LANG_FLAGS[l]}</div>
+        <input class="item-options-input" value="${esc(hintObj[l]||'')}" placeholder="Hint in ${l}…"
+          oninput="setItemLang(${si},${ii},'hint','${l}',this.value)">
+      </div>` : ''}
+    </div>`).join('');
+
   el.innerHTML = `
     <div class="item-card-top">
       <span class="item-num">${ii+1}</span>
-      <input class="item-label-input" value="${esc(item.label||'')}" placeholder="Vraagtekst…"
-        oninput="sections[${si}].items[${ii}].label=this.value">
+      <div style="flex:1;min-width:0">
+        <div class="trans-tabs">${transTabsHtml}</div>
+        ${transPanelsHtml}
+      </div>
       <div class="item-card-actions">
         <button class="icon-btn" onclick="moveItem(${si},${ii},-1)" ${isFirst?'disabled style="opacity:0.25"':''} title="Omhoog">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
@@ -519,7 +555,7 @@ function renderItem(si, ii, item) {
         Verplicht
       </label>
     </div>
-    ${extraHtml || followHtml || condHtml ? `<div class="item-extra">${extraHtml}${followHtml}${condHtml}</div>` : ''}`;
+    ${extraHtml || followHtml || condHtml ? `<div class="item-extra" style="padding-left:0">${extraHtml}${followHtml}${condHtml}</div>` : ''}`;
   return el;
 }
 
@@ -545,6 +581,38 @@ function addItem(si, type) {
   sections[si].items.push(ni);
   renderSections();
 }
+// ── TRANSLATION HELPERS ──
+function switchTransTab(clickedTab, panelGroupId) {
+  const card = clickedTab.closest('.item-card');
+  card.querySelectorAll('.trans-tab').forEach(t => t.classList.remove('active'));
+  card.querySelectorAll('.trans-panel').forEach(p => p.classList.add('hidden'));
+  clickedTab.classList.add('active');
+  const lang = clickedTab.textContent.trim().slice(-2).toLowerCase();
+  const panel = document.getElementById(panelGroupId + '-' + lang);
+  if (panel) panel.classList.remove('hidden');
+}
+
+function setItemLang(si, ii, field, lang, val) {
+  const item = sections[si].items[ii];
+  // Convert string to object if needed
+  if (typeof item[field] !== 'object' || !item[field]) {
+    const existing = item[field] || '';
+    item[field] = { nl: existing, en: '', fr: '', de: '' };
+  }
+  item[field][lang] = val;
+  // Keep backward compat: if NL is set, also keep as root for old templates
+  if (lang === 'nl') item[field + '_legacy'] = val;
+}
+
+function setSectionTitleLang(si, lang, val) {
+  const sec = sections[si];
+  if (typeof sec.title !== 'object' || !sec.title) {
+    const existing = sec.title || '';
+    sec.title = { nl: existing, en: '', fr: '', de: '' };
+  }
+  sec.title[lang] = val;
+}
+
 function setCondSrc(si, ii, srcId) {
   if (!sections[si].items[ii].showIf) sections[si].items[ii].showIf = {};
   sections[si].items[ii].showIf.itemId = srcId;
@@ -592,14 +660,22 @@ async function saveTemplate() {
   const name = document.getElementById('e-name').value.trim();
   if (!name) { toast('Geef een naam op', 'error'); return; }
 
-  // Auto-fix any showIf rules where value is still empty for check-type sources
+  // Normalise all labels/hints to multilingual objects, and fix showIf values
   const allItems = sections.flatMap(s => s.items);
-  sections.forEach(sec => sec.items.forEach(item => {
-    if (item.showIf?.itemId && !item.showIf.value) {
-      const srcItem = allItems.find(it => it.id === item.showIf.itemId);
-      if (srcItem?.type === 'check') item.showIf.value = 'aangevinkt';
-    }
-  }));
+  sections.forEach(sec => {
+    if (typeof sec.title !== 'object' || !sec.title)
+      sec.title = { nl: sec.title||'', en:'', fr:'', de:'' };
+    sec.items.forEach(item => {
+      if (typeof item.label !== 'object' || !item.label)
+        item.label = { nl: item.label||'', en:'', fr:'', de:'' };
+      if (typeof item.hint !== 'object' || !item.hint)
+        item.hint  = { nl: item.hint||'',  en:'', fr:'', de:'' };
+      if (item.showIf?.itemId && !item.showIf.value) {
+        const srcItem = allItems.find(it => it.id === item.showIf.itemId);
+        if (srcItem?.type === 'check') item.showIf.value = 'aangevinkt';
+      }
+    });
+  });
 
   const payload = {
     name,
