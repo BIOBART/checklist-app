@@ -123,6 +123,15 @@ textarea.ff:focus, input.ff:focus { border-color:var(--accent); background:var(-
 .bottom-bar { position:fixed; bottom:0; left:0; right:0; background:var(--surface); border-top:1px solid var(--border); padding:0.75rem 1.5rem; display:flex; align-items:center; justify-content:space-between; gap:12px; z-index:40; flex-wrap:wrap; }
 .bottom-left { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 
+/* SIGNATURE */
+.sig-wrap { margin-top:6px; position:relative; }
+.sig-canvas { width:100%; height:120px; border:1.5px solid var(--border); border-radius:var(--radius); background:var(--surface); cursor:crosshair; display:block; touch-action:none; }
+.sig-canvas:active { border-color:var(--accent); }
+.sig-preview { width:100%; max-height:120px; object-fit:contain; border:1px solid var(--border); border-radius:var(--radius); display:block; background:var(--surface); }
+.sig-clear-btn { margin-top:6px; font-size:12px; color:var(--muted); background:none; border:1px solid var(--border); border-radius:var(--radius); padding:4px 12px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.15s; }
+.sig-clear-btn:hover { border-color:var(--danger); color:var(--danger); }
+.sig-clear-hint { font-size:11px; color:var(--light); margin-top:4px; }
+
 /* STATUSCHECK */
 .status-btns { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
 .status-btn { display:flex; align-items:center; gap:6px; padding:7px 14px; border-radius:var(--radius); border:1.5px solid var(--border); font-size:13px; font-family:'DM Sans',sans-serif; cursor:pointer; transition:all 0.15s; background:var(--surface); color:var(--text); }
@@ -501,11 +510,47 @@ function renderItem(secId, item) {
     return el;
   }
 
-  // ── Standard types ──
+  // ── Types without checkbox: text, number, date, signature ──
+  if (['text','number','date','signature'].includes(item.type)) {
+    let inputHtml = '';
+    if (item.type === 'text') {
+      inputHtml = `<textarea class="ff" rows="2" placeholder="${esc(gl(item.hint)||'Typ hier…')}" oninput="setVal('${item.id}',this.value)">${esc(ans.value||'')}</textarea>`;
+    } else if (item.type === 'number') {
+      const unitHtml = item.unit ? `<span class="unit-label">${esc(item.unit)}</span>` : '';
+      inputHtml = `<div class="${item.unit?'input-unit-wrap':''}"><input type="number" class="ff" placeholder="0" value="${esc(ans.value||'')}" oninput="setVal('${item.id}',this.value)">${unitHtml}</div>`;
+    } else if (item.type === 'date') {
+      inputHtml = `<input type="date" class="ff" value="${esc(ans.value||'')}" oninput="setVal('${item.id}',this.value)">`;
+    } else if (item.type === 'signature') {
+      const hasSig = !!ans.value;
+      inputHtml = `
+        <div class="sig-wrap" id="sig-${item.id}">
+          ${hasSig
+            ? `<img src="${ans.value}" class="sig-preview" onclick="clearSig('${item.id}')">
+               <div class="sig-clear-hint">Klik om te wissen</div>`
+            : `<canvas class="sig-canvas" id="sigcanvas-${item.id}" width="400" height="120"
+                onmousedown="startSig(event,'${item.id}')" ontouchstart="startSig(event,'${item.id}')"
+                onmousemove="drawSig(event,'${item.id}')" ontouchmove="drawSig(event,'${item.id}')"
+                onmouseup="endSig('${item.id}')" ontouchend="endSig('${item.id}')"
+                onmouseleave="endSig('${item.id}')"></canvas>
+               <button class="sig-clear-btn" onclick="clearSig('${item.id}')">Wissen</button>`
+          }
+        </div>`;
+    }
+    el.innerHTML = `
+      <div class="item-body" style="padding-left:0">
+        <div class="item-label" style="cursor:default">
+          ${esc(gl(item.label))}${item.required?`<span class="req-star">*</span>`:''}
+        </div>
+        ${gl(item.hint) ? `<div class="item-hint">${esc(gl(item.hint))}</div>` : ''}
+        <div class="field-wrap">${inputHtml}</div>
+        ${followUpHtml(item)}
+      </div>`;
+    return el;
+  }
+
+  // ── Types with checkbox: check, radio, yesno ──
   let fieldHtml = '';
-  if (item.type === 'text') {
-    fieldHtml = `<div class="field-wrap"><textarea class="ff" rows="2" placeholder="${esc(gl(item.hint)||'Typ hier…')}" oninput="setVal('${item.id}',this.value)">${esc(ans.value||'')}</textarea></div>`;
-  } else if (item.type === 'radio') {
+  if (item.type === 'radio') {
     const opts = (item.options||['Ja','Nee','N/A']).map(o =>
       `<div class="radio-opt${ans.value===o?' active':''}" onclick="setRadio('${item.id}','${esc(o)}')">${esc(o)}</div>`
     ).join('');
@@ -515,11 +560,6 @@ function renderItem(secId, item) {
       `<div class="radio-opt${ans.value===o?' active':''}" onclick="setRadio('${item.id}','${esc(o)}')">${esc(o)}</div>`
     ).join('');
     fieldHtml = `<div class="radio-row">${opts}</div>`;
-  } else if (item.type === 'number') {
-    const unitHtml = item.unit ? `<span class="unit-label">${esc(item.unit)}</span>` : '';
-    fieldHtml = `<div class="field-wrap"><div class="${item.unit?'input-unit-wrap':''}"><input type="number" class="ff" placeholder="0" value="${esc(ans.value||'')}" oninput="setVal('${item.id}',this.value)">${unitHtml}</div></div>`;
-  } else if (item.type === 'date') {
-    fieldHtml = `<div class="field-wrap"><input type="date" class="ff" value="${esc(ans.value||'')}" oninput="setVal('${item.id}',this.value)"></div>`;
   }
 
   el.innerHTML = `
@@ -535,6 +575,54 @@ function renderItem(secId, item) {
       ${followUpHtml(item)}
     </div>`;
   return el;
+}
+
+// ── SIGNATURE ──
+const sigState = {};
+
+function startSig(e, id) {
+  e.preventDefault();
+  const canvas = document.getElementById('sigcanvas-' + id);
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const pt = e.touches ? e.touches[0] : e;
+  sigState[id] = { drawing: true, scaleX, scaleY, canvas,
+    ctx: canvas.getContext('2d'), lastX: (pt.clientX-rect.left)*scaleX, lastY: (pt.clientY-rect.top)*scaleY };
+  const ctx = sigState[id].ctx;
+  ctx.strokeStyle = '#1A1714'; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+}
+
+function drawSig(e, id) {
+  e.preventDefault();
+  const s = sigState[id]; if (!s?.drawing) return;
+  const rect = s.canvas.getBoundingClientRect();
+  const pt = e.touches ? e.touches[0] : e;
+  const x = (pt.clientX - rect.left) * s.scaleX;
+  const y = (pt.clientY - rect.top) * s.scaleY;
+  s.ctx.beginPath(); s.ctx.moveTo(s.lastX, s.lastY); s.ctx.lineTo(x, y); s.ctx.stroke();
+  s.lastX = x; s.lastY = y;
+}
+
+function endSig(id) {
+  const s = sigState[id]; if (!s?.drawing) return;
+  s.drawing = false;
+  const dataUrl = s.canvas.toDataURL('image/png');
+  getAns(id).value = dataUrl;
+  scheduleSave();
+}
+
+function clearSig(id) {
+  getAns(id).value = '';
+  scheduleSave();
+  // Re-render just this item
+  const sec = template.schema?.sections?.find(s => s.items.some(i => i.id === id));
+  const item = sec?.items.find(i => i.id === id);
+  if (sec && item) {
+    const el = document.getElementById('item-' + id);
+    if (el) { const newEl = renderItem(sec.id, item); el.replaceWith(newEl); }
+  }
 }
 
 // ── ANSWERS ──
@@ -1084,13 +1172,37 @@ async function generatePDF() {
       // Value fields (text, number, date, radio)
       if ((item.type==='text'||item.type==='number'||item.type==='date') && ans.value) {
         doc.setFontSize(9); doc.setTextColor(...M);
-        const vl=doc.splitTextToSize('→ '+ans.value+(item.unit?' '+item.unit:''), cw-8);
+        let displayVal = ans.value;
+        if (item.type === 'date' && ans.value) {
+          // Format ISO date to locale string safely (avoid jsPDF encoding issues)
+          try {
+            const [y2,m2,d2] = ans.value.split('-').map(Number);
+            const months = {nl:['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'],
+                            en:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+                            fr:['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'],
+                            de:['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez']};
+            const ml = months[lang]||months.nl;
+            displayVal = d2 + ' ' + ml[m2-1] + ' ' + y2;
+          } catch(e) { displayVal = ans.value; }
+        }
+        const vl=doc.splitTextToSize('→ '+displayVal+(item.unit?' '+item.unit:''), cw-8);
         vl.forEach(l=>{ if(y>ph-15){doc.addPage();y=mg;} doc.text(l,mg,y); y+=4.2; });
       }
       if (item.type==='radio' && ans.value) {
         doc.setFontSize(9); doc.setTextColor(...M);
         doc.text('→ '+ans.value, mg, y); y+=4.2;
       }
+      // Signature in PDF
+      if (item.type === 'signature' && ans.value) {
+        doc.setFontSize(9); doc.setTextColor(...M);
+        doc.text('Handtekening:', mg, y); y+=3;
+        const sigW=70, sigH=22;
+        if (y+sigH > ph-15) { doc.addPage(); y=mg; }
+        try { doc.addImage(ans.value,'PNG',mg,y,sigW,sigH); } catch(e){}
+        doc.setDrawColor(...L); doc.setLineWidth(0.3); doc.rect(mg,y,sigW,sigH);
+        y+=sigH+3;
+      }
+
       // follow-up note for radio/yesno items with followUp config
       if (ans.followNote && item.followUp?.trigger && ans.value===item.followUp.trigger) {
         doc.setFontSize(9); doc.setTextColor(...M);
