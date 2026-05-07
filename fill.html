@@ -369,6 +369,7 @@ function renderPage() {
   const sr = document.getElementById('sections-render');
   sections.forEach(sec => sr.appendChild(renderSection(sec)));
   updateProgress();
+  evalConditionals();  // apply show/hide rules after all items are in the DOM
   document.getElementById('bottom-bar').style.display = 'flex';
   if (submission?.status === 'completed') {
     document.getElementById('status-badge').textContent = 'Voltooid';
@@ -401,14 +402,6 @@ function renderItem(secId, item) {
   const ans = answers[item.id] || {};
   const checked = !!ans.checked;
   const photos = ans.photos || [];
-
-  // ── Conditional visibility ──
-  if (item.showIf?.itemId) {
-    const srcAns = answers[item.showIf.itemId] || {};
-    const trigger = item.showIf.value;
-    const srcVal = srcAns.value || (srcAns.checked ? 'aangevinkt' : '');
-    if (srcVal !== trigger) el.classList.add('cond-hidden');
-  }
 
   // ── Photo upload helper ──
   const photoUploadHtml = (itemId, existingPhotos) => {
