@@ -367,6 +367,9 @@ function renderSections() {
         <button class="add-item-btn" onclick="addItem(${si},'yesno')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="12" y1="8" x2="12" y2="16"/></svg>Ja/Nee/N.v.t.
         </button>
+        <button class="add-item-btn" onclick="addItem(${si},'statuscheck')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><circle cx="12" cy="12" r="10"/></svg>Statuscheck
+        </button>
         <button class="add-item-btn" onclick="addItem(${si},'text')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>Tekstveld
         </button>
@@ -390,11 +393,80 @@ function renderSections() {
   });
 }
 
-const TYPE_LABELS = { check:'Vinkpunt', yesno:'Ja/Nee/N.v.t.', text:'Tekstveld', radio:'Keuze', photo:'Foto', date:'Datum', number:'Getal' };
+const TYPE_LABELS = {
+  check:'Vinkpunt', yesno:'Ja/Nee/N.v.t.', statuscheck:'Statuscheck (OK/Niet OK/…)',
+  text:'Tekstveld', radio:'Keuze', photo:'Foto', date:'Datum', number:'Getal'
+};
+
+// Gather all items across all sections as [{id, label}] for condition dropdowns
+function allItemsBefore(si, ii) {
+  const result = [];
+  sections.forEach((sec, ssi) => {
+    sec.items.forEach((item, iii) => {
+      if (ssi < si || (ssi === si && iii < ii)) {
+        if (item.label) result.push({ id: item.id, label: item.label, type: item.type });
+      }
+    });
+  });
+  return result;
+}
+
+function conditionValueOpts(sourceItem) {
+  if (!sourceItem) return [];
+  if (sourceItem.type === 'yesno') return ['Ja','Nee','N.v.t.'];
+  if (sourceItem.type === 'statuscheck') return ['OK','Niet OK','Onderdelen nodig','Niet gecheckt'];
+  if (sourceItem.type === 'radio') return sourceItem.options || [];
+  if (sourceItem.type === 'check') return ['aangevinkt'];
+  return [];
+}
 
 function renderItem(si, ii, item) {
   const el = document.createElement('div');
   el.className = 'item-row';
+  const prevItems = allItemsBefore(si, ii);
+
+  // Condition config: which source item + which value triggers visibility
+  const condSrcId = item.showIf?.itemId || '';
+  const condVal   = item.showIf?.value  || '';
+  const condSrc   = prevItems.find(p => p.id === condSrcId);
+  const condVals  = condSrc ? conditionValueOpts(condSrc) : (condSrcId ? [condVal] : []);
+
+  const condHtml = `
+    <div style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--muted);white-space:nowrap">Toon alleen als:</span>
+      <select class="item-options-input" style="flex:1;min-width:120px;font-size:12px"
+        onchange="setCondSrc(${si},${ii},this.value)">
+        <option value="">— altijd zichtbaar —</option>
+        ${prevItems.map(p=>`<option value="${p.id}"${p.id===condSrcId?' selected':''}>${esc(p.label)}</option>`).join('')}
+      </select>
+      ${condSrcId ? `
+      <select class="item-options-input" style="flex:1;min-width:80px;font-size:12px"
+        onchange="setCondVal(${si},${ii},this.value)">
+        ${condVals.map(v=>`<option value="${v}"${v===condVal?' selected':''}>${esc(v)}</option>`).join('')}
+      </select>` : ''}
+    </div>`;
+
+  // Follow-up trigger: show extra text+photo when a specific answer is chosen
+  // Only relevant for yesno, radio, statuscheck
+  const hasTrigger = ['yesno','radio','statuscheck'].includes(item.type);
+  const triggerVals = item.type==='yesno' ? ['Nee','N.v.t.'] :
+                      item.type==='statuscheck' ? ['Niet OK','Onderdelen nodig'] :
+                      (item.options||[]);
+  const followHtml = hasTrigger ? `
+    <div style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--muted);white-space:nowrap">Bijkomend veld bij:</span>
+      <select class="item-options-input" style="flex:1;min-width:120px;font-size:12px"
+        onchange="setFollowTrigger(${si},${ii},this.value)">
+        <option value="">— geen —</option>
+        ${triggerVals.map(v=>`<option value="${v}"${(item.followUp?.trigger||'')===(v)?'selected':''}>${esc(v)}</option>`).join('')}
+      </select>
+      ${item.followUp?.trigger ? `
+        <label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;cursor:pointer">
+          <input type="checkbox" ${item.followUp?.photo?'checked':''} onchange="setFollowPhoto(${si},${ii},this.checked)">
+          + foto
+        </label>` : ''}
+    </div>` : '';
+
   el.innerHTML = `
     <div class="item-fields">
       <input class="item-label-input" style="width:100%" value="${esc(item.label||'')}" placeholder="Vraagtekst…"
@@ -421,13 +493,13 @@ function renderItem(si, ii, item) {
     ${item.type==='radio'?`<input class="item-options-input" placeholder="Opties gescheiden door komma, bv: Ja, Nee, N/A"
       value="${esc((item.options||[]).join(', '))}"
       onchange="sections[${si}].items[${ii}].options=this.value.split(',').map(s=>s.trim()).filter(Boolean);renderSections()">`:
-     item.type==='text'?`<input class="item-options-input" placeholder="Hint / instructie (optioneel)"
-      value="${esc(item.hint||'')}" oninput="sections[${si}].items[${ii}].hint=this.value">`:
-     item.type==='yesno'?`<input class="item-options-input" placeholder="Omschrijving / context (optioneel)"
+     item.type==='text'||item.type==='yesno'?`<input class="item-options-input" placeholder="Hint / instructie (optioneel)"
       value="${esc(item.hint||'')}" oninput="sections[${si}].items[${ii}].hint=this.value">`:
      item.type==='number'?`<input class="item-options-input" placeholder="Eenheid (optioneel, bv: kg, °C, mm)"
       value="${esc(item.unit||'')}" oninput="sections[${si}].items[${ii}].unit=this.value">`:
-    ''}`;
+    ''}
+    ${followHtml}
+    ${condHtml}`;
   return el;
 }
 
@@ -452,6 +524,26 @@ function addItem(si, type) {
   if (type==='radio') ni.options=['Ja','Nee','N/A'];
   sections[si].items.push(ni);
   renderSections();
+}
+function setCondSrc(si, ii, srcId) {
+  if (!sections[si].items[ii].showIf) sections[si].items[ii].showIf = {};
+  sections[si].items[ii].showIf.itemId = srcId;
+  sections[si].items[ii].showIf.value = '';
+  renderSections();
+}
+function setCondVal(si, ii, val) {
+  if (!sections[si].items[ii].showIf) sections[si].items[ii].showIf = {};
+  sections[si].items[ii].showIf.value = val;
+}
+function setFollowTrigger(si, ii, val) {
+  if (!sections[si].items[ii].followUp) sections[si].items[ii].followUp = {};
+  sections[si].items[ii].followUp.trigger = val;
+  sections[si].items[ii].followUp.photo = sections[si].items[ii].followUp.photo || false;
+  renderSections();
+}
+function setFollowPhoto(si, ii, val) {
+  if (!sections[si].items[ii].followUp) sections[si].items[ii].followUp = {};
+  sections[si].items[ii].followUp.photo = val;
 }
 function deleteItem(si, ii) {
   sections[si].items.splice(ii,1);
