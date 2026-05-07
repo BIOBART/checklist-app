@@ -86,18 +86,28 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
 .icon-btn svg { width:14px; height:14px; }
 
 /* ITEMS IN SECTION */
-.items-wrap { padding:8px 14px 4px; }
-.item-row { display:flex; align-items:flex-start; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }
-.item-row:last-child { border-bottom:none; }
-.item-fields { flex:1; display:grid; grid-template-columns:1fr auto auto auto; gap:8px; align-items:center; }
-@media(max-width:600px){ .item-fields { grid-template-columns:1fr auto; } }
-.item-label-input { font-family:'DM Sans',sans-serif; font-size:14px; padding:6px 10px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text); outline:none; }
-.item-label-input:focus { border-color:var(--accent); }
-.item-type-select { font-family:'DM Sans',sans-serif; font-size:12px; padding:6px 8px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text); outline:none; cursor:pointer; }
-.item-req { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--muted); white-space:nowrap; cursor:pointer; }
+.items-wrap { padding:10px 14px 6px; display:flex; flex-direction:column; gap:8px; }
+.item-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px; display:flex; flex-direction:column; gap:10px; transition:border-color 0.15s; }
+.item-card:hover { border-color:var(--border-strong); }
+.item-card-top { display:flex; gap:8px; align-items:flex-start; }
+.item-num { font-size:11px; color:var(--light); font-weight:600; min-width:18px; padding-top:9px; flex-shrink:0; }
+.item-label-input { font-family:'DM Sans',sans-serif; font-size:14px; padding:7px 11px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); color:var(--text); outline:none; flex:1; min-width:0; }
+.item-label-input:focus { border-color:var(--accent); background:var(--surface); }
+.item-card-actions { display:flex; gap:4px; flex-shrink:0; align-items:center; padding-top:3px; }
+.item-card-meta { display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding-left:26px; }
+.item-type-select { font-family:'DM Sans',sans-serif; font-size:13px; padding:6px 10px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text); outline:none; cursor:pointer; flex:1; min-width:160px; }
+.item-type-select:focus { border-color:var(--accent); }
+.item-req { display:flex; align-items:center; gap:5px; font-size:13px; color:var(--muted); white-space:nowrap; cursor:pointer; }
 .item-req input { accent-color:var(--accent); width:14px; height:14px; cursor:pointer; }
-.item-options-input { font-family:'DM Sans',sans-serif; font-size:12px; padding:5px 8px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text); outline:none; width:100%; margin-top:4px; }
+.item-extra { padding-left:26px; display:flex; flex-direction:column; gap:6px; }
+.item-options-input { font-family:'DM Sans',sans-serif; font-size:13px; padding:6px 10px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text); outline:none; width:100%; }
 .item-options-input:focus { border-color:var(--accent); }
+.item-rule-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.item-rule-label { font-size:11px; color:var(--light); font-weight:500; white-space:nowrap; min-width:110px; }
+.item-rule-select { font-family:'DM Sans',sans-serif; font-size:12px; padding:5px 8px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text); outline:none; cursor:pointer; flex:1; min-width:120px; }
+.item-rule-select:focus { border-color:var(--accent); }
+.item-rule-check { display:flex; align-items:center; gap:4px; font-size:12px; color:var(--muted); cursor:pointer; white-space:nowrap; }
+.item-rule-check input { accent-color:var(--accent); }
 
 /* ADD ITEM ROW */
 .add-item-row { display:flex; gap:8px; padding:8px 0; flex-wrap:wrap; }
@@ -422,55 +432,83 @@ function conditionValueOpts(sourceItem) {
 
 function renderItem(si, ii, item) {
   const el = document.createElement('div');
-  el.className = 'item-row';
+  el.className = 'item-card';
   const prevItems = allItemsBefore(si, ii);
 
-  // Condition config: which source item + which value triggers visibility
   const condSrcId = item.showIf?.itemId || '';
   const condVal   = item.showIf?.value  || '';
   const condSrc   = prevItems.find(p => p.id === condSrcId);
   const condVals  = condSrc ? conditionValueOpts(condSrc) : (condSrcId ? [condVal] : []);
 
-  const condHtml = `
-    <div style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <span style="font-size:11px;color:var(--muted);white-space:nowrap">Toon alleen als:</span>
-      <select class="item-options-input" style="flex:1;min-width:120px;font-size:12px"
-        onchange="setCondSrc(${si},${ii},this.value)">
-        <option value="">— altijd zichtbaar —</option>
-        ${prevItems.map(p=>`<option value="${p.id}"${p.id===condSrcId?' selected':''}>${esc(p.label)}</option>`).join('')}
-      </select>
-      ${condSrcId ? `
-      <select class="item-options-input" style="flex:1;min-width:80px;font-size:12px"
-        onchange="setCondVal(${si},${ii},this.value)">
-        ${condVals.map(v=>`<option value="${v}"${v===condVal?' selected':''}>${esc(v)}</option>`).join('')}
-      </select>` : ''}
-    </div>`;
-
-  // Follow-up trigger: show extra text+photo when a specific answer is chosen
-  // Only relevant for yesno, radio, statuscheck
   const hasTrigger = ['yesno','radio','statuscheck'].includes(item.type);
   const triggerVals = item.type==='yesno' ? ['Nee','N.v.t.'] :
                       item.type==='statuscheck' ? ['Niet OK','Onderdelen nodig'] :
                       (item.options||[]);
+
+  // Extra config fields (hint, options, unit)
+  let extraHtml = '';
+  if (item.type==='radio') {
+    extraHtml = `<input class="item-options-input" placeholder="Opties gescheiden door komma, bv: Ja, Nee, N/A"
+      value="${esc((item.options||[]).join(', '))}"
+      onchange="sections[${si}].items[${ii}].options=this.value.split(',').map(s=>s.trim()).filter(Boolean);renderSections()">`;
+  } else if (item.type==='text'||item.type==='yesno') {
+    extraHtml = `<input class="item-options-input" placeholder="Hint / instructie (optioneel)"
+      value="${esc(item.hint||'')}" oninput="sections[${si}].items[${ii}].hint=this.value">`;
+  } else if (item.type==='number') {
+    extraHtml = `<input class="item-options-input" placeholder="Eenheid (optioneel, bv: kg, °C, mm)"
+      value="${esc(item.unit||'')}" oninput="sections[${si}].items[${ii}].unit=this.value">`;
+  }
+
+  // Follow-up rule
   const followHtml = hasTrigger ? `
-    <div style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <span style="font-size:11px;color:var(--muted);white-space:nowrap">Bijkomend veld bij:</span>
-      <select class="item-options-input" style="flex:1;min-width:120px;font-size:12px"
-        onchange="setFollowTrigger(${si},${ii},this.value)">
+    <div class="item-rule-row">
+      <span class="item-rule-label">Bijkomend veld bij:</span>
+      <select class="item-rule-select" onchange="setFollowTrigger(${si},${ii},this.value)">
         <option value="">— geen —</option>
         ${triggerVals.map(v=>`<option value="${v}"${(item.followUp?.trigger||'')===(v)?'selected':''}>${esc(v)}</option>`).join('')}
       </select>
       ${item.followUp?.trigger ? `
-        <label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;cursor:pointer">
+        <label class="item-rule-check">
           <input type="checkbox" ${item.followUp?.photo?'checked':''} onchange="setFollowPhoto(${si},${ii},this.checked)">
-          + foto
+          + foto toevoegen
         </label>` : ''}
     </div>` : '';
 
+  // Condition rule
+  const condHtml = `
+    <div class="item-rule-row">
+      <span class="item-rule-label">Toon alleen als:</span>
+      <select class="item-rule-select" onchange="setCondSrc(${si},${ii},this.value)">
+        <option value="">— altijd zichtbaar —</option>
+        ${prevItems.map(p=>`<option value="${p.id}"${p.id===condSrcId?' selected':''}>${esc(p.label)}</option>`).join('')}
+      </select>
+      ${condSrcId ? `
+        <select class="item-rule-select" style="min-width:80px;flex:0 0 auto" onchange="setCondVal(${si},${ii},this.value)">
+          ${condVals.map(v=>`<option value="${v}"${v===condVal?' selected':''}>${esc(v)}</option>`).join('')}
+        </select>` : ''}
+    </div>`;
+
+  const isFirst = ii === 0;
+  const isLast  = ii === sections[si].items.length - 1;
+
   el.innerHTML = `
-    <div class="item-fields">
-      <input class="item-label-input" style="width:100%" value="${esc(item.label||'')}" placeholder="Vraagtekst…"
+    <div class="item-card-top">
+      <span class="item-num">${ii+1}</span>
+      <input class="item-label-input" value="${esc(item.label||'')}" placeholder="Vraagtekst…"
         oninput="sections[${si}].items[${ii}].label=this.value">
+      <div class="item-card-actions">
+        <button class="icon-btn" onclick="moveItem(${si},${ii},-1)" ${isFirst?'disabled style="opacity:0.25"':''} title="Omhoog">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+        </button>
+        <button class="icon-btn" onclick="moveItem(${si},${ii},1)" ${isLast?'disabled style="opacity:0.25"':''} title="Omlaag">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <button class="icon-btn" onclick="deleteItem(${si},${ii})" title="Verwijder" style="margin-left:2px;color:var(--danger);opacity:0.7">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="item-card-meta">
       <select class="item-type-select" onchange="changeItemType(${si},${ii},this.value)">
         ${Object.entries(TYPE_LABELS).map(([v,l])=>`<option value="${v}"${item.type===v?' selected':''}>${l}</option>`).join('')}
       </select>
@@ -478,28 +516,8 @@ function renderItem(si, ii, item) {
         <input type="checkbox" ${item.required?'checked':''} onchange="sections[${si}].items[${ii}].required=this.checked">
         Verplicht
       </label>
-      <div style="display:flex;gap:4px">
-        <button class="icon-btn" onclick="moveItem(${si},${ii},-1)" ${ii===0?'disabled style="opacity:0.3"':''}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
-        </button>
-        <button class="icon-btn" onclick="moveItem(${si},${ii},1)" ${ii===sections[si].items.length-1?'disabled style="opacity:0.3"':''}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <button class="icon-btn" onclick="deleteItem(${si},${ii})">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
     </div>
-    ${item.type==='radio'?`<input class="item-options-input" placeholder="Opties gescheiden door komma, bv: Ja, Nee, N/A"
-      value="${esc((item.options||[]).join(', '))}"
-      onchange="sections[${si}].items[${ii}].options=this.value.split(',').map(s=>s.trim()).filter(Boolean);renderSections()">`:
-     item.type==='text'||item.type==='yesno'?`<input class="item-options-input" placeholder="Hint / instructie (optioneel)"
-      value="${esc(item.hint||'')}" oninput="sections[${si}].items[${ii}].hint=this.value">`:
-     item.type==='number'?`<input class="item-options-input" placeholder="Eenheid (optioneel, bv: kg, °C, mm)"
-      value="${esc(item.unit||'')}" oninput="sections[${si}].items[${ii}].unit=this.value">`:
-    ''}
-    ${followHtml}
-    ${condHtml}`;
+    ${extraHtml || followHtml || condHtml ? `<div class="item-extra">${extraHtml}${followHtml}${condHtml}</div>` : ''}`;
   return el;
 }
 
