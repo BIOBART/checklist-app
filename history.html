@@ -239,7 +239,7 @@ function applyFilters() {
     if (activeFilter !== 'all' && r.status !== activeFilter) return false;
     if (cat && r.template_name?.toLowerCase().indexOf(cat) === -1) return false;
     if (q) {
-      const haystack = [r.template_name, r.filled_by, r.organisation, r.notes].join(' ').toLowerCase();
+      const haystack = [r.template_name, r.customer, r.reference, r.filled_by, r.organisation, r.location, r.notes].join(' ').toLowerCase();
       if (!haystack.includes(q)) return false;
     }
     return true;
@@ -248,7 +248,11 @@ function applyFilters() {
   // Sort
   filtered.sort((a,b) => {
     if (sort==='updated_asc') return new Date(a.updated_at)-new Date(b.updated_at);
-    if (sort==='name_asc') return (a.template_name||'').localeCompare(b.template_name||'');
+    if (sort==='name_asc') {
+      const nameA = [a.template_name, a.customer, a.reference].filter(Boolean).join(' ');
+      const nameB = [b.template_name, b.customer, b.reference].filter(Boolean).join(' ');
+      return nameA.localeCompare(nameB);
+    }
     if (sort==='status') { const order={open:0,completed:1,archived:2}; return (order[a.status]||0)-(order[b.status]||0); }
     return new Date(b.updated_at)-new Date(a.updated_at);
   });
@@ -279,10 +283,14 @@ function renderList(data) {
     return `<div class="sub-card">
       <div class="sub-dot dot-${r.status}"></div>
       <div class="sub-info">
-        <div class="sub-title">${esc(r.template_name||'Naamloze checklist')}</div>
+        <div class="sub-title">
+          ${esc(r.template_name||'Naamloze checklist')}
+          ${r.customer?`<span style="color:var(--accent);font-weight:500"> · ${esc(r.customer)}</span>`:''}
+          ${r.reference?`<span style="color:var(--muted);font-size:13px;font-weight:400"> · ${esc(r.reference)}</span>`:''}
+        </div>
         <div class="sub-meta">
           ${r.filled_by?`<span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${esc(r.filled_by)}</span>`:''}
-          ${r.organisation?`<span>${esc(r.organisation)}</span>`:''}
+          ${r.location?`<span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${esc(r.location)}</span>`:''}
           <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${dateStr}</span>
           <span>${pct}% voltooid</span>
         </div>
