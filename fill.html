@@ -548,20 +548,27 @@ function renderItem(secId, item) {
     return el;
   }
 
-  // ── Types with checkbox: check, radio, yesno ──
-  let fieldHtml = '';
-  if (item.type === 'radio') {
-    const opts = (item.options||['Ja','Nee','N/A']).map(o =>
+  // ── radio and yesno: no checkbox, selection IS the answer ──
+  if (item.type === 'radio' || item.type === 'yesno') {
+    const opts = item.type === 'yesno'
+      ? ['Ja','Nee','N.v.t.']
+      : (item.options||['Ja','Nee','N/A']);
+    const pills = opts.map(o =>
       `<div class="radio-opt${ans.value===o?' active':''}" onclick="setRadio('${item.id}','${esc(o)}')">${esc(o)}</div>`
     ).join('');
-    fieldHtml = `<div class="radio-row">${opts}</div>`;
-  } else if (item.type === 'yesno') {
-    const opts = ['Ja','Nee','N.v.t.'].map(o =>
-      `<div class="radio-opt${ans.value===o?' active':''}" onclick="setRadio('${item.id}','${esc(o)}')">${esc(o)}</div>`
-    ).join('');
-    fieldHtml = `<div class="radio-row">${opts}</div>`;
+    el.innerHTML = `
+      <div class="item-body" style="padding-left:0">
+        <div class="item-label" style="cursor:default">
+          ${esc(gl(item.label))}${item.required?`<span class="req-star">*</span>`:''}
+        </div>
+        ${gl(item.hint) ? `<div class="item-hint">${esc(gl(item.hint))}</div>` : ''}
+        <div class="radio-row">${pills}</div>
+        ${followUpHtml(item)}
+      </div>`;
+    return el;
   }
 
+  // ── check: the only type that keeps a checkbox ──
   el.innerHTML = `
     <div class="checkbox${checked?' checked':''}" onclick="toggleCheck('${secId}','${item.id}')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -570,8 +577,7 @@ function renderItem(secId, item) {
       <div class="item-label${checked?' done':''}" onclick="toggleCheck('${secId}','${item.id}')">
         ${esc(gl(item.label))}${item.required?`<span class="req-star">*</span>`:''}
       </div>
-      ${gl(item.hint) && item.type !== 'text' ? `<div class="item-hint">${esc(gl(item.hint))}</div>` : ''}
-      ${fieldHtml}
+      ${gl(item.hint) ? `<div class="item-hint">${esc(gl(item.hint))}</div>` : ''}
       ${followUpHtml(item)}
     </div>`;
   return el;
@@ -647,7 +653,13 @@ function toggleCheck(secId, itemId) {
   evalConditionals();
 }
 
-function setVal(id, val) { getAns(id).value = val; scheduleSave(); }
+function setVal(id, val) {
+  const a = getAns(id);
+  a.value = val;
+  a.checked = val.trim().length > 0;  // count as done when something is filled in
+  scheduleSave();
+  updateProgress();
+}
 
 function setRadio(id, val) {
   const a = getAns(id); a.value = val; a.checked = true;
