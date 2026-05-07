@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ingevulde checklists</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#F6F4EF; --surface:#FFFFFF; --surface2:#EFECE5;
+  --border:#E0DDD5; --border-strong:#C5C0B5;
+  --text:#1A1714; --muted:#7A7168; --light:#B0A898;
+  --accent:#2D5A3D; --accent-bg:#E8F0EB; --accent-mid:#4A8A5E;
+  --warn:#D4860A; --warn-bg:#FEF3C7;
+  --danger:#C0392B; --danger-bg:#FDECEA;
+  --radius:10px; --radius-lg:16px;
+  --shadow:0 1px 3px rgba(0,0,0,0.05),0 4px 14px rgba(0,0,0,0.04);
+}
+body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+header { background:var(--surface); border-bottom:1px solid var(--border); height:60px; display:flex; align-items:center; justify-content:space-between; padding:0 2rem; position:sticky; top:0; z-index:50; gap:12px; }
+.logo { font-family:'DM Serif Display',serif; font-size:20px; display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--text); }
+.logo-dot { width:8px; height:8px; border-radius:50%; background:var(--accent); }
+.nav { display:flex; gap:6px; align-items:center; }
+.nav-link { font-size:13px; color:var(--muted); text-decoration:none; padding:6px 12px; border-radius:var(--radius); transition:all 0.15s; display:flex; align-items:center; gap:5px; }
+.nav-link:hover { background:var(--surface2); color:var(--text); }
+.nav-link.active { color:var(--accent); font-weight:500; }
+.nav-link svg { width:14px; height:14px; }
+.btn { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:var(--radius); font-size:13px; font-family:'DM Sans',sans-serif; font-weight:500; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--text); text-decoration:none; transition:all 0.15s; }
+.btn:hover { background:var(--surface2); }
+.btn svg { width:14px; height:14px; }
+.btn-primary { background:var(--accent); color:white; border-color:var(--accent); }
+.btn-primary:hover { background:#234830; }
+.btn-danger { color:var(--danger); border-color:transparent; }
+.btn-danger:hover { background:var(--danger-bg); border-color:var(--danger); }
+
+/* LAYOUT */
+.container { max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+.page-header { margin-bottom:1.5rem; }
+.page-title { font-family:'DM Serif Display',serif; font-size:28px; }
+.page-subtitle { font-size:14px; color:var(--muted); margin-top:4px; }
+
+/* TOOLBAR */
+.toolbar { display:flex; gap:10px; margin-bottom:1.25rem; flex-wrap:wrap; align-items:center; }
+.search-wrap { position:relative; flex:1; min-width:200px; }
+.search-icon { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--light); pointer-events:none; }
+.search-icon svg { width:15px; height:15px; }
+.search-input { width:100%; font-family:'DM Sans',sans-serif; font-size:14px; padding:8px 12px 8px 34px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text); outline:none; }
+.search-input:focus { border-color:var(--accent); }
+.filter-select { font-family:'DM Sans',sans-serif; font-size:13px; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text); outline:none; cursor:pointer; }
+.filter-select:focus { border-color:var(--accent); }
+
+/* STATS ROW */
+.stats-row { display:flex; gap:10px; margin-bottom:1.25rem; flex-wrap:wrap; }
+.stat-pill { padding:6px 14px; border-radius:99px; font-size:13px; border:1px solid var(--border); background:var(--surface); color:var(--muted); cursor:pointer; transition:all 0.15s; display:flex; align-items:center; gap:6px; }
+.stat-pill:hover { border-color:var(--border-strong); }
+.stat-pill.active { background:var(--accent); color:white; border-color:var(--accent); }
+.stat-pill .count { font-weight:600; }
+.dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.dot-open { background:#F0B429; }
+.dot-completed { background:var(--accent-mid); }
+.dot-archived { background:var(--light); }
+
+/* LIST */
+.list-wrap { display:flex; flex-direction:column; gap:8px; }
+.sub-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:1rem 1.25rem; display:flex; align-items:center; gap:14px; box-shadow:var(--shadow); transition:all 0.15s; }
+.sub-card:hover { border-color:var(--border-strong); }
+.sub-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.sub-info { flex:1; min-width:0; }
+.sub-title { font-weight:600; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sub-meta { font-size:12px; color:var(--muted); margin-top:3px; display:flex; gap:8px; flex-wrap:wrap; }
+.sub-meta span { display:flex; align-items:center; gap:3px; }
+.sub-actions { display:flex; gap:6px; align-items:center; flex-shrink:0; }
+.status-badge { padding:3px 9px; border-radius:99px; font-size:11px; font-weight:500; white-space:nowrap; }
+.status-open { background:var(--warn-bg); color:#92400E; }
+.status-completed { background:var(--accent-bg); color:var(--accent); }
+.status-archived { background:var(--surface2); color:var(--muted); }
+
+/* PROGRESS MINI */
+.mini-progress { height:3px; background:var(--surface2); border-radius:99px; margin-top:6px; overflow:hidden; }
+.mini-fill { height:100%; background:var(--accent); border-radius:99px; }
+
+/* EMPTY */
+.empty { text-align:center; padding:4rem 2rem; color:var(--muted); }
+.empty svg { width:48px; height:48px; color:var(--border-strong); margin-bottom:1rem; }
+.empty h3 { font-size:16px; margin-bottom:6px; color:var(--text); }
+.empty p { font-size:14px; }
+
+/* SKELETON */
+.skeleton { background:linear-gradient(90deg,var(--surface2) 25%,var(--border) 50%,var(--surface2) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:var(--radius-lg); height:80px; }
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* MODAL */
+.overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:200; align-items:center; justify-content:center; padding:1rem; }
+.overlay.open { display:flex; }
+.modal { background:var(--surface); border-radius:var(--radius-lg); padding:1.5rem; width:100%; max-width:400px; box-shadow:0 20px 60px rgba(0,0,0,0.2); }
+.modal h2 { font-family:'DM Serif Display',serif; font-size:20px; margin-bottom:0.75rem; }
+.modal p { font-size:14px; color:var(--muted); margin-bottom:1.25rem; line-height:1.6; }
+.modal-actions { display:flex; gap:8px; justify-content:flex-end; }
+
+.toast { position:fixed; bottom:1.5rem; right:1.5rem; background:var(--text); color:white; padding:10px 16px; border-radius:var(--radius); font-size:13px; z-index:999; opacity:0; transform:translateY(10px); transition:all 0.25s; pointer-events:none; }
+.toast.show { opacity:1; transform:translateY(0); }
+.toast.success { background:var(--accent); }
+.toast.error { background:var(--danger); }
+
+@media(max-width:640px){
+  header { padding:0 1rem; }
+  .container { padding:1rem 0.75rem 3rem; }
+  .sub-actions .btn .btn-label { display:none; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="index.html" class="logo"><div class="logo-dot"></div>Checklist</a>
+  <nav class="nav">
+    <a href="index.html" class="nav-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Home
+    </a>
+    <a href="history.html" class="nav-link active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>Ingevuld
+    </a>
+    <a href="admin.html" class="nav-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41"/></svg>Admin
+    </a>
+  </nav>
+</header>
+
+<div class="container">
+  <div class="page-header">
+    <div class="page-title">Ingevulde checklists</div>
+    <div class="page-subtitle" id="total-label">Laden…</div>
+  </div>
+
+  <!-- Filter pills -->
+  <div class="stats-row">
+    <div class="stat-pill active" data-filter="all" onclick="setFilter('all',this)">
+      <span class="count" id="cnt-all">0</span> Alles
+    </div>
+    <div class="stat-pill" data-filter="open" onclick="setFilter('open',this)">
+      <span class="dot dot-open"></span><span class="count" id="cnt-open">0</span> Open
+    </div>
+    <div class="stat-pill" data-filter="completed" onclick="setFilter('completed',this)">
+      <span class="dot dot-completed"></span><span class="count" id="cnt-completed">0</span> Voltooid
+    </div>
+    <div class="stat-pill" data-filter="archived" onclick="setFilter('archived',this)">
+      <span class="dot dot-archived"></span><span class="count" id="cnt-archived">0</span> Gearchiveerd
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <div class="search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+      <input class="search-input" type="text" placeholder="Zoeken op naam, invuller, organisatie…" id="search-input" oninput="applyFilters()">
+    </div>
+    <select class="filter-select" id="cat-filter" onchange="applyFilters()">
+      <option value="">Alle categorieën</option>
+      <option value="oplevering">Oplevering</option>
+      <option value="opstart">Opstart</option>
+      <option value="assemblage">Assemblage</option>
+      <option value="feedback">Feedback</option>
+      <option value="inspectie">Inspectie</option>
+      <option value="onderhoud">Onderhoud</option>
+    </select>
+    <select class="filter-select" id="sort-select" onchange="applyFilters()">
+      <option value="updated_desc">Laatste gewijzigd</option>
+      <option value="updated_asc">Oudste eerst</option>
+      <option value="name_asc">Naam A–Z</option>
+      <option value="status">Status</option>
+    </select>
+  </div>
+
+  <!-- List -->
+  <div class="list-wrap" id="list-wrap">
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+  </div>
+</div>
+
+<!-- Delete confirm modal -->
+<div class="overlay" id="del-overlay">
+  <div class="modal">
+    <h2>Verwijderen?</h2>
+    <p>Deze ingevulde checklist wordt permanent verwijderd, inclusief alle foto's. Dit kan niet ongedaan worden gemaakt.</p>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeDelModal()">Annuleer</button>
+      <button class="btn" style="background:var(--danger);color:white;border-color:var(--danger)" onclick="confirmDelete()">Verwijder</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+let allData = [];
+let activeFilter = 'all';
+let deleteId = null;
+
+// ── LOAD ──
+async function load() {
+  const { data, error } = await sb
+    .from('submissions')
+    .select('*')
+    .order('updated_at', { ascending: false });
+
+  if (error) { toast('Kan data niet laden: '+error.message, 'error'); return; }
+  allData = data || [];
+  updateCounts();
+  applyFilters();
+}
+
+function updateCounts() {
+  document.getElementById('cnt-all').textContent = allData.length;
+  document.getElementById('cnt-open').textContent = allData.filter(r=>r.status==='open').length;
+  document.getElementById('cnt-completed').textContent = allData.filter(r=>r.status==='completed').length;
+  document.getElementById('cnt-archived').textContent = allData.filter(r=>r.status==='archived').length;
+  document.getElementById('total-label').textContent = `${allData.length} checklists gevonden`;
+}
+
+function setFilter(f, el) {
+  activeFilter = f;
+  document.querySelectorAll('.stat-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  applyFilters();
+}
+
+function applyFilters() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const cat = document.getElementById('cat-filter').value;
+  const sort = document.getElementById('sort-select').value;
+
+  let filtered = allData.filter(r => {
+    if (activeFilter !== 'all' && r.status !== activeFilter) return false;
+    if (cat && r.template_name?.toLowerCase().indexOf(cat) === -1) return false;
+    if (q) {
+      const haystack = [r.template_name, r.filled_by, r.organisation, r.notes].join(' ').toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
+    return true;
+  });
+
+  // Sort
+  filtered.sort((a,b) => {
+    if (sort==='updated_asc') return new Date(a.updated_at)-new Date(b.updated_at);
+    if (sort==='name_asc') return (a.template_name||'').localeCompare(b.template_name||'');
+    if (sort==='status') { const order={open:0,completed:1,archived:2}; return (order[a.status]||0)-(order[b.status]||0); }
+    return new Date(b.updated_at)-new Date(a.updated_at);
+  });
+
+  document.getElementById('total-label').textContent = `${filtered.length} van ${allData.length} checklists`;
+  renderList(filtered);
+}
+
+// ── RENDER ──
+function renderList(data) {
+  const el = document.getElementById('list-wrap');
+  if (!data.length) {
+    el.innerHTML = `<div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <h3>Geen resultaten</h3>
+      <p>Pas de filters aan of <a href="index.html" style="color:var(--accent)">start een nieuwe checklist</a>.</p>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = data.map(r => {
+    const answers = r.answers || {};
+    const totalQ = Object.keys(answers).length;
+    const doneQ = Object.values(answers).filter(a => a.checked).length;
+    const pct = totalQ ? Math.round((doneQ/totalQ)*100) : 0;
+    const dateStr = new Date(r.updated_at).toLocaleDateString('nl-BE', {day:'2-digit',month:'short',year:'numeric'});
+
+    return `<div class="sub-card">
+      <div class="sub-dot dot-${r.status}"></div>
+      <div class="sub-info">
+        <div class="sub-title">${esc(r.template_name||'Naamloze checklist')}</div>
+        <div class="sub-meta">
+          ${r.filled_by?`<span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${esc(r.filled_by)}</span>`:''}
+          ${r.organisation?`<span>${esc(r.organisation)}</span>`:''}
+          <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${dateStr}</span>
+          <span>${pct}% voltooid</span>
+        </div>
+        <div class="mini-progress"><div class="mini-fill" style="width:${pct}%"></div></div>
+      </div>
+      <div class="sub-actions">
+        <span class="status-badge status-${r.status}">${STATUS_LABELS[r.status]||r.status}</span>
+        <a href="fill.html?submission=${r.id}" class="btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          <span class="btn-label">Openen</span>
+        </a>
+        ${r.status !== 'archived' ? `<button class="btn" onclick="archiveItem('${r.id}',event)" title="Archiveer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+        </button>` : ''}
+        <button class="btn btn-danger" onclick="openDelModal('${r.id}',event)" title="Verwijder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+const STATUS_LABELS = { open:'Open', completed:'Voltooid', archived:'Gearchiveerd' };
+
+// ── ACTIONS ──
+async function archiveItem(id, e) {
+  e.stopPropagation();
+  const { error } = await sb.from('submissions').update({ status:'archived' }).eq('id', id);
+  if (error) { toast('Fout: '+error.message, 'error'); return; }
+  allData = allData.map(r => r.id===id ? {...r, status:'archived'} : r);
+  updateCounts();
+  applyFilters();
+  toast('Gearchiveerd');
+}
+
+function openDelModal(id, e) {
+  e.stopPropagation();
+  deleteId = id;
+  document.getElementById('del-overlay').classList.add('open');
+}
+function closeDelModal() { document.getElementById('del-overlay').classList.remove('open'); deleteId = null; }
+
+async function confirmDelete() {
+  if (!deleteId) return;
+  // Delete photos from storage
+  const { data: photos } = await sb.from('photos').select('storage_path').eq('submission_id', deleteId);
+  if (photos?.length) {
+    const paths = photos.map(p => p.storage_path);
+    await sb.storage.from(STORAGE_BUCKET).remove(paths);
+  }
+  const { error } = await sb.from('submissions').delete().eq('id', deleteId);
+  if (error) { toast('Fout: '+error.message, 'error'); closeDelModal(); return; }
+  allData = allData.filter(r => r.id !== deleteId);
+  updateCounts();
+  applyFilters();
+  closeDelModal();
+  toast('Verwijderd');
+}
+
+// ── UTILS ──
+function toast(msg, type='') {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='toast show '+(type||'');
+  setTimeout(()=>el.className='toast',2500);
+}
+const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+load();
+</script>
+</body>
+</html>

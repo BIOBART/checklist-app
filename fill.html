@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checklist invullen</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="config.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#F6F4EF; --surface:#FFFFFF; --surface2:#EFECE5;
+  --border:#E0DDD5; --border-strong:#C5C0B5;
+  --text:#1A1714; --muted:#7A7168; --light:#B0A898;
+  --accent:#2D5A3D; --accent-bg:#E8F0EB; --accent-mid:#4A8A5E;
+  --warn:#D4860A; --warn-bg:#FEF3C7;
+  --danger:#C0392B; --danger-bg:#FDECEA;
+  --radius:10px; --radius-lg:16px;
+  --shadow:0 1px 3px rgba(0,0,0,0.05),0 4px 14px rgba(0,0,0,0.04);
+}
+body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+header { background:var(--surface); border-bottom:1px solid var(--border); height:60px; display:flex; align-items:center; justify-content:space-between; padding:0 2rem; position:sticky; top:0; z-index:50; gap:12px; }
+.logo { font-family:'DM Serif Display',serif; font-size:20px; display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--text); }
+.logo-dot { width:8px; height:8px; border-radius:50%; background:var(--accent); }
+.header-right { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.btn { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:var(--radius); font-size:13px; font-family:'DM Sans',sans-serif; font-weight:500; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--text); text-decoration:none; transition:all 0.15s; white-space:nowrap; }
+.btn:hover { background:var(--surface2); }
+.btn:active { transform:scale(0.98); }
+.btn-primary { background:var(--accent); color:white; border-color:var(--accent); }
+.btn-primary:hover { background:#234830; }
+.btn-success { background:var(--accent-mid); color:white; border-color:var(--accent-mid); }
+.btn svg { width:14px; height:14px; flex-shrink:0; }
+.save-indicator { font-size:12px; color:var(--light); display:flex; align-items:center; gap:5px; transition:color 0.3s; }
+.save-indicator::before { content:''; width:6px; height:6px; border-radius:50%; background:var(--accent-mid); display:inline-block; }
+
+/* LAYOUT */
+.container { max-width:760px; margin:0 auto; padding:2rem 1.5rem 6rem; }
+
+/* META CARD */
+.meta-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:1.5rem; margin-bottom:1.5rem; box-shadow:var(--shadow); }
+.form-title { font-family:'DM Serif Display',serif; font-size:26px; letter-spacing:-0.3px; }
+.form-cat { font-size:12px; text-transform:uppercase; letter-spacing:0.06em; color:var(--light); font-weight:500; margin-bottom:6px; }
+.form-desc { font-size:14px; color:var(--muted); margin-top:4px; line-height:1.6; }
+.meta-fields { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:1.25rem; padding-top:1.25rem; border-top:1px solid var(--border); }
+@media(max-width:520px){ .meta-fields { grid-template-columns:1fr; } }
+.field-label { font-size:12px; color:var(--muted); font-weight:500; display:block; margin-bottom:4px; }
+.field-input { width:100%; font-family:'DM Sans',sans-serif; font-size:14px; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); color:var(--text); outline:none; transition:border-color 0.15s; }
+.field-input:focus { border-color:var(--accent); background:var(--surface); }
+.field-select { width:100%; font-family:'DM Sans',sans-serif; font-size:14px; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); color:var(--text); outline:none; cursor:pointer; }
+
+/* PROGRESS */
+.progress-wrap { margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border); }
+.progress-info { display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-bottom:6px; }
+.progress-track { height:4px; background:var(--surface2); border-radius:99px; overflow:hidden; }
+.progress-fill { height:100%; background:var(--accent); border-radius:99px; transition:width 0.3s ease; }
+
+/* REQUIRED WARNING */
+.req-warning { background:var(--warn-bg); border:1px solid #FCD34D; border-radius:var(--radius); padding:10px 14px; font-size:13px; color:#92400E; margin-bottom:1rem; display:none; }
+
+/* SECTION */
+.section { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); margin-bottom:1rem; box-shadow:var(--shadow); overflow:hidden; }
+.section-head { padding:1rem 1.25rem; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+.section-icon { width:30px; height:30px; border-radius:8px; background:var(--accent-bg); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--accent); }
+.section-icon svg { width:15px; height:15px; }
+.section-title { font-weight:600; font-size:14px; flex:1; }
+.section-count { font-size:12px; color:var(--muted); background:var(--surface2); padding:2px 8px; border-radius:99px; }
+
+/* ITEMS */
+.item { display:flex; align-items:flex-start; gap:12px; padding:12px 1.25rem; border-bottom:1px solid var(--border); transition:background 0.1s; }
+.item:last-child { border-bottom:none; }
+.item:hover { background:#FDFCFA; }
+.item.missing .item-label { color:var(--danger); }
+.checkbox { width:20px; height:20px; border-radius:5px; border:1.5px solid var(--border-strong); flex-shrink:0; margin-top:2px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; background:var(--surface); }
+.checkbox:hover { border-color:var(--accent); }
+.checkbox.checked { background:var(--accent); border-color:var(--accent); }
+.checkbox svg { display:none; width:11px; height:11px; color:white; }
+.checkbox.checked svg { display:block; }
+.item-body { flex:1; min-width:0; }
+.item-label { font-size:14px; color:var(--text); user-select:none; cursor:pointer; display:flex; align-items:center; gap:6px; }
+.item-label.done { color:var(--light); text-decoration:line-through; text-decoration-color:var(--border-strong); }
+.req-star { color:var(--danger); font-size:12px; }
+.item-hint { font-size:12px; color:var(--light); margin-top:2px; }
+
+/* FIELD TYPES */
+.field-wrap { margin-top:8px; }
+textarea.ff, input[type=text].ff, input[type=number].ff, input[type=date].ff { width:100%; font-family:'DM Sans',sans-serif; font-size:13px; color:var(--text); background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:8px 12px; outline:none; transition:border-color 0.15s; }
+textarea.ff { resize:vertical; min-height:64px; }
+textarea.ff:focus, input.ff:focus { border-color:var(--accent); background:var(--surface); }
+.input-unit-wrap { display:flex; gap:0; }
+.input-unit-wrap input { border-radius:var(--radius) 0 0 var(--radius); flex:1; }
+.unit-label { padding:8px 12px; background:var(--surface2); border:1px solid var(--border); border-left:none; border-radius:0 var(--radius) var(--radius) 0; font-size:13px; color:var(--muted); white-space:nowrap; }
+.radio-row { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+.radio-opt { padding:4px 12px; border-radius:99px; border:1px solid var(--border); font-size:12px; cursor:pointer; color:var(--muted); transition:all 0.15s; background:var(--surface); }
+.radio-opt:hover { border-color:var(--accent); color:var(--accent); }
+.radio-opt.active { background:var(--accent); color:white; border-color:var(--accent); }
+
+/* PHOTOS */
+.photo-section { margin-top:10px; }
+.photo-grid { display:flex; flex-wrap:wrap; gap:8px; }
+.photo-thumb { position:relative; width:76px; height:76px; border-radius:var(--radius); overflow:hidden; border:1px solid var(--border); flex-shrink:0; }
+.photo-thumb img { width:100%; height:100%; object-fit:cover; display:block; cursor:pointer; }
+.photo-del { position:absolute; top:3px; right:3px; background:rgba(0,0,0,0.6); border:none; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:white; padding:0; }
+.photo-del svg { width:10px; height:10px; }
+.photo-add-label { width:76px; height:76px; border-radius:var(--radius); border:1.5px dashed var(--border-strong); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; color:var(--muted); font-size:11px; background:var(--bg); transition:all 0.15s; flex-shrink:0; }
+.photo-add-label:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-bg); }
+.photo-add-label svg { width:20px; height:20px; }
+.photo-uploading { opacity:0.5; font-size:11px; color:var(--muted); margin-top:4px; }
+
+/* LIGHTBOX */
+.lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:300; align-items:center; justify-content:center; }
+.lightbox.open { display:flex; }
+.lightbox img { max-width:90vw; max-height:90vh; border-radius:var(--radius); object-fit:contain; }
+.lb-close { position:fixed; top:20px; right:24px; background:none; border:none; color:white; font-size:32px; cursor:pointer; line-height:1; }
+
+/* STATUS BADGE */
+.status-badge { padding:4px 10px; border-radius:99px; font-size:12px; font-weight:500; }
+.status-open { background:var(--warn-bg); color:#92400E; }
+.status-completed { background:var(--accent-bg); color:var(--accent); }
+
+/* BOTTOM BAR */
+.bottom-bar { position:fixed; bottom:0; left:0; right:0; background:var(--surface); border-top:1px solid var(--border); padding:0.75rem 1.5rem; display:flex; align-items:center; justify-content:space-between; gap:12px; z-index:40; flex-wrap:wrap; }
+.bottom-left { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+
+/* LOADING */
+.loading { text-align:center; padding:4rem 2rem; color:var(--muted); }
+.error-msg { background:var(--danger-bg); border:1px solid #FCA5A5; border-radius:var(--radius-lg); padding:1.25rem; color:var(--danger); text-align:center; }
+
+/* PDF MODAL */
+.overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:200; align-items:center; justify-content:center; padding:1rem; }
+.overlay.open { display:flex; }
+.modal { background:var(--surface); border-radius:var(--radius-lg); padding:1.5rem; width:100%; max-width:420px; box-shadow:0 20px 60px rgba(0,0,0,0.2); }
+.modal h2 { font-family:'DM Serif Display',serif; font-size:20px; margin-bottom:1rem; }
+.modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:1.25rem; }
+
+.toast { position:fixed; bottom:5rem; right:1.5rem; background:var(--text); color:white; padding:10px 16px; border-radius:var(--radius); font-size:13px; z-index:999; opacity:0; transform:translateY(10px); transition:all 0.25s; pointer-events:none; }
+.toast.show { opacity:1; transform:translateY(0); }
+.toast.success { background:var(--accent); }
+.toast.error { background:var(--danger); }
+
+@media(max-width:600px){
+  header { padding:0 1rem; }
+  .container { padding:1rem 0.75rem 7rem; }
+  .btn .btn-label { display:none; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="index.html" class="logo"><div class="logo-dot"></div>Checklist</a>
+  <div class="header-right">
+    <div class="save-indicator" id="save-indicator">Opgeslagen</div>
+    <select class="field-select" id="lang-select" onchange="changeLang(this.value)" style="width:auto;font-size:13px;padding:6px 10px;">
+      <option value="nl">🇧🇪 NL</option>
+      <option value="en">🇬🇧 EN</option>
+      <option value="fr">🇫🇷 FR</option>
+      <option value="de">🇩🇪 DE</option>
+    </select>
+    <button class="btn btn-primary" onclick="openPdfModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span class="btn-label">PDF</span>
+    </button>
+  </div>
+</header>
+
+<div class="container" id="main">
+  <div class="loading">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite;margin-bottom:12px"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+    <p>Laden…</p>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lb-close">×</button>
+  <img id="lb-img" src="" alt="">
+</div>
+
+<!-- PDF Modal -->
+<div class="overlay" id="pdf-overlay">
+  <div class="modal">
+    <h2>Exporteer als PDF</h2>
+    <div style="margin-bottom:1rem">
+      <label class="field-label">Opgesteld door</label>
+      <input class="field-input" id="pdf-author" type="text" placeholder="Naam inspecteur…">
+    </div>
+    <div style="margin-bottom:1rem">
+      <label class="field-label">Organisatie</label>
+      <input class="field-input" id="pdf-org" type="text" placeholder="Bedrijfsnaam…">
+    </div>
+    <div style="margin-bottom:1rem">
+      <label class="field-label">Opmerking op PDF</label>
+      <input class="field-input" id="pdf-note" type="text" placeholder="Optioneel…">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closePdfModal()">Annuleer</button>
+      <button class="btn btn-primary" onclick="generatePDF()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download PDF
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom bar (rendered after load) -->
+<div class="bottom-bar" id="bottom-bar" style="display:none">
+  <div class="bottom-left">
+    <a href="index.html" class="btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      <span class="btn-label">Terug</span>
+    </a>
+    <span id="status-badge" class="status-badge status-open">Open</span>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn" onclick="saveNow()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+      <span class="btn-label">Opslaan</span>
+    </button>
+    <button class="btn btn-success" onclick="markComplete()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span class="btn-label">Voltooien</span>
+    </button>
+  </div>
+</div>
+
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+<script>
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const params = new URLSearchParams(location.search);
+const templateId = params.get('template');
+const submissionId = params.get('submission');
+
+const TR = {
+  nl:{ progress:'Voortgang', of:'van', checked:'aangevinkt', saved:'Opgeslagen', saving:'Opslaan…', photos:'foto\'s', addphoto:'Foto', required:'Verplichte velden ontbreken', completed:'Voltooid!', confirm_complete:'Checklist als voltooid markeren?', missing:'Vul alle verplichte velden in voor je voltooit.', locale:'nl-BE' },
+  en:{ progress:'Progress', of:'of', checked:'checked', saved:'Saved', saving:'Saving…', photos:'photos', addphoto:'Photo', required:'Required fields missing', completed:'Completed!', confirm_complete:'Mark checklist as completed?', missing:'Please fill in all required fields before completing.', locale:'en-GB' },
+  fr:{ progress:'Progression', of:'sur', checked:'cochés', saved:'Sauvegardé', saving:'Enregistrement…', photos:'photos', addphoto:'Photo', required:'Champs obligatoires manquants', completed:'Terminé!', confirm_complete:'Marquer comme terminé ?', missing:'Veuillez remplir tous les champs obligatoires.', locale:'fr-FR' },
+  de:{ progress:'Fortschritt', of:'von', checked:'abgehakt', saved:'Gespeichert', saving:'Speichern…', photos:'Fotos', addphoto:'Foto', required:'Pflichtfelder fehlen', completed:'Abgeschlossen!', confirm_complete:'Als abgeschlossen markieren?', missing:'Bitte alle Pflichtfelder ausfüllen.', locale:'de-DE' }
+};
+let lang = 'nl';
+const t = k => (TR[lang]||TR.nl)[k]||k;
+
+let template = null;
+let submission = null;
+let answers = {};    // { item_id: { checked, value, photos: [{data,path,name}] } }
+let saveTimer = null;
+let dirty = false;
+
+// ── INIT ──
+async function init() {
+  if (submissionId) {
+    await loadSubmission();
+  } else if (templateId) {
+    await loadTemplate();
+    createNewSubmission();
+  } else {
+    showError('Geen template of checklist opgegeven.');
+  }
+}
+
+async function loadTemplate() {
+  const { data, error } = await sb.from('templates').select('*').eq('id', templateId).single();
+  if (error || !data) { showError('Template niet gevonden.'); return; }
+  template = data;
+  lang = data.lang || 'nl';
+  document.getElementById('lang-select').value = lang;
+}
+
+async function loadSubmission() {
+  const { data, error } = await sb.from('submissions').select('*').eq('id', submissionId).single();
+  if (error || !data) { showError('Checklist niet gevonden.'); return; }
+  submission = data;
+  answers = data.answers || {};
+  lang = data.lang || 'nl';
+  document.getElementById('lang-select').value = lang;
+  // load template
+  if (data.template_id) {
+    const { data: tpl } = await sb.from('templates').select('*').eq('id', data.template_id).single();
+    if (tpl) template = tpl;
+  }
+  // load photos from storage paths
+  await loadPhotos();
+  renderPage();
+}
+
+async function loadPhotos() {
+  const { data } = await sb.from('photos').select('*').eq('submission_id', submissionId);
+  if (!data) return;
+  for (const p of data) {
+    if (!answers[p.item_id]) answers[p.item_id] = { checked:false, value:'', photos:[] };
+    if (!answers[p.item_id].photos) answers[p.item_id].photos = [];
+    // get public URL
+    const { data: urlData } = sb.storage.from(STORAGE_BUCKET).getPublicUrl(p.storage_path);
+    answers[p.item_id].photos.push({ data: urlData.publicUrl, path: p.storage_path, name: p.filename, dbId: p.id });
+  }
+}
+
+function createNewSubmission() {
+  answers = {};
+  renderPage();
+}
+
+// ── RENDER ──
+function renderPage() {
+  if (!template) { showError('Template niet gevonden.'); return; }
+  const schema = template.schema || {};
+  const sections = schema.sections || [];
+  const el = document.getElementById('main');
+
+  el.innerHTML = `
+    <div class="meta-card">
+      <div class="form-cat">${esc(template.category||'Checklist')}</div>
+      <div class="form-title">${esc(template.name)}</div>
+      ${template.description?`<div class="form-desc">${esc(template.description)}</div>`:''}
+      <div class="meta-fields">
+        <div>
+          <label class="field-label">Ingevuld door</label>
+          <input class="field-input" id="f-filled-by" type="text" placeholder="Naam…" value="${esc(submission?.filled_by||'')}" oninput="scheduleSave()">
+        </div>
+        <div>
+          <label class="field-label">Organisatie</label>
+          <input class="field-input" id="f-org" type="text" placeholder="Bedrijf…" value="${esc(submission?.organisation||'')}" oninput="scheduleSave()">
+        </div>
+        <div>
+          <label class="field-label">Datum</label>
+          <input class="field-input" id="f-date" type="date" value="${submission?.created_at?submission.created_at.split('T')[0]:new Date().toISOString().split('T')[0]}" oninput="scheduleSave()">
+        </div>
+        <div>
+          <label class="field-label">Opmerkingen</label>
+          <input class="field-input" id="f-notes" type="text" placeholder="Optioneel…" value="${esc(submission?.notes||'')}" oninput="scheduleSave()">
+        </div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-info"><span>${t('progress')}</span><span id="prog-pct">0%</span></div>
+        <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div class="req-warning" id="req-warning">
+      <strong>${t('required')}</strong> — ${t('missing')}
+    </div>
+    <div id="sections-render"></div>
+  `;
+
+  const sr = document.getElementById('sections-render');
+  sections.forEach(sec => sr.appendChild(renderSection(sec)));
+  updateProgress();
+  document.getElementById('bottom-bar').style.display = 'flex';
+  if (submission?.status === 'completed') {
+    document.getElementById('status-badge').textContent = 'Voltooid';
+    document.getElementById('status-badge').className = 'status-badge status-completed';
+  }
+}
+
+function renderSection(sec) {
+  const el = document.createElement('div');
+  el.className = 'section';
+  const done = (sec.items||[]).filter(i => answers[i.id]?.checked).length;
+  el.innerHTML = `
+    <div class="section-head">
+      <div class="section-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </div>
+      <div class="section-title">${esc(sec.title)}</div>
+      <div class="section-count" id="sc-${sec.id}">${done}/${(sec.items||[]).length}</div>
+    </div>
+    <div id="si-${sec.id}"></div>`;
+  const iw = el.querySelector(`#si-${sec.id}`);
+  (sec.items||[]).forEach(item => iw.appendChild(renderItem(sec.id, item)));
+  return el;
+}
+
+function renderItem(secId, item) {
+  const el = document.createElement('div');
+  el.className = 'item';
+  el.id = 'item-' + item.id;
+  const ans = answers[item.id] || {};
+  const checked = !!ans.checked;
+  const photos = ans.photos || [];
+
+  let fieldHtml = '';
+  if (item.type === 'text') {
+    fieldHtml = `<div class="field-wrap"><textarea class="ff" rows="2" placeholder="${esc(item.hint||'Typ hier…')}" oninput="setVal('${item.id}',this.value)">${esc(ans.value||'')}</textarea></div>`;
+  } else if (item.type === 'radio') {
+    const opts = (item.options||['Ja','Nee','N/A']).map(o =>
+      `<div class="radio-opt${ans.value===o?' active':''}" onclick="setRadio('${item.id}','${esc(o)}')">${esc(o)}</div>`
+    ).join('');
+    fieldHtml = `<div class="radio-row">${opts}</div>`;
+  } else if (item.type === 'number') {
+    const unitHtml = item.unit ? `<span class="unit-label">${esc(item.unit)}</span>` : '';
+    fieldHtml = `<div class="field-wrap"><div class="${item.unit?'input-unit-wrap':''}"><input type="number" class="ff" placeholder="0" value="${esc(ans.value||'')}" oninput="setVal('${item.id}',this.value)">${unitHtml}</div></div>`;
+  } else if (item.type === 'date') {
+    fieldHtml = `<div class="field-wrap"><input type="date" class="ff" value="${esc(ans.value||'')}" oninput="setVal('${item.id}',this.value)"></div>`;
+  }
+
+  // Photos
+  const thumbs = photos.map((p, pi) =>
+    `<div class="photo-thumb"><img src="${p.data}" onclick="openLightbox('${p.data}')" alt="foto ${pi+1}">
+    <button class="photo-del" onclick="deletePhoto('${item.id}',${pi})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>`
+  ).join('');
+
+  const photoSection = item.type !== 'photo' && item.type !== 'check' ? '' : `
+    <div class="photo-section">
+      <div class="photo-grid">
+        ${thumbs}
+        <label class="photo-add-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <span>${t('addphoto')}</span>
+          <input type="file" accept="image/*" multiple style="display:none" onchange="handlePhotos('${item.id}',this)">
+        </label>
+      </div>
+      ${photos.length > 0 ? `<div style="font-size:11px;color:var(--light);margin-top:4px">${photos.length} ${t('photos')}</div>` : ''}
+    </div>`;
+
+  el.innerHTML = `
+    <div class="checkbox${checked?' checked':''}" onclick="toggleCheck('${secId}','${item.id}')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div class="item-body">
+      <div class="item-label${checked?' done':''}" onclick="toggleCheck('${secId}','${item.id}')">
+        ${esc(item.label)}${item.required?`<span class="req-star">*</span>`:''}
+      </div>
+      ${item.hint && item.type !== 'text' ? `<div class="item-hint">${esc(item.hint)}</div>` : ''}
+      ${fieldHtml}
+      ${photoSection}
+    </div>`;
+  return el;
+}
+
+// ── ANSWERS ──
+function getAns(id) { if (!answers[id]) answers[id]={checked:false,value:'',photos:[]}; return answers[id]; }
+
+function toggleCheck(secId, itemId) {
+  const a = getAns(itemId);
+  a.checked = !a.checked;
+  const cb = document.querySelector(`#item-${itemId} .checkbox`);
+  const lbl = document.querySelector(`#item-${itemId} .item-label`);
+  if (cb) cb.classList.toggle('checked', a.checked);
+  if (lbl) lbl.classList.toggle('done', a.checked);
+  // update section count
+  const sec = template.schema.sections.find(s=>s.items.some(i=>i.id===itemId));
+  if (sec) {
+    const done = sec.items.filter(i=>answers[i.id]?.checked).length;
+    const sc = document.getElementById('sc-'+sec.id);
+    if (sc) sc.textContent = `${done}/${sec.items.length}`;
+  }
+  updateProgress();
+  scheduleSave();
+}
+
+function setVal(id, val) { getAns(id).value = val; scheduleSave(); }
+function setRadio(id, val) { const a=getAns(id); a.value=val; a.checked=true; scheduleSave(); updateProgress(); renderRadioHighlight(id,val); toggleCheckUI(id,true); }
+
+function renderRadioHighlight(id, val) {
+  document.querySelectorAll(`#item-${id} .radio-opt`).forEach(el => {
+    el.classList.toggle('active', el.textContent === val);
+  });
+}
+function toggleCheckUI(id, state) {
+  const cb=document.querySelector(`#item-${id} .checkbox`);
+  const lbl=document.querySelector(`#item-${id} .item-label`);
+  if(cb) cb.classList.toggle('checked',state);
+  if(lbl) lbl.classList.toggle('done',state);
+}
+
+// ── PHOTOS ──
+async function handlePhotos(itemId, input) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
+  const a = getAns(itemId);
+  for (const file of files) {
+    // Read locally first for preview
+    const dataUrl = await readFile(file);
+    let storagePath = null;
+    // Upload to Supabase Storage if submission exists
+    if (submission?.id) {
+      const path = `${submission.id}/${itemId}/${Date.now()}_${file.name}`;
+      const { error } = await sb.storage.from(STORAGE_BUCKET).upload(path, file, { upsert: true });
+      if (!error) {
+        storagePath = path;
+        // Save to photos table
+        await sb.from('photos').insert({ submission_id: submission.id, item_id: itemId, storage_path: path, filename: file.name });
+      }
+    }
+    a.photos.push({ data: dataUrl, path: storagePath, name: file.name });
+  }
+  scheduleSave();
+  renderPage(); // re-render to show new photos
+}
+
+function readFile(file) {
+  return new Promise(res => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.readAsDataURL(file);
+  });
+}
+
+async function deletePhoto(itemId, idx) {
+  const a = getAns(itemId);
+  const photo = a.photos[idx];
+  if (photo.path && submission?.id) {
+    await sb.storage.from(STORAGE_BUCKET).remove([photo.path]);
+    if (photo.dbId) await sb.from('photos').delete().eq('id', photo.dbId);
+  }
+  a.photos.splice(idx, 1);
+  scheduleSave();
+  renderPage();
+}
+
+function openLightbox(src) { document.getElementById('lb-img').src=src; document.getElementById('lightbox').classList.add('open'); }
+function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
+document.getElementById('lightbox').addEventListener('click', closeLightbox);
+
+// ── PROGRESS ──
+function updateProgress() {
+  if (!template) return;
+  let total=0, done=0;
+  (template.schema?.sections||[]).forEach(s => s.items.forEach(i => { total++; if(answers[i.id]?.checked) done++; }));
+  const pct = total ? Math.round((done/total)*100) : 0;
+  const pf = document.getElementById('prog-fill');
+  const pp = document.getElementById('prog-pct');
+  if (pf) pf.style.width = pct+'%';
+  if (pp) pp.textContent = pct+'%';
+}
+
+// ── SAVE ──
+function scheduleSave() {
+  dirty = true;
+  const ind = document.getElementById('save-indicator');
+  if (ind) ind.textContent = t('saving');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveNow, 1500);
+}
+
+async function saveNow() {
+  if (!dirty && submission) return;
+  const filledBy = document.getElementById('f-filled-by')?.value||'';
+  const org = document.getElementById('f-org')?.value||'';
+  const notes = document.getElementById('f-notes')?.value||'';
+
+  // Strip photo data URLs from answers before saving (stored in Storage)
+  const cleanAnswers = {};
+  for (const [k,v] of Object.entries(answers)) {
+    cleanAnswers[k] = { checked: v.checked, value: v.value||'' };
+  }
+
+  const payload = {
+    template_id: template?.id,
+    template_name: template?.name,
+    filled_by: filledBy,
+    organisation: org,
+    notes,
+    lang,
+    answers: cleanAnswers,
+    updated_at: new Date().toISOString()
+  };
+
+  let error;
+  if (submission?.id) {
+    ({ error } = await sb.from('submissions').update(payload).eq('id', submission.id));
+  } else {
+    const { data, error: err } = await sb.from('submissions').insert({ ...payload, status:'open' }).select().single();
+    error = err;
+    if (data) {
+      submission = data;
+      history.replaceState({}, '', `?submission=${data.id}`);
+    }
+  }
+
+  dirty = false;
+  const ind = document.getElementById('save-indicator');
+  if (ind) { ind.textContent = t('saved'); ind.style.color = 'var(--accent)'; setTimeout(()=>ind.style.color='',1500); }
+  if (error) toast('Fout bij opslaan: '+error.message, 'error');
+}
+
+async function markComplete() {
+  // Check required fields
+  const missing = [];
+  (template.schema?.sections||[]).forEach(sec => sec.items.forEach(item => {
+    if (item.required && !answers[item.id]?.checked) missing.push(item.label);
+  }));
+  if (missing.length) {
+    document.getElementById('req-warning').style.display = 'block';
+    document.getElementById('req-warning').scrollIntoView({ behavior:'smooth', block:'center' });
+    return;
+  }
+  if (!confirm(t('confirm_complete'))) return;
+  await saveNow();
+  const { error } = await sb.from('submissions').update({ status:'completed' }).eq('id', submission?.id);
+  if (!error) {
+    submission.status = 'completed';
+    toast(t('completed'), 'success');
+    document.getElementById('status-badge').textContent = 'Voltooid';
+    document.getElementById('status-badge').className = 'status-badge status-completed';
+  }
+}
+
+function changeLang(l) { lang = l; scheduleSave(); }
+
+// ── PDF ──
+function openPdfModal() { document.getElementById('pdf-overlay').classList.add('open'); }
+function closePdfModal() { document.getElementById('pdf-overlay').classList.remove('open'); }
+
+async function generatePDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+  const pw=210, ph=297, mg=18, cw=pw-mg*2;
+  let y=mg;
+  const G=[45,90,61], D=[26,23,20], M=[120,113,104], L=[240,237,230], W=[255,255,255];
+  const author = document.getElementById('pdf-author').value || document.getElementById('f-filled-by')?.value || '';
+  const org = document.getElementById('pdf-org').value || document.getElementById('f-org')?.value || '';
+  const note = document.getElementById('pdf-note').value || document.getElementById('f-notes')?.value || '';
+  const locale = t('locale');
+  const dateStr = new Date().toLocaleDateString(locale, {day:'2-digit',month:'long',year:'numeric'});
+
+  doc.setFillColor(...G); doc.rect(0,0,pw,22,'F');
+  doc.setTextColor(...W); doc.setFontSize(16); doc.setFont('helvetica','bold');
+  doc.text(template?.name||'Checklist', mg, 14);
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text(org?(org+' · '+dateStr):dateStr, pw-mg, 14, {align:'right'});
+  y = 30;
+
+  if (author||note) {
+    doc.setFontSize(9); doc.setTextColor(...M);
+    if (author) { doc.text('Opgesteld door: '+author, mg, y); y+=5; }
+    if (note) { doc.text('Opmerking: '+note, mg, y); y+=5; }
+    y += 2;
+  }
+
+  let total=0, done=0;
+  (template.schema?.sections||[]).forEach(s=>s.items.forEach(i=>{total++;if(answers[i.id]?.checked)done++;}));
+  const pct=total?Math.round((done/total)*100):0;
+  doc.setFontSize(9); doc.setTextColor(...M);
+  doc.text(`${t('progress')}: ${done}/${total} (${pct}%)`, mg, y); y+=4;
+  doc.setFillColor(...L); doc.roundedRect(mg,y,cw,3,1.5,1.5,'F');
+  doc.setFillColor(...G); if(pct>0) doc.roundedRect(mg,y,cw*pct/100,3,1.5,1.5,'F');
+  y+=9;
+
+  for (const sec of (template.schema?.sections||[])) {
+    if (y > ph-30) { doc.addPage(); y=mg; }
+    doc.setFillColor(...L); doc.roundedRect(mg,y,cw,8,2,2,'F');
+    doc.setTextColor(...G); doc.setFontSize(10); doc.setFont('helvetica','bold');
+    doc.text(sec.title, mg+4, y+5.5);
+    const sd=sec.items.filter(i=>answers[i.id]?.checked).length;
+    doc.setTextColor(...M); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text(`${sd}/${sec.items.length}`, pw-mg-2, y+5.5, {align:'right'});
+    y+=12;
+
+    for (const item of (sec.items||[])) {
+      if (y > ph-20) { doc.addPage(); y=mg; }
+      const ans = answers[item.id]||{};
+      // Checkbox
+      if (ans.checked) {
+        doc.setFillColor(...G); doc.roundedRect(mg,y-3.5,5,5,1,1,'F');
+        doc.setDrawColor(...W); doc.setLineWidth(0.8);
+        doc.line(mg+1,y-0.8,mg+2.2,y+0.6); doc.line(mg+2.2,y+0.6,mg+4,y-1.8);
+      } else {
+        doc.setFillColor(...W); doc.setDrawColor(180,174,166); doc.setLineWidth(0.4);
+        doc.roundedRect(mg,y-3.5,5,5,1,1,'FD');
+      }
+      doc.setTextColor(ans.checked?160:D[0], ans.checked?155:D[1], ans.checked?148:D[2]);
+      doc.setFontSize(10); doc.setFont('helvetica','normal');
+      const ll = doc.splitTextToSize(item.label+(item.required?' *':''), cw-14);
+      doc.text(ll, mg+8, y);
+      if (ans.checked) {
+        doc.setDrawColor(180,174,166); doc.setLineWidth(0.3);
+        ll.forEach((_,li)=>{ const tw=doc.getTextWidth(ll[li]); doc.line(mg+8,y+li*4.5-0.5,mg+8+tw,y+li*4.5-0.5); });
+      }
+      y += ll.length*4.5;
+
+      if ((item.type==='text'||item.type==='number'||item.type==='date') && ans.value) {
+        doc.setFontSize(9); doc.setTextColor(...M);
+        const vl=doc.splitTextToSize('→ '+ans.value+(item.unit?' '+item.unit:''), cw-14);
+        vl.forEach(l=>{ if(y>ph-15){doc.addPage();y=mg;} doc.text(l,mg+8,y); y+=4.2; });
+      }
+      if (item.type==='radio' && ans.value) {
+        doc.setFontSize(9); doc.setTextColor(...M);
+        doc.text('→ '+ans.value, mg+8, y); y+=4.2;
+      }
+
+      // Photos
+      const photos = answers[item.id]?.photos||[];
+      if (photos.length > 0) {
+        const pw2=42, ph2=32, gap=4; let px=mg+8;
+        if (y+ph2 > ph-15) { doc.addPage(); y=mg; }
+        for (const photo of photos) {
+          if (px+pw2 > pw-mg) { px=mg+8; y+=ph2+gap; if(y+ph2>ph-15){doc.addPage();y=mg;px=mg+8;} }
+          try { doc.addImage(photo.data,'JPEG',px,y,pw2,ph2,'','MEDIUM'); } catch(e){}
+          doc.setDrawColor(...L); doc.setLineWidth(0.3); doc.rect(px,y,pw2,ph2);
+          px+=pw2+gap;
+        }
+        y+=ph2+gap+2;
+      }
+      y+=2;
+    }
+    y+=4;
+  }
+
+  const pc=doc.internal.getNumberOfPages();
+  for (let i=1;i<=pc;i++) {
+    doc.setPage(i);
+    doc.setFillColor(...L); doc.rect(0,ph-10,pw,10,'F');
+    doc.setTextColor(...M); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Gegenereerd op '+dateStr, mg, ph-4);
+    doc.text('Pagina '+i+' / '+pc, pw-mg, ph-4, {align:'right'});
+  }
+
+  const fname=(template?.name||'checklist').replace(/\s+/g,'_').toLowerCase()+'.pdf';
+  doc.save(fname);
+  closePdfModal();
+}
+
+// ── UTILS ──
+function showError(msg) {
+  document.getElementById('main').innerHTML = `<div class="error-msg"><strong>Fout</strong><br>${msg}<br><br><a href="index.html">← Terug naar home</a></div>`;
+}
+function toast(msg, type='') {
+  const el=document.createElement('div'); el.className='toast show '+(type||'');
+  el.textContent=msg; document.body.appendChild(el);
+  setTimeout(()=>{el.className='toast';setTimeout(()=>el.remove(),300);},2500);
+}
+const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+init();
+</script>
+</body>
+</html>
