@@ -813,36 +813,56 @@ async function generatePDF() {
   doc.text(dateStr, pw-mg, 20, {align:'right'});
   y = 32;
 
-  // ── Info block: 2-column grid ──
-  doc.setFillColor(...L); doc.roundedRect(mg, y, cw, 26, 2, 2, 'F');
-  const col1x = mg+5, col2x = mg + cw/2 + 5;
-  doc.setFontSize(7.5); doc.setTextColor(...M); doc.setFont('helvetica','normal');
-
-  // Row 1
-  doc.text('Ingevuld door', col1x, y+7);
-  doc.text('Organisatie', col2x, y+7);
-  doc.setFontSize(9.5); doc.setTextColor(...D); doc.setFont('helvetica','bold');
-  doc.text(author||'—', col1x, y+14);
-  doc.text(org||'—', col2x, y+14);
-
-  // Row 2
-  doc.setFontSize(7.5); doc.setTextColor(...M); doc.setFont('helvetica','normal');
-  doc.text('Locatie', col1x, y+21);
-  doc.text('Referentie / dossier', col2x, y+21);
-  doc.setFontSize(9); doc.setTextColor(...D); doc.setFont('helvetica','bold');
-  const locLines = doc.splitTextToSize(pdfLocation||'—', cw/2-10);
-  doc.text(locLines[0]||'—', col1x, y+27);
-  doc.text(pdfReference||'—', col2x, y+27);
-  doc.setFont('helvetica','normal');
-
-  y = y + 34;
-
+  // ── Info block: 2 columns, each field on one line as "Label:   Value" ──
+  // Define fields for each column
+  const col1Fields = [
+    { label: 'Ingevuld door', value: author||'—' },
+    { label: 'Locatie',       value: pdfLocation||'—' },
+  ];
+  const col2Fields = [
+    { label: 'Organisatie',        value: org||'—' },
+    { label: 'Referentie/dossier', value: pdfReference||'—' },
+  ];
   if (note) {
-    doc.setFontSize(9); doc.setTextColor(...M); doc.setFont('helvetica','italic');
-    doc.text('Opmerking: ' + note, mg, y); y += 6;
-    doc.setFont('helvetica','normal');
+    col1Fields.push({ label: 'Opmerking', value: note });
   }
-  y += 2;
+
+  const rowH = 7;           // mm per row
+  const padV = 5;           // top/bottom padding inside box
+  const nRows = Math.max(col1Fields.length, col2Fields.length);
+  const boxH = nRows * rowH + padV * 2;
+
+  doc.setFillColor(...L); doc.roundedRect(mg, y, cw, boxH, 2, 2, 'F');
+
+  const col1x = mg + 5;
+  const col2x = mg + cw / 2 + 5;
+  const labelW = 38;  // mm reserved for the label text
+
+  for (let ri = 0; ri < nRows; ri++) {
+    const ry = y + padV + ri * rowH + 4.5;  // baseline of this row
+
+    // Column 1
+    if (col1Fields[ri]) {
+      doc.setFontSize(7.5); doc.setTextColor(...M); doc.setFont('helvetica','normal');
+      doc.text(col1Fields[ri].label + ':', col1x, ry);
+      doc.setFontSize(9); doc.setTextColor(...D); doc.setFont('helvetica','bold');
+      const v1 = doc.splitTextToSize(col1Fields[ri].value, cw/2 - labelW - 4);
+      doc.text(v1[0], col1x + labelW, ry);
+      doc.setFont('helvetica','normal');
+    }
+
+    // Column 2
+    if (col2Fields[ri]) {
+      doc.setFontSize(7.5); doc.setTextColor(...M); doc.setFont('helvetica','normal');
+      doc.text(col2Fields[ri].label + ':', col2x, ry);
+      doc.setFontSize(9); doc.setTextColor(...D); doc.setFont('helvetica','bold');
+      const v2 = doc.splitTextToSize(col2Fields[ri].value, cw/2 - labelW - 4);
+      doc.text(v2[0], col2x + labelW, ry);
+      doc.setFont('helvetica','normal');
+    }
+  }
+
+  y = y + boxH + 6;
 
   for (const sec of (template.schema?.sections||[])) {
     if (y > ph-30) { doc.addPage(); y=mg; }
@@ -855,33 +875,42 @@ async function generatePDF() {
     y+=12;
 
     for (const item of (sec.items||[])) {
+      // Skip items hidden by conditional rules
+      if (item.showIf?.itemId) {
+        const srcItem = findItem(item.showIf.itemId);
+        const srcAns = answers[item.showIf.itemId] || {};
+        const srcVal = srcItem?.type === 'check'
+          ? (srcAns.checked ? 'aangevinkt' : '')
+          : (srcAns.value || '');
+        if (srcVal !== item.showIf.value) continue;
+      }
       if (y > ph-20) { doc.addPage(); y=mg; }
       const ans = answers[item.id]||{};
       const cbSize = 5;
       const cbX = pw - mg - cbSize;  // checkbox right-aligned
 
-      // Photo-only item: no checkbox, just label + photos
+      // Photo-only item: skip entirely on PDF if no photos
       if (item.type === 'photo') {
-        doc.setTextColor(...D); doc.setFontSize(10); doc.setFont('helvetica','normal');
-        const ll = doc.splitTextToSize(item.label+(item.required?' *':''), cw);
-        doc.text(ll, mg, y);
-        y += ll.length * 4.5 + 1;
         const photos = answers[item.id]?.photos||[];
-        if (photos.length > 0) {
-          const pw2=56, ph2=44, gap=5; let px=mg;
-          if (y+ph2 > ph-15) { doc.addPage(); y=mg; }
-          for (const photo of photos) {
-            if (px+pw2 > pw-mg) { px=mg; y+=ph2+gap; if(y+ph2>ph-15){doc.addPage();y=mg;px=mg;} }
-            try {
-              const imgData = await resizeImageForPdf(photo.data, 400, 300);
-              doc.addImage(imgData,'JPEG',px,y,pw2,ph2);
-            } catch(e){}
-            doc.setDrawColor(...L); doc.setLineWidth(0.3); doc.rect(px,y,pw2,ph2);
-            px+=pw2+gap;
-          }
-          y+=ph2+gap+2;
+        if (photos.length === 0) continue;  // no photos → skip label too
+        if (y > ph-20) { doc.addPage(); y=mg; }
+        doc.setTextColor(...M); doc.setFontSize(9); doc.setFont('helvetica','italic');
+        doc.text(item.label, mg, y);
+        doc.setFont('helvetica','normal');
+        y += 5;
+        // Larger photos: up to 3 per row at 80x60mm
+        const pw2=80, ph2=60, gap=5; let px=mg;
+        if (y+ph2 > ph-15) { doc.addPage(); y=mg; }
+        for (const photo of photos) {
+          if (px+pw2 > pw-mg) { px=mg; y+=ph2+gap; if(y+ph2>ph-15){doc.addPage();y=mg;px=mg;} }
+          try {
+            const imgData = await resizeImageForPdf(photo.data, 1200, 900);
+            doc.addImage(imgData,'JPEG',px,y,pw2,ph2);
+          } catch(e){}
+          doc.setDrawColor(...L); doc.setLineWidth(0.3); doc.rect(px,y,pw2,ph2);
+          px+=pw2+gap;
         }
-        y+=3;
+        y+=ph2+gap+3;
         continue;
       }
 
@@ -916,7 +945,7 @@ async function generatePDF() {
         // follow-up note
         if (ans.followNote && item.followUp?.trigger && ans.value===item.followUp.trigger) {
           doc.setFontSize(9); doc.setTextColor(...M);
-          const fn=doc.splitTextToSize('↳ '+ans.followNote, cw);
+          const fn=doc.splitTextToSize('>  '+ans.followNote, cw);
           fn.forEach(l=>{ if(y>ph-15){doc.addPage();y=mg;} doc.text(l,mg+4,y); y+=4.2; });
         }
         continue;
@@ -958,20 +987,20 @@ async function generatePDF() {
         // follow-up note + photos for Niet OK / Onderdelen nodig
         if (ans.followNote && (ans.value==='Niet OK'||ans.value==='Onderdelen nodig')) {
           doc.setFontSize(9); doc.setTextColor(...M);
-          const fn=doc.splitTextToSize('↳ '+ans.followNote, cw);
+          const fn=doc.splitTextToSize('>  '+ans.followNote, cw);
           fn.forEach(l=>{ if(y>ph-15){doc.addPage();y=mg;} doc.text(l,mg+4,y); y+=4.2; });
         }
         const fuPhotos = answers[item.id+'_fu']?.photos||[];
         if (fuPhotos.length>0) {
-          const pw2=44,ph2=34,gap=4; let px3=mg+4;
+          const pw2=80,ph2=60,gap=5; let px3=mg;
           if(y+ph2>ph-15){doc.addPage();y=mg;}
           for(const photo of fuPhotos){
-            if(px3+pw2>pw-mg){px3=mg+4;y+=ph2+gap;if(y+ph2>ph-15){doc.addPage();y=mg;px3=mg+4;}}
-            try{ const imgD=await resizeImageForPdf(photo.data,400,300); doc.addImage(imgD,'JPEG',px3,y,pw2,ph2); }catch(e){}
+            if(px3+pw2>pw-mg){px3=mg;y+=ph2+gap;if(y+ph2>ph-15){doc.addPage();y=mg;px3=mg;}}
+            try{ const imgD=await resizeImageForPdf(photo.data,1200,900); doc.addImage(imgD,'JPEG',px3,y,pw2,ph2); }catch(e){}
             doc.setDrawColor(...L);doc.setLineWidth(0.3);doc.rect(px3,y,pw2,ph2);
             px3+=pw2+gap;
           }
-          y+=ph2+gap+2;
+          y+=ph2+gap+3;
         }
         y+=2;
         continue;
@@ -1009,19 +1038,19 @@ async function generatePDF() {
       // follow-up note for radio/yesno items with followUp config
       if (ans.followNote && item.followUp?.trigger && ans.value===item.followUp.trigger) {
         doc.setFontSize(9); doc.setTextColor(...M);
-        const fn=doc.splitTextToSize('↳ '+ans.followNote, cw-8);
+        const fn=doc.splitTextToSize('>  '+ans.followNote, cw-8);
         fn.forEach(l=>{ if(y>ph-15){doc.addPage();y=mg;} doc.text(l,mg,y); y+=4.2; });
         const fuPhotos = answers[item.id+'_fu']?.photos||[];
         if (fuPhotos.length>0 && item.followUp?.photo) {
-          const pw2=44,ph2=34,gap=4; let px3=mg;
+          const pw2=80,ph2=60,gap=5; let px3=mg;
           if(y+ph2>ph-15){doc.addPage();y=mg;}
           for(const photo of fuPhotos){
             if(px3+pw2>pw-mg){px3=mg;y+=ph2+gap;if(y+ph2>ph-15){doc.addPage();y=mg;px3=mg;}}
-            try{ const imgD=await resizeImageForPdf(photo.data,400,300); doc.addImage(imgD,'JPEG',px3,y,pw2,ph2); }catch(e){}
+            try{ const imgD=await resizeImageForPdf(photo.data,1200,900); doc.addImage(imgD,'JPEG',px3,y,pw2,ph2); }catch(e){}
             doc.setDrawColor(...L);doc.setLineWidth(0.3);doc.rect(px3,y,pw2,ph2);
             px3+=pw2+gap;
           }
-          y+=ph2+gap+2;
+          y+=ph2+gap+3;
         }
       }
       y+=2;
