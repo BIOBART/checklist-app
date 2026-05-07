@@ -254,17 +254,23 @@ async function loadRecent() {
     el.innerHTML = `<div class="empty"><p>Nog geen ingevulde checklists.</p></div>`;
     return;
   }
-  el.innerHTML = data.map(r => `
+  el.innerHTML = data.map(r => {
+    const titleParts = [r.template_name, r.customer, r.reference].filter(Boolean);
+    const title = titleParts.length > 1
+      ? `${esc(r.template_name||'Checklist')}<span style="color:var(--accent-mid);font-weight:500"> · ${esc(r.customer||'')}</span>${r.reference?`<span style="color:var(--muted);font-weight:400"> · ${esc(r.reference)}</span>`:''}`
+      : esc(r.template_name||'Checklist');
+    const meta = [r.filled_by, r.location].filter(Boolean).map(esc).join(' · ');
+    return `
     <a href="fill.html?submission=${r.id}" class="recent-item">
       <div class="recent-dot dot-${r.status}"></div>
       <div class="recent-info">
-        <div class="recent-title">${esc(r.template_name||'Checklist')}</div>
-        <div class="recent-meta">${r.filled_by?esc(r.filled_by)+' · ':''} ${fmtDate(r.updated_at)}</div>
+        <div class="recent-title">${title}</div>
+        <div class="recent-meta">${meta ? meta + ' · ' : ''}${fmtDate(r.updated_at)}</div>
       </div>
       <span class="recent-status status-${r.status}">${statusLabel(r.status)}</span>
       <span class="recent-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
-    </a>
-  `).join('');
+    </a>`;
+  }).join('');
 }
 
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
