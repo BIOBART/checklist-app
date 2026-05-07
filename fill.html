@@ -834,11 +834,18 @@ async function generatePDF() {
 
   const pdfLocation  = document.getElementById('f-location')?.value || '';
   const pdfReference = document.getElementById('f-ref')?.value || '';
+  const fnCustomer = (document.getElementById('f-customer')?.value||'').trim();
+  const fnRef = (document.getElementById('f-ref')?.value||'').trim();
+  const fnParts = [template?.name||'checklist', fnCustomer, fnRef].filter(Boolean);
+  const docTitle = fnParts.join(' — ');
+  const fname = fnParts.map(p => p.replace(/[^a-zA-Z0-9_\-]/g, '_')).join('_') + '.pdf';
 
   // ── Header bar ──
   doc.setFillColor(...G); doc.rect(0,0,pw,26,'F');
-  doc.setTextColor(...W); doc.setFontSize(16); doc.setFont('helvetica','bold');
-  doc.text(template?.name||'Checklist', mg, 12);
+  doc.setTextColor(...W); doc.setFont('helvetica','bold');
+  const titleFs = docTitle.length > 55 ? 11 : docTitle.length > 38 ? 13 : 16;
+  doc.setFontSize(titleFs);
+  doc.text(docTitle, mg, titleFs >= 16 ? 12 : 13);
   doc.setFontSize(9); doc.setFont('helvetica','normal');
   doc.text(template?.category||'', mg, 20);
   doc.text(dateStr, pw-mg, 20, {align:'right'});
@@ -1100,10 +1107,6 @@ async function generatePDF() {
     doc.text('Pagina '+i+' / '+pc, pw-mg, ph-4, {align:'right'});
   }
 
-  const fnCustomer = (document.getElementById('f-customer')?.value||'').trim();
-  const fnRef = (document.getElementById('f-ref')?.value||'').trim();
-  const fnParts = [template?.name||'checklist', fnCustomer, fnRef].filter(Boolean);
-  const fname = fnParts.map(p => p.replace(/[^a-zA-Z0-9_\-]/g, '_')).join('_') + '.pdf';
   doc.save(fname);
   closePdfModal();
 }
