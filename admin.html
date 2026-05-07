@@ -482,7 +482,9 @@ function renderItem(si, ii, item) {
         <option value="">— altijd zichtbaar —</option>
         ${prevItems.map(p=>`<option value="${p.id}"${p.id===condSrcId?' selected':''}>${esc(p.label)}</option>`).join('')}
       </select>
-      ${condSrcId ? `
+      ${condSrcId && condSrc?.type === 'check' ? `
+        <span style="font-size:12px;color:var(--accent);background:var(--accent-bg);padding:4px 10px;border-radius:99px;white-space:nowrap">= aangevinkt</span>` :
+       condSrcId && condVals.length ? `
         <select class="item-rule-select" style="min-width:80px;flex:0 0 auto" onchange="setCondVal(${si},${ii},this.value)">
           ${condVals.map(v=>`<option value="${v}"${v===condVal?' selected':''}>${esc(v)}</option>`).join('')}
         </select>` : ''}
@@ -546,7 +548,13 @@ function addItem(si, type) {
 function setCondSrc(si, ii, srcId) {
   if (!sections[si].items[ii].showIf) sections[si].items[ii].showIf = {};
   sections[si].items[ii].showIf.itemId = srcId;
-  sections[si].items[ii].showIf.value = '';
+  // Auto-set value for check type (only one possible value)
+  if (srcId) {
+    const srcItem = sections.flatMap(s=>s.items).find(it=>it.id===srcId);
+    sections[si].items[ii].showIf.value = srcItem?.type === 'check' ? 'aangevinkt' : '';
+  } else {
+    sections[si].items[ii].showIf.value = '';
+  }
   renderSections();
 }
 function setCondVal(si, ii, val) {
@@ -583,6 +591,16 @@ function changeItemType(si, ii, type) {
 async function saveTemplate() {
   const name = document.getElementById('e-name').value.trim();
   if (!name) { toast('Geef een naam op', 'error'); return; }
+
+  // Auto-fix any showIf rules where value is still empty for check-type sources
+  const allItems = sections.flatMap(s => s.items);
+  sections.forEach(sec => sec.items.forEach(item => {
+    if (item.showIf?.itemId && !item.showIf.value) {
+      const srcItem = allItems.find(it => it.id === item.showIf.itemId);
+      if (srcItem?.type === 'check') item.showIf.value = 'aangevinkt';
+    }
+  }));
+
   const payload = {
     name,
     description: document.getElementById('e-desc').value.trim(),
