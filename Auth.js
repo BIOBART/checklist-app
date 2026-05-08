@@ -8,10 +8,12 @@ const AUTH = (() => {
   let _session = null;
   let _user = null;
   let _isAdmin = false;
+  let _sb = null;
 
   async function init() {
-    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-    const { data: { session } } = await sb.auth.getSession();
+    // Create a fresh client — Supabase JS v2 auto-loads session from localStorage
+    _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    const { data: { session } } = await _sb.auth.getSession();
 
     if (!session) {
       // Not logged in — redirect to login with return URL
@@ -23,6 +25,13 @@ const AUTH = (() => {
     _session = session;
     _user = session.user;
     _isAdmin = _user?.user_metadata?.role === 'admin';
+
+    // ── Key fix: reassign the page-level `sb` variable so all queries
+    //    use the authenticated client with the correct session token ──
+    if (typeof sb !== 'undefined') {
+      // eslint-disable-next-line no-global-assign
+      sb = _sb;
+    }
 
     // Render user pill in header if #user-pill exists
     const pill = document.getElementById('user-pill');
@@ -43,12 +52,12 @@ const AUTH = (() => {
         </div>`;
     }
 
-    return { session, user: _user, isAdmin: _isAdmin, sb };
+    return { session, user: _user, isAdmin: _isAdmin, sb: _sb };
   }
 
   async function logout() {
-    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-    await sb.auth.signOut();
+    const s = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    await s.auth.signOut();
     location.href = 'login.html';
   }
 
@@ -56,10 +65,11 @@ const AUTH = (() => {
   function getUserId()  { return _user?.id || null; }
   function getEmail()   { return _user?.email || ''; }
   function isAdmin()    { return _isAdmin; }
+  function getClient()  { return _sb; }
 
   function escHtml(s) {
     return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
-  return { init, logout, getUser, getUserId, getEmail, isAdmin };
+  return { init, logout, getUser, getUserId, getEmail, isAdmin, getClient };
 })();
