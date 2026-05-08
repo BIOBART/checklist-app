@@ -164,6 +164,60 @@ The exported PDF includes:
 
 ---
 
+## PDF per mail versturen
+
+De app integreert met **EmailJS** om de gegenereerde PDF als bijlage te mailen zonder eigen server.
+
+### Setup EmailJS
+
+1. Maak een gratis account op [emailjs.com](https://emailjs.com)
+2. Ga naar **Email Services** → voeg een service toe (Gmail, Outlook, of SMTP)
+3. Ga naar **Email Templates** → maak een nieuw template aan
+
+**Template variabelen** die beschikbaar zijn in je EmailJS template:
+
+| Variabele | Inhoud |
+|---|---|
+| `{{to_email}}` | Ontvanger |
+| `{{cc_email}}` | CC-adres (optioneel) |
+| `{{subject}}` | Onderwerp (bv. `Checklist: WKK — Visser — IT049`) |
+| `{{doc_title}}` | Volledige documenttitel |
+| `{{filled_by}}` | Naam invuller |
+| `{{location}}` | Locatie |
+| `{{date}}` | Datum |
+| `{{message}}` | Optioneel bericht van de verzender |
+| `{{from_name}}` | Naam afzender |
+| `{{pdf_base64}}` | PDF als base64 bijlage |
+| `{{pdf_filename}}` | Bestandsnaam van de PDF |
+
+**Voorbeeld template body:**
+```
+Beste,
+
+Hierbij de ingevulde checklist {{doc_title}}.
+
+Ingevuld door: {{filled_by}}
+Locatie: {{location}}
+Datum: {{date}}
+
+{{message}}
+
+Met vriendelijke groeten,
+{{from_name}}
+```
+
+4. Kopieer je **Service ID**, **Template ID** en **Public Key** naar `config.js`
+
+> ⚠️ `config.js` staat in `.gitignore` — push deze file nooit naar een publieke repo.
+
+### Gebruik
+
+In de invulpagina verschijnen twee knoppen naast "Download PDF":
+- **Download PDF** — download lokaal
+- **Verstuur per mail** — opent een modal met ontvanger, CC en bericht
+
+---
+
 ## Template beheer
 
 Templates kunnen worden **geactiveerd of gedeactiveerd** via de knop in de template-lijst. Inactieve templates verschijnen doorgestreept en zijn niet beschikbaar voor invullen vanuit de homepage.
