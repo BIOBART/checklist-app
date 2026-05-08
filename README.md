@@ -45,6 +45,26 @@ A lightweight, mobile-friendly web application for creating, filling in, and exp
 
 ---
 
+## User Roles (Model B)
+
+| Role | Access |
+|---|---|
+| **Admin** | All submissions from all users, template management, user invitations |
+| **Technieker** | Only their own submissions |
+
+Roles are set via Supabase user metadata (`role: 'admin'` or `role: 'technician'`).
+
+To promote a user to admin, run in the Supabase SQL Editor:
+```sql
+update auth.users
+  set raw_user_meta_data = raw_user_meta_data || '{"role":"admin"}'::jsonb
+  where email = 'admin@biolectric.com';
+```
+
+New users are invited via **Admin → Gebruikers → Gebruiker uitnodigen**. They receive a magic link by email and can set their password on first login.
+
+---
+
 ## Setup
 
 ### 1. Supabase project
@@ -141,6 +161,20 @@ The exported PDF includes:
 - Row Level Security (RLS) is enabled on all tables — anonymous users can read and create submissions, but only authenticated users can modify templates
 - The `anon` key in `config.js` is safe to expose in a frontend app — it only grants the permissions defined in your RLS policies
 - For a production environment, consider restricting submission creation to authenticated users as well
+
+---
+
+## Template beheer
+
+Templates kunnen worden **geactiveerd of gedeactiveerd** via de knop in de template-lijst. Inactieve templates verschijnen doorgestreept en zijn niet beschikbaar voor invullen vanuit de homepage.
+
+## Statuscheck type
+
+Het statuscheck vraagttype heeft standaard 4 opties: **OK / Niet OK / Onderdelen nodig / Niet gecheckt**. In de admin kunnen de benamingen worden aangepast. Per optie kan worden ingesteld of er een verduidelijkingsveld (+ optionele foto) verschijnt als die optie gekozen wordt.
+
+## Auto-opslaan
+
+Zowel de template-editor (admin) als de invulpagina slaan automatisch op elke **2 minuten** op. In de invulpagina wordt bovendien ook opgeslagen na elke wijziging (1,5 seconden debounce).
 
 ---
 
