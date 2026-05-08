@@ -304,7 +304,8 @@ textarea.ff:focus, input.ff:focus { border-color:var(--accent); background:var(-
 <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
 <script>
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+// sb is set after AUTH.init() — uses the authenticated session
+let sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 const params = new URLSearchParams(location.search);
 const templateId = params.get('template');
 const submissionId = params.get('submission');
