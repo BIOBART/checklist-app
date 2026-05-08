@@ -11,3 +11,7 @@ const STORAGE_BUCKET = 'checklist-photos';
 
 // App versie / naam
 const APP_NAME = 'Checklist App';
+
+const EMAILJS_SERVICE_ID  = 'YOUR_SERVICE_ID';   // bv. 'service_abc123'
+const EMAILJS_TEMPLATE_ID = 'YOUR_TEMPLATE_ID';  // bv. 'template_xyz789'
+const EMAILJS_PUBLIC_KEY  = 'YOUR_PUBLIC_KEY';   // bv. 'AbCdEfGhIjKlMnOp
