@@ -329,7 +329,8 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
 <div class="toast" id="toast"></div>
 
 <script>
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+// sb starts as anon — refreshed to authenticated after login
+let sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 let currentId = null;
 let sections = [];
 let idN = 100;
@@ -414,7 +415,10 @@ const uid = () => 's' + (++idN) + Date.now().toString(36);
 // ── AUTH ──
 async function checkAuth() {
   const { data: { session } } = await sb.auth.getSession();
-  if (session) showAdmin(session.user);
+  if (session) {
+    refreshSb();
+    showAdmin(session.user);
+  }
 }
 
 async function doLogin() {
@@ -423,7 +427,13 @@ async function doLogin() {
   document.getElementById('login-error').style.display = 'none';
   const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
   if (error) { document.getElementById('login-error').style.display = 'block'; return; }
+  refreshSb();
   showAdmin(data.user);
+}
+
+// Recreate sb so it picks up the session from localStorage
+function refreshSb() {
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 }
 
 function showAdmin(user) {
