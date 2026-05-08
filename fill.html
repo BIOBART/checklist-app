@@ -1543,11 +1543,16 @@ function toast(msg, type='') {
 }
 const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-init();
+// init() is called after AUTH is ready — see script block below
 </script>
 <script src="auth.js"></script>
 <script>
-AUTH.init().then(ctx => { if (!ctx) return; window._authCtx = ctx; });
+// AUTH must be ready before init() so AUTH.getUserId() works in saveNow()
+AUTH.init().then(ctx => {
+  if (!ctx) return;  // redirected to login
+  window._authCtx = ctx;
+  init();            // safe to call now
+});
 </script>
 </body>
 </html>
