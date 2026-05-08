@@ -8,6 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script src="config.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1411,12 +1412,42 @@ async function generatePDF(mode = 'download') {
   }
 
   const pc=doc.internal.getNumberOfPages();
+
+  // Generate QR code pointing to digital version (only if submission exists)
+  let qrDataUrl = null;
+  if (submission?.id) {
+    try {
+      const qrUrl = location.origin + location.pathname.replace(/[^/]*$/, '') + 'fill.html?submission=' + submission.id;
+      qrDataUrl = await QRCode.toDataURL(qrUrl, {
+        width: 80, margin: 1,
+        color: { dark: '#2D5A3D', light: '#FFFFFF' }
+      });
+    } catch(e) { console.warn('QR generation failed', e); }
+  }
+
   for (let i=1;i<=pc;i++) {
     doc.setPage(i);
+    // Footer bar
     doc.setFillColor(...L); doc.rect(0,ph-10,pw,10,'F');
     doc.setTextColor(...M); doc.setFontSize(8); doc.setFont('helvetica','normal');
     doc.text('Gegenereerd op '+dateStr, mg, ph-4);
-    doc.text('Pagina '+i+' / '+pc, pw-mg, ph-4, {align:'right'});
+    doc.text('Pagina '+i+' / '+pc, pw/2, ph-4, {align:'center'});
+
+    // QR code on last page, right side of footer
+    if (i === pc && qrDataUrl) {
+      const qrSize = 22;
+      const qrX = pw - mg - qrSize;
+      const qrY = ph - qrSize - 12;
+      try {
+        doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+      } catch(e) {}
+      doc.setFontSize(6.5); doc.setTextColor(...M);
+      doc.text('Digitale versie', qrX + qrSize/2, ph - 12.5, {align:'center'});
+      doc.text('scannen', qrX + qrSize/2, ph - 9.5, {align:'center'});
+    } else if (i === pc) {
+      // No submission yet — show URL as text instead
+      doc.text('fill.html', pw-mg, ph-4, {align:'right'});
+    }
   }
 
   if (mode === 'download') {
