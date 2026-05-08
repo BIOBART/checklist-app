@@ -106,6 +106,15 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); hei
   .hero h1 { font-size: 26px; }
   .nav-link span { display: none; }
 }
+
+/* USER PILL */
+.user-pill { display:flex; align-items:center; gap:8px; }
+.user-avatar { width:28px; height:28px; border-radius:50%; background:var(--accent); color:white; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.user-name { font-size:13px; color:var(--text); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.user-role-badge { font-size:10px; background:var(--accent-bg); color:var(--accent); padding:2px 7px; border-radius:99px; font-weight:600; white-space:nowrap; }
+.user-logout { background:none; border:none; cursor:pointer; color:var(--muted); display:flex; align-items:center; padding:4px; border-radius:6px; transition:color 0.15s; }
+.user-logout:hover { color:var(--danger); }
+
 </style>
 </head>
 <body>
@@ -126,6 +135,7 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); hei
       <span>Admin</span>
     </a>
   </nav>
+  <div id="user-pill"></div>
 </header>
 
 <div class="hero">
@@ -280,6 +290,10 @@ Promise.all([loadStats(), loadTemplates(), loadRecent()]).catch(e => {
   toast('Kan geen verbinding maken met de database. Controleer config.js');
   console.error(e);
 });
+</script>
+<script src="auth.js"></script>
+<script>
+AUTH.init().then(ctx => { if (!ctx) return; window._authCtx = ctx; });
 </script>
 </body>
 </html>
