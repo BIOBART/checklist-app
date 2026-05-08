@@ -207,7 +207,8 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
 <div class="toast" id="toast"></div>
 
 <script>
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+// sb is set after AUTH.init() — uses the authenticated session
+let sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 let allData = [];
 let activeFilter = 'all';
 let deleteId = null;
@@ -394,11 +395,14 @@ function toast(msg, type='') {
 }
 const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-load();
 </script>
 <script src="auth.js"></script>
 <script>
-AUTH.init().then(ctx => { if (!ctx) return; window._authCtx = ctx; });
+AUTH.init().then(ctx => {
+  if (!ctx) return;
+  window._authCtx = ctx;
+  load();
+});
 </script>
 </body>
 </html>
