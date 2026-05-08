@@ -110,6 +110,15 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
   .container { padding:1rem 0.75rem 3rem; }
   .sub-actions .btn .btn-label { display:none; }
 }
+
+/* USER PILL */
+.user-pill { display:flex; align-items:center; gap:8px; }
+.user-avatar { width:28px; height:28px; border-radius:50%; background:var(--accent); color:white; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.user-name { font-size:13px; color:var(--text); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.user-role-badge { font-size:10px; background:var(--accent-bg); color:var(--accent); padding:2px 7px; border-radius:99px; font-weight:600; white-space:nowrap; }
+.user-logout { background:none; border:none; cursor:pointer; color:var(--muted); display:flex; align-items:center; padding:4px; border-radius:6px; transition:color 0.15s; }
+.user-logout:hover { color:var(--danger); }
+
 </style>
 </head>
 <body>
@@ -127,6 +136,7 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41"/></svg>Admin
     </a>
   </nav>
+  <div id="user-pill"></div>
 </header>
 
 <div class="container">
@@ -204,13 +214,27 @@ let deleteId = null;
 
 // ── LOAD ──
 async function load() {
-  const { data, error } = await sb
-    .from('submissions')
-    .select('*')
-    .order('updated_at', { ascending: false });
+  // Wait for auth context — admins see all, technicians see own
+  const ctx = window._authCtx || await AUTH.init();
+  if (!ctx) return;
 
+  let query = sb.from('submissions').select('*').order('updated_at', { ascending: false });
+
+  // Non-admins only see their own submissions
+  if (!AUTH.isAdmin()) {
+    query = query.eq('user_id', AUTH.getUserId());
+  }
+
+  const { data, error } = await query;
   if (error) { toast('Kan data niet laden: '+error.message, 'error'); return; }
   allData = data || [];
+
+  // Show admin indicator in page title
+  if (AUTH.isAdmin()) {
+    const sub = document.getElementById('total-label');
+    if (sub) sub.dataset.adminMode = 'true';
+  }
+
   updateCounts();
   applyFilters();
 }
@@ -257,7 +281,9 @@ function applyFilters() {
     return new Date(b.updated_at)-new Date(a.updated_at);
   });
 
-  document.getElementById('total-label').textContent = `${filtered.length} van ${allData.length} checklists`;
+  const isAdm = AUTH.isAdmin();
+  document.getElementById('total-label').textContent =
+    `${filtered.length} van ${allData.length} checklist${allData.length !== 1 ? 's' : ''}${isAdm ? ' (alle gebruikers)' : ''}`;
   renderList(filtered);
 }
 
@@ -369,6 +395,10 @@ function toast(msg, type='') {
 const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
 load();
+</script>
+<script src="auth.js"></script>
+<script>
+AUTH.init().then(ctx => { if (!ctx) return; window._authCtx = ctx; });
 </script>
 </body>
 </html>
