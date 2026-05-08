@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <script src="config.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -236,9 +237,43 @@ textarea.ff:focus, input.ff:focus { border-color:var(--accent); background:var(-
     </div>
     <div class="modal-actions">
       <button class="btn" onclick="closePdfModal()">Annuleer</button>
-      <button class="btn btn-primary" onclick="generatePDF()">
+      <button class="btn" onclick="downloadAndEmail()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Verstuur per mail
+      </button>
+      <button class="btn btn-primary" onclick="generatePDF('download')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Download PDF
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Email Modal -->
+<div class="overlay" id="email-overlay">
+  <div class="modal">
+    <h2>Verstuur PDF per mail</h2>
+    <div id="email-config-warning" style="display:none;background:var(--warn-bg);border:1px solid #FCD34D;border-radius:var(--radius);padding:10px 14px;font-size:13px;color:#92400E;margin-bottom:1rem">
+      ⚠️ EmailJS is nog niet geconfigureerd. Vul <code>EMAILJS_SERVICE_ID</code>, <code>EMAILJS_TEMPLATE_ID</code> en <code>EMAILJS_PUBLIC_KEY</code> in via <code>config.js</code>.
+    </div>
+    <div style="margin-bottom:1rem">
+      <label class="field-label">Ontvanger e-mailadres <span style="color:var(--danger)">*</span></label>
+      <input class="field-input" id="email-to" type="email" placeholder="ontvanger@bedrijf.com">
+    </div>
+    <div style="margin-bottom:1rem">
+      <label class="field-label">CC (optioneel)</label>
+      <input class="field-input" id="email-cc" type="email" placeholder="cc@bedrijf.com">
+    </div>
+    <div style="margin-bottom:1rem">
+      <label class="field-label">Bericht (optioneel)</label>
+      <textarea class="field-input" id="email-message" rows="3" placeholder="Bijkomende boodschap…" style="resize:vertical;min-height:70px"></textarea>
+    </div>
+    <div id="email-status" style="display:none;padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:1rem"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeEmailModal()">Annuleer</button>
+      <button class="btn btn-primary" id="send-email-btn" onclick="sendEmail()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Versturen
       </button>
     </div>
   </div>
@@ -958,8 +993,34 @@ function changeLang(l) {
 }
 
 // ── PDF ──
-function openPdfModal() { document.getElementById('pdf-overlay').classList.add('open'); }
+function openPdfModal()  { document.getElementById('pdf-overlay').classList.add('open'); }
 function closePdfModal() { document.getElementById('pdf-overlay').classList.remove('open'); }
+function openEmailModal()  { document.getElementById('email-overlay').classList.add('open'); }
+function closeEmailModal() {
+  document.getElementById('email-overlay').classList.remove('open');
+  document.getElementById('email-status').style.display = 'none';
+  document.getElementById('send-email-btn').disabled = false;
+  document.getElementById('send-email-btn').textContent = 'Versturen';
+}
+
+// Cached PDF data for email sending
+let _cachedPdfBase64 = null;
+let _cachedPdfFilename = null;
+
+async function downloadAndEmail() {
+  // Generate PDF silently, then open email modal
+  const result = await generatePDF('email');
+  if (!result) return;
+  _cachedPdfBase64 = result.base64;
+  _cachedPdfFilename = result.fname;
+  closePdfModal();
+  // Check EmailJS config
+  const configured = typeof EMAILJS_SERVICE_ID !== 'undefined'
+    && EMAILJS_SERVICE_ID && EMAILJS_SERVICE_ID !== 'YOUR_SERVICE_ID';
+  document.getElementById('email-config-warning').style.display = configured ? 'none' : 'block';
+  // Pre-fill recipient with customer email if known
+  openEmailModal();
+}
 
 function resizeImageForPdf(dataUrl, maxW=800, maxH=600) {
   return new Promise((resolve) => {
@@ -979,7 +1040,7 @@ function resizeImageForPdf(dataUrl, maxW=800, maxH=600) {
   });
 }
 
-async function generatePDF() {
+async function generatePDF(mode = 'download') {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'mm', format:'a4' });
   const pw=210, ph=297, mg=18, cw=pw-mg*2;
@@ -1358,8 +1419,86 @@ async function generatePDF() {
     doc.text('Pagina '+i+' / '+pc, pw-mg, ph-4, {align:'right'});
   }
 
-  doc.save(fname);
-  closePdfModal();
+  if (mode === 'download') {
+    doc.save(fname);
+    closePdfModal();
+    return null;
+  } else {
+    // Return base64 string for emailing (strip data: prefix if present)
+    const base64 = doc.output('datauristring').split(',')[1];
+    return { base64, fname };
+  }
+}
+
+// ── EMAIL ──
+async function sendEmail() {
+  const to      = document.getElementById('email-to').value.trim();
+  const cc      = document.getElementById('email-cc').value.trim();
+  const message = document.getElementById('email-message').value.trim();
+  const statusEl = document.getElementById('email-status');
+  const sendBtn  = document.getElementById('send-email-btn');
+
+  if (!to) { showEmailStatus('Vul een ontvanger in.', 'error'); return; }
+  if (!_cachedPdfBase64) { showEmailStatus('Geen PDF beschikbaar. Sluit dit venster en probeer opnieuw.', 'error'); return; }
+
+  // Check config
+  if (typeof EMAILJS_SERVICE_ID === 'undefined' || !EMAILJS_SERVICE_ID || EMAILJS_SERVICE_ID === 'YOUR_SERVICE_ID') {
+    showEmailStatus('EmailJS is niet geconfigureerd. Voeg de credentials toe aan config.js.', 'error');
+    return;
+  }
+
+  sendBtn.disabled = true;
+  sendBtn.textContent = 'Versturen…';
+  showEmailStatus('Bezig met versturen…', 'info');
+
+  // Build template params
+  const titleParts = [template?.name, document.getElementById('f-customer')?.value, document.getElementById('f-ref')?.value].filter(Boolean);
+  const docTitle = titleParts.join(' — ');
+  const filledBy = document.getElementById('f-filled-by')?.value || AUTH.getEmail() || '';
+  const location = document.getElementById('f-location')?.value || '';
+  const dateVal  = document.getElementById('f-date')?.value || '';
+
+  const templateParams = {
+    to_email:    to,
+    cc_email:    cc,
+    subject:     `Checklist: ${docTitle}`,
+    doc_title:   docTitle,
+    filled_by:   filledBy,
+    location:    location,
+    date:        dateVal,
+    message:     message || `Gelieve de bijgevoegde checklist "${docTitle}" te vinden.`,
+    pdf_base64:  _cachedPdfBase64,
+    pdf_filename: _cachedPdfFilename,
+    from_name:   filledBy || 'Biolectric',
+  };
+
+  try {
+    emailjs.init(EMAILJS_PUBLIC_KEY);
+    const response = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+    if (response.status === 200) {
+      showEmailStatus('✓ Mail succesvol verstuurd naar ' + to, 'success');
+      sendBtn.textContent = 'Verstuurd ✓';
+      setTimeout(() => closeEmailModal(), 2500);
+    } else {
+      throw new Error('Status ' + response.status);
+    }
+  } catch(err) {
+    sendBtn.disabled = false;
+    sendBtn.textContent = 'Versturen';
+    showEmailStatus('Fout bij versturen: ' + (err.text || err.message || err), 'error');
+  }
+}
+
+function showEmailStatus(msg, type) {
+  const el = document.getElementById('email-status');
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.background = type === 'success' ? 'var(--accent-bg)' :
+                         type === 'error'   ? 'var(--danger-bg)' : 'var(--surface2)';
+  el.style.color = type === 'success' ? 'var(--accent)' :
+                   type === 'error'   ? 'var(--danger)' : 'var(--muted)';
+  el.style.border = '1px solid ' + (type === 'success' ? 'var(--accent-mid)' :
+                                     type === 'error'   ? '#FCA5A5' : 'var(--border)');
 }
 
 // ── UTILS ──
