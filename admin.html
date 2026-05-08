@@ -41,7 +41,7 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
 .login-card h2 { font-family:'DM Serif Display',serif; font-size:22px; margin-bottom:0.5rem; }
 .login-card p { font-size:13px; color:var(--muted); margin-bottom:1.5rem; }
 .field-label { font-size:12px; color:var(--muted); font-weight:500; display:block; margin-bottom:4px; }
-.field-input { width:100%; font-family:'DM Sans',sans-serif; font-size:14px; padding:9px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); color:var(--text); outline:none; margin-bottom:12px; }
+.field-input { width:100%; font-family:'DM Sans',sans-serif; font-size:14px; padding:9px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); color:var(--text); outline:none; }
 .field-input:focus { border-color:var(--accent); background:var(--surface); }
 .login-error { font-size:13px; color:var(--danger); margin-bottom:12px; display:none; }
 
@@ -131,6 +131,17 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
 .toast.success { background:var(--accent); }
 .toast.error { background:var(--danger); }
 
+/* OVERLAY & MODAL */
+.overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:200; align-items:center; justify-content:center; padding:1rem; }
+.overlay.open { display:flex; }
+.modal { background:var(--surface); border-radius:var(--radius-lg); padding:1.5rem; width:100%; max-width:440px; box-shadow:0 20px 60px rgba(0,0,0,0.2); }
+.modal h2 { font-family:'DM Serif Display',serif; font-size:20px; margin-bottom:1rem; }
+.modal-field { margin-bottom:1rem; }
+.modal-label { font-size:12px; color:var(--muted); margin-bottom:4px; font-weight:500; display:block; }
+.modal-input { width:100%; font-family:'DM Sans',sans-serif; font-size:14px; padding:9px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); color:var(--text); outline:none; }
+.modal-input:focus { border-color:var(--accent); background:var(--surface); }
+.modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:1.25rem; }
+
 /* USER PILL */
 .user-pill { display:flex; align-items:center; gap:8px; }
 .user-avatar { width:28px; height:28px; border-radius:50%; background:var(--accent); color:white; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
@@ -169,12 +180,16 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
     <h2>Admin login</h2>
     <p>Enkel beheerders kunnen templates aanmaken en bewerken.</p>
     <div class="login-error" id="login-error">Ongeldig e-mailadres of wachtwoord.</div>
-    <label class="field-label">E-mailadres</label>
-    <input class="field-input" type="email" id="login-email" placeholder="admin@bedrijf.be" autocomplete="email">
-    <label class="field-label">Wachtwoord</label>
-    <input class="field-input" type="password" id="login-pw" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    <div class="field-group" style="margin-bottom:12px">
+      <label class="field-label">E-mailadres</label>
+      <input class="field-input" type="email" id="login-email" placeholder="admin@bedrijf.be" autocomplete="email" style="margin-bottom:0">
+    </div>
+    <div class="field-group" style="margin-bottom:16px">
+      <label class="field-label">Wachtwoord</label>
+      <input class="field-input" type="password" id="login-pw" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" style="margin-bottom:0">
+    </div>
     <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doLogin()">Inloggen</button>
-    <p style="font-size:12px;color:var(--light);margin-top:1rem;text-align:center">Maak eerst een account aan via Supabase → Authentication → Users</p>
+    <p style="font-size:12px;color:var(--light);margin-top:1rem;text-align:center">Account aanmaken via Supabase → Authentication → Users</p>
   </div>
 </div>
 
