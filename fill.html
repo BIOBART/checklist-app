@@ -204,7 +204,6 @@ textarea.ff:focus, input.ff:focus { border-color:var(--accent); background:var(-
       <span class="btn-label">PDF</span>
     </button>
   </div>
-  <div id="user-pill"></div>
 </header>
 
 <div class="container" id="main">
@@ -304,20 +303,8 @@ textarea.ff:focus, input.ff:focus { border-color:var(--accent); background:var(-
 <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
 <script>
-// sb getter — always returns the authenticated Supabase client
-function getSb() {
-  // Prefer AUTH client (has session), fall back to anon
-  if (typeof AUTH !== 'undefined' && AUTH.getClient && AUTH.getClient()) {
-    return AUTH.getClient();
-  }
-  return supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-}
-// Proxy object so existing sb.from() calls still work
-const sb = new Proxy({}, {
-  get(_, prop) {
-    return (...args) => getSb()[prop](...args);
-  }
-});
+// sb is set after AUTH.init() — uses the authenticated session
+let sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 const params = new URLSearchParams(location.search);
 const templateId = params.get('template');
 const submissionId = params.get('submission');
@@ -926,12 +913,12 @@ async function saveNow() {
   const location = document.getElementById('f-location')?.value||'';
   const reference = document.getElementById('f-ref')?.value||'';
   const customer = document.getElementById('f-customer')?.value||'';
-  const userId    = AUTH.getUserId();
-  const userEmail = AUTH.getEmail();
+  const userId    = null;
+  const userEmail = null;
   const payload = {
     template_id: template?.id,
     template_name: template?.name,
-    filled_by: filledBy || AUTH.getUser()?.user_metadata?.full_name || userEmail,
+    filled_by: filledBy,
     organisation: org,
     location,
     reference,
@@ -1556,16 +1543,7 @@ function toast(msg, type='') {
 }
 const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-// init() is called after AUTH is ready — see script block below
-</script>
-<script src="auth.js"></script>
-<script>
-// AUTH must be ready before init() so AUTH.getUserId() works in saveNow()
-AUTH.init().then(ctx => {
-  if (!ctx) return;  // redirected to login
-  window._authCtx = ctx;
-  init();            // safe to call now
-});
+init();
 </script>
 </body>
 </html>
