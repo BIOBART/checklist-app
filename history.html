@@ -136,7 +136,6 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41"/></svg>Admin
     </a>
   </nav>
-  <div id="user-pill"></div>
 </header>
 
 <div class="container">
@@ -207,20 +206,8 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
 <div class="toast" id="toast"></div>
 
 <script>
-// sb getter — always returns the authenticated Supabase client
-function getSb() {
-  // Prefer AUTH client (has session), fall back to anon
-  if (typeof AUTH !== 'undefined' && AUTH.getClient && AUTH.getClient()) {
-    return AUTH.getClient();
-  }
-  return supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-}
-// Proxy object so existing sb.from() calls still work
-const sb = new Proxy({}, {
-  get(_, prop) {
-    return (...args) => getSb()[prop](...args);
-  }
-});
+// sb is set after AUTH.init() — uses the authenticated session
+let sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 let allData = [];
 let activeFilter = 'all';
 let deleteId = null;
@@ -407,14 +394,7 @@ function toast(msg, type='') {
 }
 const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-</script>
-<script src="auth.js"></script>
-<script>
-AUTH.init().then(ctx => {
-  if (!ctx) return;
-  window._authCtx = ctx;
-  load();
-});
+load();
 </script>
 </body>
 </html>
