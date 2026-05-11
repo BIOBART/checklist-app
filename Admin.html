@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Checklist App</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#F6F4EF; --surface:#FFFFFF; --surface2:#EFECE5;
+  --border:#E0DDD5; --border-strong:#C5C0B5;
+  --text:#1A1714; --muted:#7A7168; --light:#B0A898;
+  --accent:#2D5A3D; --accent-bg:#E8F0EB; --accent-mid:#4A8A5E;
+  --danger:#C0392B; --danger-bg:#FDECEA;
+  --radius:10px; --radius-lg:16px;
+  --shadow:0 1px 3px rgba(0,0,0,0.05),0 4px 14px rgba(0,0,0,0.04);
+}
+body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+header { background:var(--surface); border-bottom:1px solid var(--border); height:60px; display:flex; align-items:center; justify-content:space-between; padding:0 2rem; position:sticky; top:0; z-index:50; }
+.logo { font-family:'DM Serif Display',serif; font-size:20px; display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--text); }
+.logo-dot { width:8px; height:8px; border-radius:50%; background:var(--accent); }
+.nav { display:flex; gap:6px; align-items:center; }
+.nav-link { font-size:13px; color:var(--muted); text-decoration:none; padding:6px 12px; border-radius:var(--radius); transition:all 0.15s; display:flex; align-items:center; gap:5px; }
+.nav-link:hover { background:var(--surface2); color:var(--text); }
+.nav-link.active { color:var(--accent); font-weight:500; }
+.nav-link svg { width:14px; height:14px; }
+.btn { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:var(--radius); font-size:13px; font-family:'DM Sans',sans-serif; font-weight:500; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--text); transition:all 0.15s; white-space:nowrap; }
+.btn:hover { background:var(--surface2); }
+.btn-primary { background:var(--accent); color:white; border-color:var(--accent); }
+.btn-primary:hover { background:#234830; }
+.btn-danger { color:var(--danger); border-color:var(--danger); }
+.btn-danger:hover { background:var(--danger-bg); }
+.btn svg { width:14px; height:14px; }
+
+/* LOGIN SCREEN */
+#login-screen { display:flex; align-items:center; justify-content:center; min-height:calc(100vh - 60px); padding:2rem; }
+.login-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:2rem; width:100%; max-width:380px; box-shadow:var(--shadow); }
+.login-card h2 { font-family:'DM Serif Display',serif; font-size:22px; margin-bottom:0.5rem; }
+.login-card p { font-size:13px; color:var(--muted); margin-bottom:1.5rem; }
+.field-label { font-size:12px; color:var(--muted); font-weight:500; display:block; margin-bottom:4px; }
+.field-input { width:100%; font-family:'DM Sans',sans-serif; font-size:14px; padding:9px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); color:var(--text); outline:none; }
+.field-input:focus { border-color:var(--accent); background:var(--surface); }
+.login-error { font-size:13px; color:var(--danger); margin-bottom:12px; display:none; }
+
+/* MAIN LAYOUT */
+#admin-screen { display:none; }
+.container { max-width:1100px; margin:0 auto; padding:2rem; }
+.page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:2rem; flex-wrap:wrap; gap:12px; }
+.page-title { font-family:'DM Serif Display',serif; font-size:28px; }
+.page-subtitle { font-size:14px; color:var(--muted); margin-top:4px; }
+
+/* TEMPLATE LIST */
+.template-list { display:flex; flex-direction:column; gap:10px; margin-bottom:2rem; }
+.tpl-row { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:1rem 1.25rem; display:flex; align-items:center; gap:14px; box-shadow:var(--shadow); }
+.tpl-info { flex:1; min-width:0; }
+.tpl-name { font-weight:600; font-size:15px; }
+.tpl-meta { font-size:12px; color:var(--muted); margin-top:3px; display:flex; gap:8px; flex-wrap:wrap; }
+.tpl-badge { padding:2px 8px; border-radius:99px; font-size:11px; background:var(--accent-bg); color:var(--accent); font-weight:500; }
+.tpl-actions { display:flex; gap:6px; }
+
+/* EDITOR */
+#editor { display:none; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:1.5rem; box-shadow:var(--shadow); }
+.editor-header { display:flex; align-items:center; gap:12px; margin-bottom:1.5rem; padding-bottom:1.25rem; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+.editor-title { font-family:'DM Serif Display',serif; font-size:22px; flex:1; }
+
+/* FORM FIELDS */
+.field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:1rem; }
+.field-row.full { grid-template-columns:1fr; }
+@media(max-width:600px){ .field-row { grid-template-columns:1fr; } }
+.field-group { display:flex; flex-direction:column; gap:4px; }
+.field-select { width:100%; font-family:'DM Sans',sans-serif; font-size:14px; padding:9px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); color:var(--text); outline:none; }
+.field-select:focus { border-color:var(--accent); }
+.field-textarea { width:100%; font-family:'DM Sans',sans-serif; font-size:14px; padding:9px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); color:var(--text); outline:none; resize:vertical; min-height:60px; }
+.field-textarea:focus { border-color:var(--accent); }
+
+/* SECTIONS IN EDITOR */
+.sections-wrap { display:flex; flex-direction:column; gap:12px; margin:1.25rem 0; }
+.sec-card { background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; }
+.sec-head { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--surface2); border-bottom:1px solid var(--border); }
+.sec-title-input { flex:1; border:none; outline:none; background:transparent; font-family:'DM Sans',sans-serif; font-weight:600; font-size:14px; color:var(--text); }
+.icon-btn { background:none; border:none; cursor:pointer; color:var(--light); padding:4px; display:flex; align-items:center; border-radius:6px; transition:all 0.15s; }
+.icon-btn:hover { color:var(--muted); background:var(--border); }
+.icon-btn svg { width:14px; height:14px; }
+
+/* ITEMS IN SECTION */
+.items-wrap { padding:10px 14px 6px; display:flex; flex-direction:column; gap:8px; }
+.item-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px; display:flex; flex-direction:column; gap:10px; transition:border-color 0.15s; }
+.item-card:hover { border-color:var(--border-strong); }
+.item-card-top { display:flex; gap:8px; align-items:flex-start; }
+.item-num { font-size:11px; color:var(--light); font-weight:600; min-width:18px; padding-top:9px; flex-shrink:0; }
+.item-label-input { font-family:'DM Sans',sans-serif; font-size:14px; padding:7px 11px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); color:var(--text); outline:none; flex:1; min-width:0; }
+.item-label-input:focus { border-color:var(--accent); background:var(--surface); }
+.item-card-actions { display:flex; gap:4px; flex-shrink:0; align-items:center; padding-top:3px; }
+.item-card-meta { display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding-left:26px; }
+.item-type-select { font-family:'DM Sans',sans-serif; font-size:13px; padding:6px 10px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text); outline:none; cursor:pointer; flex:1; min-width:160px; }
+.item-type-select:focus { border-color:var(--accent); }
+.item-req { display:flex; align-items:center; gap:5px; font-size:13px; color:var(--muted); white-space:nowrap; cursor:pointer; }
+.item-req input { accent-color:var(--accent); width:14px; height:14px; cursor:pointer; }
+.item-extra { padding-left:26px; display:flex; flex-direction:column; gap:6px; }
+.item-options-input { font-family:'DM Sans',sans-serif; font-size:13px; padding:6px 10px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text); outline:none; width:100%; }
+.item-options-input:focus { border-color:var(--accent); }
+.item-rule-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.item-rule-label { font-size:11px; color:var(--light); font-weight:500; white-space:nowrap; min-width:110px; }
+.item-rule-select { font-family:'DM Sans',sans-serif; font-size:12px; padding:5px 8px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text); outline:none; cursor:pointer; flex:1; min-width:120px; }
+.item-rule-select:focus { border-color:var(--accent); }
+.item-rule-check { display:flex; align-items:center; gap:4px; font-size:12px; color:var(--muted); cursor:pointer; white-space:nowrap; }
+.item-rule-check input { accent-color:var(--accent); }
+
+/* TRANSLATION TABS */
+.trans-tabs { display:flex; gap:2px; margin-bottom:0; }
+.trans-tab { padding:4px 10px; font-size:11px; font-family:'DM Sans',sans-serif; border:1px solid var(--border); border-bottom:none; border-radius:var(--radius) var(--radius) 0 0; cursor:pointer; background:var(--surface2); color:var(--muted); transition:all 0.1s; }
+.trans-tab.active { background:var(--surface); color:var(--text); font-weight:500; border-color:var(--border-strong); }
+.trans-panel { border:1px solid var(--border-strong); border-radius:0 var(--radius) var(--radius) var(--radius); padding:10px; background:var(--surface); display:flex; flex-direction:column; gap:6px; }
+.trans-panel.hidden { display:none; }
+.trans-field-label { font-size:11px; color:var(--light); margin-bottom:2px; }
+
+/* ADD ITEM ROW */
+.add-item-row { display:flex; gap:8px; padding:8px 0; flex-wrap:wrap; }
+.add-item-btn { font-size:12px; color:var(--muted); background:none; border:1px dashed var(--border-strong); border-radius:var(--radius); cursor:pointer; font-family:'DM Sans',sans-serif; display:flex; align-items:center; gap:4px; padding:5px 10px; transition:all 0.15s; }
+.add-item-btn:hover { border-color:var(--accent); color:var(--accent); }
+.add-item-btn svg { width:12px; height:12px; }
+.add-sec-btn { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; padding:11px; border:1.5px dashed var(--border-strong); border-radius:var(--radius-lg); background:transparent; color:var(--muted); font-family:'DM Sans',sans-serif; font-size:13px; cursor:pointer; transition:all 0.15s; }
+.add-sec-btn:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-bg); }
+
+/* TOAST */
+.toast { position:fixed; bottom:1.5rem; right:1.5rem; background:var(--text); color:white; padding:10px 16px; border-radius:var(--radius); font-size:13px; z-index:999; opacity:0; transform:translateY(10px); transition:all 0.25s; pointer-events:none; }
+.toast.show { opacity:1; transform:translateY(0); }
+.toast.success { background:var(--accent); }
+.toast.error { background:var(--danger); }
+
+/* OVERLAY & MODAL */
+.overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:200; align-items:center; justify-content:center; padding:1rem; }
+.overlay.open { display:flex; }
+.modal { background:var(--surface); border-radius:var(--radius-lg); padding:1.5rem; width:100%; max-width:440px; box-shadow:0 20px 60px rgba(0,0,0,0.2); }
+.modal h2 { font-family:'DM Serif Display',serif; font-size:20px; margin-bottom:1rem; }
+.modal-field { margin-bottom:1rem; }
+.modal-label { font-size:12px; color:var(--muted); margin-bottom:4px; font-weight:500; display:block; }
+.modal-input { width:100%; font-family:'DM Sans',sans-serif; font-size:14px; padding:9px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); color:var(--text); outline:none; }
+.modal-input:focus { border-color:var(--accent); background:var(--surface); }
+.modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:1.25rem; }
+
+/* USER PILL */
+.user-pill { display:flex; align-items:center; gap:8px; }
+.user-avatar { width:28px; height:28px; border-radius:50%; background:var(--accent); color:white; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.user-name { font-size:13px; color:var(--text); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.user-role-badge { font-size:10px; background:var(--accent-bg); color:var(--accent); padding:2px 7px; border-radius:99px; font-weight:600; white-space:nowrap; }
+.user-logout { background:none; border:none; cursor:pointer; color:var(--muted); display:flex; align-items:center; padding:4px; border-radius:6px; transition:color 0.15s; }
+.user-logout:hover { color:var(--danger); }
+
+</style>
+</head>
+<body>
+
+<header>
+  <a href="index.html" class="logo" style="padding:0"><img src="data:image/png;base64,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" alt="Biolectric" style="height:34px;display:block;"></a>
+  <nav class="nav">
+    <a href="index.html" class="nav-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Home
+    </a>
+    <a href="history.html" class="nav-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>Ingevuld
+    </a>
+    <a href="admin.html" class="nav-link active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41"/></svg>Admin
+    </a>
+    <button class="btn" id="logout-btn" style="display:none" onclick="logout()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Uitloggen
+    </button>
+  </nav>
+  <div id="user-pill"></div>
+</header>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <h2>Admin login</h2>
+    <p>Enkel beheerders kunnen templates aanmaken en bewerken.</p>
+    <div class="login-error" id="login-error">Ongeldig e-mailadres of wachtwoord.</div>
+    <div class="field-group" style="margin-bottom:12px">
+      <label class="field-label">E-mailadres</label>
+      <input class="field-input" type="email" id="login-email" placeholder="admin@bedrijf.be" autocomplete="email" style="margin-bottom:0">
+    </div>
+    <div class="field-group" style="margin-bottom:16px">
+      <label class="field-label">Wachtwoord</label>
+      <input class="field-input" type="password" id="login-pw" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" style="margin-bottom:0">
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doLogin()">Inloggen</button>
+    <p style="font-size:12px;color:var(--light);margin-top:1rem;text-align:center">Account aanmaken via Supabase → Authentication → Users</p>
+  </div>
+</div>
+
+<!-- ADMIN SCREEN -->
+<div id="admin-screen">
+  <div class="container">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Beheer</div>
+        <div class="page-subtitle" id="user-email"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" id="tab-templates" onclick="switchTab('templates')" style="font-weight:600;color:var(--accent)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+          Templates
+        </button>
+        <button class="btn" id="tab-users" onclick="switchTab('users')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Gebruikers
+        </button>
+        <button class="btn btn-primary" id="new-template-btn" onclick="newTemplate()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nieuwe template
+        </button>
+      </div>
+    </div>
+
+    <!-- Templates tab -->
+    <div id="tab-panel-templates">
+      <div class="template-list" id="tpl-list"></div>
+      <!-- Editor -->
+      <div id="editor">
+      <div class="editor-header">
+        <div class="editor-title" id="editor-mode-label">Nieuwe template</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-danger" id="delete-btn" style="display:none" onclick="deleteTemplate()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Verwijder
+          </button>
+          <button class="btn" onclick="cancelEditor()">Annuleer</button>
+          <button class="btn btn-primary" onclick="saveTemplate()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Opslaan
+          </button>
+        </div>
+      </div>
+
+      <!-- Meta fields -->
+      <div class="field-row">
+        <div class="field-group">
+          <label class="field-label">Naam template *</label>
+          <input class="field-input" type="text" id="e-name" placeholder="bv. Oplevering silo">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Categorie</label>
+          <select class="field-select" id="e-cat">
+            <option value="oplevering">Oplevering</option>
+            <option value="opstart">Opstart</option>
+            <option value="assemblage">Assemblage</option>
+            <option value="feedback">Feedback</option>
+            <option value="inspectie">Inspectie</option>
+            <option value="onderhoud">Onderhoud</option>
+            <option value="andere">Andere</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label class="field-label">Omschrijving</label>
+          <textarea class="field-textarea" id="e-desc" placeholder="Korte beschrijving van de checklist…"></textarea>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Standaardtaal</label>
+          <select class="field-select" id="e-lang">
+            <option value="nl">🇧🇪 Nederlands</option>
+            <option value="en">🇬🇧 English</option>
+            <option value="fr">🇫🇷 Français</option>
+            <option value="de">🇩🇪 Deutsch</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Sections builder -->
+      <div style="font-size:13px;font-weight:500;margin-bottom:8px;color:var(--muted)">Secties & vragen</div>
+      <div class="sections-wrap" id="sections-editor"></div>
+      <button class="add-sec-btn" onclick="addSection()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Sectie toevoegen
+      </button>
+    </div>
+    </div><!-- /tab-panel-templates -->
+
+    <!-- Users tab -->
+    <div id="tab-panel-users" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:10px">
+        <div style="font-size:14px;color:var(--muted)">Beheer wie toegang heeft tot de app.</div>
+        <button class="btn btn-primary" onclick="openInviteModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Gebruiker uitnodigen
+        </button>
+      </div>
+      <div id="users-list">
+        <div style="color:var(--muted);font-size:14px;padding:2rem;text-align:center">Laden…</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Invite modal -->
+<div class="overlay" id="invite-overlay">
+  <div class="modal">
+    <h2>Gebruiker uitnodigen</h2>
+    <div class="modal-field">
+      <label class="modal-label">E-mailadres</label>
+      <input class="modal-input" id="invite-email" type="email" placeholder="naam@bedrijf.com">
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">Volledige naam</label>
+      <input class="modal-input" id="invite-name" type="text" placeholder="Voornaam Achternaam">
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">Rol</label>
+      <select class="modal-input" id="invite-role">
+        <option value="technician">Technieker — eigen checklists</option>
+        <option value="admin">Admin — alle checklists + beheer</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeInviteModal()">Annuleer</button>
+      <button class="btn btn-primary" onclick="sendInvite()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Uitnodiging versturen
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// sb starts as anon — refreshed to authenticated after login
+let sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+let currentId = null;
+let sections = [];
+let idN = 100;
+
+// ── TABS ──
+function switchTab(tab) {
+  ['templates','users'].forEach(t => {
+    document.getElementById('tab-panel-'+t).style.display = t===tab ? 'block' : 'none';
+    const btn = document.getElementById('tab-'+t);
+    if (btn) { btn.style.fontWeight = t===tab ? '600' : '400'; btn.style.color = t===tab ? 'var(--accent)' : ''; }
+  });
+  document.getElementById('new-template-btn').style.display = tab==='templates' ? 'flex' : 'none';
+  if (tab==='users') loadUsers();
+}
+
+// ── USER MANAGEMENT ──
+async function loadUsers() {
+  const el = document.getElementById('users-list');
+  el.innerHTML = '<div style="color:var(--muted);font-size:14px;padding:2rem;text-align:center">Laden…</div>';
+
+  // Use admin API via edge function or list from auth.users via service role
+  // Since we only have anon key, we use a workaround: list from submissions unique emails
+  const { data: subs } = await sb.from('submissions').select('user_id,user_email,filled_by').neq('user_id', null);
+
+  // Also get invited users from a users_profile table if it exists, otherwise show from submissions
+  const seen = new Set();
+  const users = [];
+  (subs||[]).forEach(s => {
+    if (s.user_email && !seen.has(s.user_email)) {
+      seen.add(s.user_email);
+      users.push({ email: s.user_email, name: s.filled_by||'', id: s.user_id });
+    }
+  });
+
+  if (!users.length) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:14px;padding:2rem;text-align:center">
+      Nog geen gebruikers actief.<br><br>
+      <small>Uitgenodigde gebruikers verschijnen hier zodra ze hun eerste checklist hebben opgeslagen.</small>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = users.map(u => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;display:flex;align-items:center;gap:14px;margin-bottom:8px;box-shadow:var(--shadow)">
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--accent-bg);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0">
+        ${esc((u.name||u.email).charAt(0).toUpperCase())}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:500;font-size:14px">${esc(u.name||'—')}</div>
+        <div style="font-size:12px;color:var(--muted)">${esc(u.email)}</div>
+      </div>
+    </div>`).join('');
+}
+
+function openInviteModal()  { document.getElementById('invite-overlay').classList.add('open'); }
+function closeInviteModal() { document.getElementById('invite-overlay').classList.remove('open'); }
+
+async function sendInvite() {
+  const email = document.getElementById('invite-email').value.trim();
+  const name  = document.getElementById('invite-name').value.trim();
+  const role  = document.getElementById('invite-role').value;
+  if (!email) { toast('Vul een e-mailadres in', 'error'); return; }
+
+  // Supabase invite via admin API — requires service role key
+  // With anon key we can only use signUp or magiclink
+  const { error } = await sb.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: location.origin + location.pathname.replace('admin.html','') + 'login.html',
+      data: { full_name: name, role }
+    }
+  });
+
+  if (error) { toast('Fout: ' + error.message, 'error'); return; }
+  toast(`Uitnodiging verstuurd naar ${email}`, 'success');
+  closeInviteModal();
+  document.getElementById('invite-email').value = '';
+  document.getElementById('invite-name').value = '';
+}
+const uid = () => 's' + (++idN) + Date.now().toString(36);
+
+// ── AUTH ──
+async function checkAuth() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    refreshSb();
+    showAdmin(session.user);
+  }
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pw = document.getElementById('login-pw').value;
+  document.getElementById('login-error').style.display = 'none';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+  if (error) { document.getElementById('login-error').style.display = 'block'; return; }
+  refreshSb();
+  showAdmin(data.user);
+}
+
+// Recreate sb so it picks up the session from localStorage
+function refreshSb() {
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+}
+
+function showAdmin(user) {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('admin-screen').style.display = 'block';
+  document.getElementById('logout-btn').style.display = 'flex';
+  const name = user.user_metadata?.full_name || user.email;
+  document.getElementById('user-email').textContent = 'Ingelogd als ' + name;
+  loadTemplates();
+}
+
+async function logout() {
+  await sb.auth.signOut();
+  location.reload();
+}
+
+// ── TEMPLATE LIST ──
+async function loadTemplates() {
+  const { data } = await sb.from('templates').select('*').order('category').order('name');
+  const el = document.getElementById('tpl-list');
+  if (!data?.length) {
+    el.innerHTML = '<p style="color:var(--muted);font-size:14px">Nog geen templates. Maak er een aan via de knop hierboven.</p>';
+    return;
+  }
+  el.innerHTML = data.map(t => {
+    const n = (t.schema?.sections||[]).reduce((a,s)=>a+(s.items?.length||0),0);
+    const isActive = t.active !== false;
+    return `<div class="tpl-row" style="${isActive?'':'opacity:0.6'}">
+      <div class="tpl-info">
+        <div class="tpl-name" style="${isActive?'':'text-decoration:line-through;color:var(--muted)'}">${esc(t.name)}</div>
+        <div class="tpl-meta">
+          <span class="tpl-badge" style="${isActive?'':'background:var(--surface2);color:var(--muted)'}">${t.category||'Algemeen'}</span>
+          <span>${n} vragen</span>
+          <span style="color:${isActive?'var(--accent-mid)':'var(--muted)'};font-weight:500">${isActive?'● Actief':'○ Inactief'}</span>
+          ${t.description?`<span>${esc(t.description)}</span>`:''}
+        </div>
+      </div>
+      <div class="tpl-actions">
+        <a href="fill.html?template=${t.id}" class="btn" target="_blank" title="Preview">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Preview
+        </a>
+        <button class="btn${isActive?'':' btn-primary'}" onclick="toggleActive('${t.id}',${isActive})" title="${isActive?'Deactiveer':'Activeer'}">
+          ${isActive
+            ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>Deactiveer`
+            : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="9 11 12 14 22 4"/></svg>Activeer`
+          }
+        </button>
+        <button class="btn" onclick="editTemplate(${JSON.stringify(t).replace(/"/g,'&quot;')})">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Bewerken
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function toggleActive(id, currentlyActive) {
+  const { error } = await sb.from('templates').update({ active: !currentlyActive }).eq('id', id);
+  if (error) { toast('Fout: ' + error.message, 'error'); return; }
+  toast(currentlyActive ? 'Template gedeactiveerd' : 'Template geactiveerd', 'success');
+  loadTemplates();
+}
+
+// ── EDITOR ──
+function newTemplate() {
+  currentId = null;
+  sections = [{ id: uid(), title: 'Sectie 1', items: [] }];
+  document.getElementById('e-name').value = '';
+  document.getElementById('e-desc').value = '';
+  document.getElementById('e-cat').value = 'oplevering';
+  document.getElementById('e-lang').value = 'nl';
+  document.getElementById('editor-mode-label').textContent = 'Nieuwe template';
+  document.getElementById('delete-btn').style.display = 'none';
+  renderSections();
+  document.getElementById('editor').style.display = 'block';
+  document.getElementById('editor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  startAutoSave();
+}
+
+function editTemplate(t) {
+  currentId = t.id;
+  sections = JSON.parse(JSON.stringify(t.schema?.sections || []));
+  // ensure items have all required fields
+  sections.forEach(s => s.items.forEach(i => {
+    if (!i.id) i.id = uid();
+    if (!i.type) i.type = 'check';
+    if (i.required === undefined) i.required = false;
+  }));
+  document.getElementById('e-name').value = t.name || '';
+  document.getElementById('e-desc').value = t.description || '';
+  document.getElementById('e-cat').value = t.category || 'andere';
+  document.getElementById('e-lang').value = t.lang || 'nl';
+  document.getElementById('editor-mode-label').textContent = 'Bewerken: ' + t.name;
+  document.getElementById('delete-btn').style.display = 'flex';
+  renderSections();
+  document.getElementById('editor').style.display = 'block';
+  document.getElementById('editor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  startAutoSave();
+}
+
+function cancelEditor() {
+  document.getElementById('editor').style.display = 'none';
+  currentId = null;
+  stopAutoSave();
+}
+
+let autoSaveInterval = null;
+function startAutoSave() {
+  stopAutoSave();
+  autoSaveInterval = setInterval(() => {
+    const name = document.getElementById('e-name')?.value?.trim();
+    if (name && currentId) {
+      saveTemplate(true); // silent save
+    }
+  }, 120000); // 2 minutes
+}
+function stopAutoSave() {
+  if (autoSaveInterval) { clearInterval(autoSaveInterval); autoSaveInterval = null; }
+}
+
+// ── SECTIONS RENDER ──
+function renderSections() {
+  const wrap = document.getElementById('sections-editor');
+  wrap.innerHTML = '';
+  sections.forEach((sec, si) => {
+    const el = document.createElement('div');
+    el.className = 'sec-card';
+    el.innerHTML = `
+      <div class="sec-head">
+        <span style="font-size:12px;color:var(--light);font-weight:500">§${si+1}</span>
+        <input class="sec-title-input" value="${esc(typeof sec.title==='object'?(sec.title.nl||sec.title.en||''):sec.title)}" placeholder="Sectietitel NL…" oninput="setSectionTitleLang(${si},'nl',this.value)" style="flex:0.35;min-width:120px">
+        <input class="sec-title-input" value="${esc(typeof sec.title==='object'?(sec.title.en||''):'' )}" placeholder="EN…" oninput="setSectionTitleLang(${si},'en',this.value)" style="flex:0.22;min-width:55px;color:var(--muted)">
+        <input class="sec-title-input" value="${esc(typeof sec.title==='object'?(sec.title.fr||''):'' )}" placeholder="FR…" oninput="setSectionTitleLang(${si},'fr',this.value)" style="flex:0.22;min-width:55px;color:var(--muted)">
+        <input class="sec-title-input" value="${esc(typeof sec.title==='object'?(sec.title.de||''):'' )}" placeholder="DE…" oninput="setSectionTitleLang(${si},'de',this.value)" style="flex:0.22;min-width:55px;color:var(--muted)">
+        <button class="icon-btn" onclick="moveSection(${si},-1)" title="Omhoog" ${si===0?'disabled style="opacity:0.3"':''}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+        </button>
+        <button class="icon-btn" onclick="moveSection(${si},1)" title="Omlaag" ${si===sections.length-1?'disabled style="opacity:0.3"':''}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <button class="icon-btn btn-danger" onclick="deleteSection(${si})" title="Verwijder sectie">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="items-wrap" id="items-${si}"></div>
+      <div class="add-item-row" style="padding:8px 14px 10px">
+        <button class="add-item-btn" onclick="addItem(${si},'label')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="17" y2="18"/></svg>Tekstlabel
+        </button>
+        <button class="add-item-btn" onclick="addItem(${si},'check')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Vinkpunt
+        </button>
+        <button class="add-item-btn" onclick="addItem(${si},'yesno')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="12" y1="8" x2="12" y2="16"/></svg>Ja/Nee/N.v.t.
+        </button>
+        <button class="add-item-btn" onclick="addItem(${si},'statuscheck')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><circle cx="12" cy="12" r="10"/></svg>Statuscheck
+        </button>
+        <button class="add-item-btn" onclick="addItem(${si},'text')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>Tekstveld
+        </button>
+        <button class="add-item-btn" onclick="addItem(${si},'radio')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>Keuze
+        </button>
+        <button class="add-item-btn" onclick="addItem(${si},'photo')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Foto-punt
+        </button>
+        <button class="add-item-btn" onclick="addItem(${si},'date')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Datum
+        </button>
+        <button class="add-item-btn" onclick="addItem(${si},'number')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>Getal
+        </button>
+        <button class="add-item-btn" onclick="addItem(${si},'signature')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17c3-3 6-6 9-3s6 3 9-3"/><path d="M3 17l2-2"/></svg>Handtekening
+        </button>
+      </div>`;
+
+    const iw = el.querySelector(`#items-${si}`);
+    sec.items.forEach((item, ii) => iw.appendChild(renderItem(si, ii, item)));
+    wrap.appendChild(el);
+  });
+}
+
+const TYPE_LABELS = {
+  label:'Tekstlabel', check:'Vinkpunt', yesno:'Ja/Nee/N.v.t.', statuscheck:'Statuscheck (OK/Niet OK/…)',
+  text:'Tekstveld', radio:'Keuze', photo:'Foto', date:'Datum', number:'Getal', signature:'Handtekening'
+};
+
+// Gather all items across all sections as [{id, label}] for condition dropdowns
+function allItemsBefore(si, ii) {
+  const result = [];
+  sections.forEach((sec, ssi) => {
+    sec.items.forEach((item, iii) => {
+      if (ssi < si || (ssi === si && iii < ii)) {
+        if (item.label) result.push({ id: item.id, label: item.label, type: item.type });
+      }
+    });
+  });
+  return result;
+}
+
+function conditionValueOpts(sourceItem) {
+  if (!sourceItem) return [];
+  if (sourceItem.type === 'yesno') return ['Ja','Nee','N.v.t.'];
+  if (sourceItem.type === 'statuscheck') return ['OK','Niet OK','Onderdelen nodig','Niet gecheckt'];
+  if (sourceItem.type === 'radio') return sourceItem.options || [];
+  if (sourceItem.type === 'check') return ['aangevinkt'];
+  return [];
+}
+
+function renderItem(si, ii, item) {
+  const el = document.createElement('div');
+  el.className = 'item-card';
+  const prevItems = allItemsBefore(si, ii);
+
+  const condSrcId = item.showIf?.itemId || '';
+  const condVal   = item.showIf?.value  || '';
+  const condSrc   = prevItems.find(p => p.id === condSrcId);
+  const condVals  = condSrc ? conditionValueOpts(condSrc) : (condSrcId ? [condVal] : []);
+
+  const hasTrigger = ['yesno','radio','statuscheck'].includes(item.type);
+  const triggerVals = item.type==='yesno' ? ['Nee','N.v.t.'] :
+                      item.type==='statuscheck' ? ['Niet OK','Onderdelen nodig'] :
+                      (item.options||[]);
+
+  // Extra config fields (options for radio, unit for number — hints now in trans panels)
+  let extraHtml = '';
+  if (item.type==='radio') {
+    extraHtml = `<input class="item-options-input" placeholder="Opties gescheiden door komma, bv: Ja, Nee, N/A"
+      value="${esc((item.options||[]).join(', '))}"
+      onchange="sections[${si}].items[${ii}].options=this.value.split(',').map(s=>s.trim()).filter(Boolean);renderSections()">`;
+  } else if (item.type==='statuscheck') {
+    const defaults = ['OK','Niet OK','Onderdelen nodig','Niet gecheckt'];
+    const labels = item.statusLabels || defaults;
+    extraHtml = `<div style="display:flex;flex-direction:column;gap:6px">
+      <div style="font-size:11px;color:var(--light);font-weight:500">Benamingen (aanpasbaar)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        ${defaults.map((def,di) => `
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="width:8px;height:8px;border-radius:50%;background:${['var(--accent)','var(--danger)','#D97706','var(--muted)'][di]};flex-shrink:0"></span>
+            <input class="item-options-input" style="margin:0" value="${esc(labels[di]||def)}"
+              placeholder="${esc(def)}" oninput="setStatusLabel(${si},${ii},${di},this.value)">
+          </div>`).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--light);font-weight:500;margin-top:4px">Verduidelijking activeren bij:</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${defaults.map((def,di) => {
+          const lbl = labels[di]||def;
+          const checked = (item.statusFollowUp||[]).includes(lbl) || (item.statusFollowUp||[]).includes(def);
+          return `<label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);cursor:pointer;padding:4px 8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface)">
+            <input type="checkbox" ${checked?'checked':''} onchange="setStatusFollowUp(${si},${ii},${di},this.checked,sections[${si}].items[${ii}].statusLabels||${JSON.stringify(defaults)})">
+            ${esc(lbl)}
+          </label>`;
+        }).join('')}
+      </div>
+    </div>`;
+  } else if (item.type==='number') {
+    extraHtml = `<input class="item-options-input" placeholder="Eenheid (optioneel, bv: kg, °C, mm)"
+      value="${esc(item.unit||'')}" oninput="sections[${si}].items[${ii}].unit=this.value">`;
+  }
+
+  // Follow-up rule
+  const followHtml = hasTrigger ? `
+    <div class="item-rule-row">
+      <span class="item-rule-label">Bijkomend veld bij:</span>
+      <select class="item-rule-select" onchange="setFollowTrigger(${si},${ii},this.value)">
+        <option value="">— geen —</option>
+        ${triggerVals.map(v=>`<option value="${v}"${(item.followUp?.trigger||'')===(v)?'selected':''}>${esc(v)}</option>`).join('')}
+      </select>
+      ${item.followUp?.trigger ? `
+        <label class="item-rule-check">
+          <input type="checkbox" ${item.followUp?.photo?'checked':''} onchange="setFollowPhoto(${si},${ii},this.checked)">
+          + foto toevoegen
+        </label>` : ''}
+    </div>` : '';
+
+  // Condition rule
+  const condHtml = `
+    <div class="item-rule-row">
+      <span class="item-rule-label">Toon alleen als:</span>
+      <select class="item-rule-select" onchange="setCondSrc(${si},${ii},this.value)">
+        <option value="">— altijd zichtbaar —</option>
+        ${prevItems.map(p=>`<option value="${p.id}"${p.id===condSrcId?' selected':''}>${esc(typeof p.label==='object'?(p.label.nl||p.label.en||'?'):p.label)}</option>`).join('')}
+      </select>
+      ${condSrcId && condSrc?.type === 'check' ? `
+        <span style="font-size:12px;color:var(--accent);background:var(--accent-bg);padding:4px 10px;border-radius:99px;white-space:nowrap">= aangevinkt</span>` :
+       condSrcId && condVals.length ? `
+        <select class="item-rule-select" style="min-width:80px;flex:0 0 auto" onchange="setCondVal(${si},${ii},this.value)">
+          ${condVals.map(v=>`<option value="${v}"${v===condVal?' selected':''}>${esc(v)}</option>`).join('')}
+        </select>` : ''}
+    </div>`;
+
+  const isFirst = ii === 0;
+  const isLast  = ii === sections[si].items.length - 1;
+
+  // ── LABEL type: purely informational, no checkbox, no required ──
+  if (item.type === 'label') {
+    const lblObj = (typeof item.label === 'object' && item.label) ? item.label : { nl: item.label||'', en:'', fr:'', de:'' };
+    const LFLAGS = {nl:'🇧🇪 NL', en:'🇬🇧 EN', fr:'🇫🇷 FR', de:'🇩🇪 DE'};
+    const lTabs = ['nl','en','fr','de'].map(l =>
+      `<div class="trans-tab${l==='nl'?' active':''}" onclick="switchTransTab(this,'ltrans-${si}-${ii}')">${LFLAGS[l]}</div>`
+    ).join('');
+    const lPanels = ['nl','en','fr','de'].map(l => `
+      <div class="trans-panel${l==='nl'?'':' hidden'}" id="ltrans-${si}-${ii}-${l}">
+        <input class="item-label-input" style="width:100%;font-style:italic;color:var(--muted)"
+          value="${esc(lblObj[l]||'')}" placeholder="Labeltext in ${l}…"
+          oninput="setItemLang(${si},${ii},'label','${l}',this.value)">
+      </div>`).join('');
+    const isFirst = ii === 0, isLast = ii === sections[si].items.length - 1;
+    el.style.borderLeft = '3px solid var(--accent)';
+    el.style.background = 'var(--accent-bg)';
+    el.innerHTML = `
+      <div class="item-card-top">
+        <span class="item-num" style="color:var(--accent)">T</span>
+        <div style="flex:1;min-width:0">
+          <div class="trans-tabs">${lTabs}</div>
+          ${lPanels}
+        </div>
+        <div class="item-card-actions">
+          <button class="icon-btn" onclick="moveItem(${si},${ii},-1)" ${isFirst?'disabled style="opacity:0.25"':''}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+          </button>
+          <button class="icon-btn" onclick="moveItem(${si},${ii},1)" ${isLast?'disabled style="opacity:0.25"':''}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <button class="icon-btn" onclick="deleteItem(${si},${ii})" style="color:var(--danger);opacity:0.7">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          </button>
+        </div>
+      </div>`;
+    return el;
+  }
+
+  // Build multilingual label — support both string and object
+  const labelObj = (typeof item.label === 'object' && item.label) ? item.label : { nl: item.label||'', en:'', fr:'', de:'' };
+  const hintObj  = (typeof item.hint  === 'object' && item.hint)  ? item.hint  : { nl: item.hint ||'', en:'', fr:'', de:'' };
+  const LANGS = ['nl','en','fr','de'];
+  const LANG_FLAGS = {nl:'🇧🇪 NL', en:'🇬🇧 EN', fr:'🇫🇷 FR', de:'🇩🇪 DE'};
+
+  // Need hint input for text/yesno/number types
+  const hasHint = ['text','yesno','number'].includes(item.type);
+
+  const transTabsHtml = LANGS.map(l =>
+    `<div class="trans-tab${l==='nl'?' active':''}" onclick="switchTransTab(this,'trans-${si}-${ii}')">${LANG_FLAGS[l]}</div>`
+  ).join('');
+
+  const transPanelsHtml = LANGS.map(l => `
+    <div class="trans-panel${l==='nl'?'':' hidden'}" id="trans-${si}-${ii}-${l}">
+      <div>
+        <div class="trans-field-label">Vraagtekst ${LANG_FLAGS[l]}</div>
+        <input class="item-label-input" style="width:100%" value="${esc(labelObj[l]||'')}" placeholder="Vraagtekst in ${l}…"
+          oninput="setItemLang(${si},${ii},'label','${l}',this.value)">
+      </div>
+      ${hasHint ? `<div>
+        <div class="trans-field-label">Hint / instructie ${LANG_FLAGS[l]}</div>
+        <input class="item-options-input" value="${esc(hintObj[l]||'')}" placeholder="Hint in ${l}…"
+          oninput="setItemLang(${si},${ii},'hint','${l}',this.value)">
+      </div>` : ''}
+    </div>`).join('');
+
+  el.innerHTML = `
+    <div class="item-card-top">
+      <span class="item-num">${ii+1}</span>
+      <div style="flex:1;min-width:0">
+        <div class="trans-tabs">${transTabsHtml}</div>
+        ${transPanelsHtml}
+      </div>
+      <div class="item-card-actions">
+        <button class="icon-btn" onclick="moveItem(${si},${ii},-1)" ${isFirst?'disabled style="opacity:0.25"':''} title="Omhoog">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+        </button>
+        <button class="icon-btn" onclick="moveItem(${si},${ii},1)" ${isLast?'disabled style="opacity:0.25"':''} title="Omlaag">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <button class="icon-btn" onclick="deleteItem(${si},${ii})" title="Verwijder" style="margin-left:2px;color:var(--danger);opacity:0.7">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="item-card-meta">
+      <select class="item-type-select" onchange="changeItemType(${si},${ii},this.value)">
+        ${Object.entries(TYPE_LABELS).map(([v,l])=>`<option value="${v}"${item.type===v?' selected':''}>${l}</option>`).join('')}
+      </select>
+      <label class="item-req">
+        <input type="checkbox" ${item.required?'checked':''} onchange="sections[${si}].items[${ii}].required=this.checked">
+        Verplicht
+      </label>
+    </div>
+    ${extraHtml || followHtml || condHtml ? `<div class="item-extra" style="padding-left:0">${extraHtml}${followHtml}${condHtml}</div>` : ''}`;
+  return el;
+}
+
+// ── ITEM/SECTION ACTIONS ──
+function addSection() {
+  sections.push({ id:uid(), title:'Nieuwe sectie', items:[] });
+  renderSections();
+}
+function deleteSection(si) {
+  if (!confirm('Sectie verwijderen?')) return;
+  sections.splice(si, 1);
+  renderSections();
+}
+function moveSection(si, dir) {
+  const j = si+dir;
+  if (j<0||j>=sections.length) return;
+  [sections[si],sections[j]]=[sections[j],sections[si]];
+  renderSections();
+}
+function addItem(si, type) {
+  const ni = { id:uid(), label:'', hint:'', type, required:false };
+  if (type==='radio') ni.options=['Ja','Nee','N/A'];
+  sections[si].items.push(ni);
+  renderSections();
+}
+// ── TRANSLATION HELPERS ──
+function switchTransTab(clickedTab, panelGroupId) {
+  const card = clickedTab.closest('.item-card');
+  card.querySelectorAll('.trans-tab').forEach(t => t.classList.remove('active'));
+  card.querySelectorAll('.trans-panel').forEach(p => p.classList.add('hidden'));
+  clickedTab.classList.add('active');
+  const lang = clickedTab.textContent.trim().slice(-2).toLowerCase();
+  const panel = document.getElementById(panelGroupId + '-' + lang);
+  if (panel) panel.classList.remove('hidden');
+}
+
+function setItemLang(si, ii, field, lang, val) {
+  const item = sections[si].items[ii];
+  // Convert string to object if needed
+  if (typeof item[field] !== 'object' || !item[field]) {
+    const existing = item[field] || '';
+    item[field] = { nl: existing, en: '', fr: '', de: '' };
+  }
+  item[field][lang] = val;
+  // Keep backward compat: if NL is set, also keep as root for old templates
+  if (lang === 'nl') item[field + '_legacy'] = val;
+}
+
+function setSectionTitleLang(si, lang, val) {
+  const sec = sections[si];
+  if (typeof sec.title !== 'object' || !sec.title) {
+    const existing = sec.title || '';
+    sec.title = { nl: existing, en: '', fr: '', de: '' };
+  }
+  sec.title[lang] = val;
+}
+
+function setStatusLabel(si, ii, idx, val) {
+  const item = sections[si].items[ii];
+  if (!item.statusLabels) item.statusLabels = ['OK','Niet OK','Onderdelen nodig','Niet gecheckt'];
+  item.statusLabels[idx] = val;
+  saveData();
+}
+
+function setStatusFollowUp(si, ii, idx, checked, currentLabels) {
+  const item = sections[si].items[ii];
+  const label = (item.statusLabels||currentLabels)[idx];
+  if (!item.statusFollowUp) item.statusFollowUp = [];
+  if (checked) { if (!item.statusFollowUp.includes(label)) item.statusFollowUp.push(label); }
+  else { item.statusFollowUp = item.statusFollowUp.filter(v => v !== label); }
+  saveData();
+}
+
+function setCondSrc(si, ii, srcId) {
+  if (!sections[si].items[ii].showIf) sections[si].items[ii].showIf = {};
+  sections[si].items[ii].showIf.itemId = srcId;
+  // Auto-set value for check type (only one possible value)
+  if (srcId) {
+    const srcItem = sections.flatMap(s=>s.items).find(it=>it.id===srcId);
+    sections[si].items[ii].showIf.value = srcItem?.type === 'check' ? 'aangevinkt' : '';
+  } else {
+    sections[si].items[ii].showIf.value = '';
+  }
+  renderSections();
+}
+function setCondVal(si, ii, val) {
+  if (!sections[si].items[ii].showIf) sections[si].items[ii].showIf = {};
+  sections[si].items[ii].showIf.value = val;
+}
+function setFollowTrigger(si, ii, val) {
+  if (!sections[si].items[ii].followUp) sections[si].items[ii].followUp = {};
+  sections[si].items[ii].followUp.trigger = val;
+  sections[si].items[ii].followUp.photo = sections[si].items[ii].followUp.photo || false;
+  renderSections();
+}
+function setFollowPhoto(si, ii, val) {
+  if (!sections[si].items[ii].followUp) sections[si].items[ii].followUp = {};
+  sections[si].items[ii].followUp.photo = val;
+}
+function deleteItem(si, ii) {
+  sections[si].items.splice(ii,1);
+  renderSections();
+}
+function moveItem(si, ii, dir) {
+  const j=ii+dir;
+  if (j<0||j>=sections[si].items.length) return;
+  [sections[si].items[ii],sections[si].items[j]]=[sections[si].items[j],sections[si].items[ii]];
+  renderSections();
+}
+function changeItemType(si, ii, type) {
+  sections[si].items[ii].type = type;
+  if (type==='radio'&&!sections[si].items[ii].options) sections[si].items[ii].options=['Ja','Nee','N/A'];
+  renderSections();
+}
+
+// ── SAVE / DELETE ──
+async function saveTemplate(silent = false) {
+  const name = document.getElementById('e-name').value.trim();
+  if (!name) { toast('Geef een naam op', 'error'); return; }
+
+  // Normalise all labels/hints to multilingual objects, and fix showIf values
+  const allItems = sections.flatMap(s => s.items);
+  sections.forEach(sec => {
+    if (typeof sec.title !== 'object' || !sec.title)
+      sec.title = { nl: sec.title||'', en:'', fr:'', de:'' };
+    sec.items.forEach(item => {
+      if (typeof item.label !== 'object' || !item.label)
+        item.label = { nl: item.label||'', en:'', fr:'', de:'' };
+      if (typeof item.hint !== 'object' || !item.hint)
+        item.hint  = { nl: item.hint||'',  en:'', fr:'', de:'' };
+      if (item.showIf?.itemId && !item.showIf.value) {
+        const srcItem = allItems.find(it => it.id === item.showIf.itemId);
+        if (srcItem?.type === 'check') item.showIf.value = 'aangevinkt';
+      }
+    });
+  });
+
+  const payload = {
+    name,
+    description: document.getElementById('e-desc').value.trim(),
+    category: document.getElementById('e-cat').value,
+    lang: document.getElementById('e-lang').value,
+    schema: { sections },
+    updated_at: new Date().toISOString()
+  };
+  let error;
+  if (currentId) {
+    ({ error } = await sb.from('templates').update(payload).eq('id', currentId));
+  } else {
+    ({ error } = await sb.from('templates').insert({ ...payload, active:true }));
+  }
+  if (error) { toast('Fout bij opslaan: ' + error.message, 'error'); return; }
+  if (!silent) {
+    toast('Template opgeslagen!', 'success');
+    cancelEditor();
+    loadTemplates();
+  } else {
+    toast('Auto-opgeslagen', '');
+  }
+}
+
+async function deleteTemplate() {
+  if (!confirm('Template verwijderen? Dit verwijdert ook alle gekoppelde ingevulde checklists.')) return;
+  const { error } = await sb.from('templates').delete().eq('id', currentId);
+  if (error) { toast('Fout: ' + error.message, 'error'); return; }
+  toast('Template verwijderd');
+  cancelEditor();
+  loadTemplates();
+}
+
+// ── UTILS ──
+function toast(msg, type='') {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='toast show '+(type||'');
+  setTimeout(()=>el.className='toast',2800);
+}
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+checkAuth();
+</script>
+</body>
+</html>
