@@ -1544,11 +1544,8 @@ function toast(msg, type='') {
 const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
 // Wait for auth.js to be available, then init
-if (typeof AUTH !== 'undefined') {
-  init();
-} else {
-  window.addEventListener('load', init);
-}
+// Single init call - AUTH may or may not be available
+init();
 </script>
 </body>
 </html>
