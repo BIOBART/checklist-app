@@ -188,8 +188,20 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); hei
 <div class="toast" id="toast"></div>
 
 <script>
-// sb is set after AUTH.init() — uses the authenticated session
-let sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+// sb getter — always returns the authenticated Supabase client
+function getSb() {
+  // Prefer AUTH client (has session), fall back to anon
+  if (typeof AUTH !== 'undefined' && AUTH.getClient && AUTH.getClient()) {
+    return AUTH.getClient();
+  }
+  return supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+}
+// Proxy object so existing sb.from() calls still work
+const sb = new Proxy({}, {
+  get(_, prop) {
+    return (...args) => getSb()[prop](...args);
+  }
+});
 
 const CATEGORY_ICONS = {
   oplevering: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`,
