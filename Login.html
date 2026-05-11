@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inloggen — Biolectric</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#F6F4EF; --surface:#FFFFFF; --surface2:#EFECE5;
+  --border:#E0DDD5; --border-strong:#C5C0B5;
+  --text:#1A1714; --muted:#7A7168; --light:#B0A898;
+  --accent:#2D5A3D; --accent-bg:#E8F0EB; --accent-mid:#4A8A5E;
+  --danger:#C0392B; --danger-bg:#FDECEA;
+  --radius:10px; --radius-lg:16px;
+  --shadow:0 4px 24px rgba(0,0,0,0.08);
+}
+body {
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:1.5rem;
+}
+
+.login-wrap { width:100%; max-width:400px; }
+
+.logo-block {
+  display:flex;
+  justify-content:center;
+  margin-bottom:2rem;
+}
+.logo-block img { height:40px; }
+
+.card {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  padding:2rem;
+  box-shadow:var(--shadow);
+}
+.card-title {
+  font-family:'DM Serif Display',serif;
+  font-size:22px;
+  margin-bottom:6px;
+}
+.card-sub {
+  font-size:14px;
+  color:var(--muted);
+  margin-bottom:1.5rem;
+  line-height:1.6;
+}
+
+.field { margin-bottom:1rem; }
+.field label {
+  display:block;
+  font-size:12px;
+  font-weight:500;
+  color:var(--muted);
+  margin-bottom:4px;
+}
+.field input {
+  width:100%;
+  font-family:'DM Sans',sans-serif;
+  font-size:14px;
+  padding:10px 12px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  background:var(--bg);
+  color:var(--text);
+  outline:none;
+  transition:border-color 0.15s, background 0.15s;
+}
+.field input:focus { border-color:var(--accent); background:var(--surface); }
+
+.btn-login {
+  width:100%;
+  padding:11px;
+  background:var(--accent);
+  color:white;
+  border:none;
+  border-radius:var(--radius);
+  font-family:'DM Sans',sans-serif;
+  font-size:15px;
+  font-weight:500;
+  cursor:pointer;
+  transition:background 0.15s;
+  margin-top:0.5rem;
+}
+.btn-login:hover { background:#234830; }
+.btn-login:disabled { background:var(--border-strong); cursor:not-allowed; }
+
+.error-msg {
+  background:var(--danger-bg);
+  border:1px solid #FCA5A5;
+  color:var(--danger);
+  border-radius:var(--radius);
+  padding:10px 14px;
+  font-size:13px;
+  margin-bottom:1rem;
+  display:none;
+}
+.error-msg.show { display:block; }
+
+.forgot-link {
+  display:block;
+  text-align:center;
+  margin-top:1rem;
+  font-size:13px;
+  color:var(--muted);
+  text-decoration:none;
+  cursor:pointer;
+}
+.forgot-link:hover { color:var(--accent); }
+
+/* Reset password panel */
+.reset-panel { display:none; }
+.reset-panel.show { display:block; }
+.login-panel.hide { display:none; }
+
+.success-msg {
+  background:var(--accent-bg);
+  border:1px solid var(--accent-mid);
+  color:var(--accent);
+  border-radius:var(--radius);
+  padding:10px 14px;
+  font-size:13px;
+  margin-bottom:1rem;
+  display:none;
+}
+.success-msg.show { display:block; }
+
+.footer-note {
+  text-align:center;
+  margin-top:1.5rem;
+  font-size:12px;
+  color:var(--light);
+}
+</style>
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="logo-block">
+    <img src="assets/logo.png" alt="Biolectric">
+  </div>
+
+  <div class="card">
+
+    <!-- Login panel -->
+    <div class="login-panel" id="login-panel">
+      <div class="card-title">Welkom terug</div>
+      <div class="card-sub">Log in om checklists in te vullen en te beheren.</div>
+
+      <div class="error-msg" id="login-error"></div>
+
+      <div class="field">
+        <label>E-mailadres</label>
+        <input type="email" id="email" placeholder="naam@biolectric.com" autocomplete="email"
+          onkeydown="if(event.key==='Enter')document.getElementById('password').focus()">
+      </div>
+      <div class="field">
+        <label>Wachtwoord</label>
+        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+
+      <button class="btn-login" id="login-btn" onclick="doLogin()">Inloggen</button>
+      <a class="forgot-link" onclick="showReset()">Wachtwoord vergeten?</a>
+    </div>
+
+    <!-- Reset password panel -->
+    <div class="reset-panel" id="reset-panel">
+      <div class="card-title">Wachtwoord herstellen</div>
+      <div class="card-sub">Vul je e-mailadres in. Je ontvangt een link om een nieuw wachtwoord in te stellen.</div>
+
+      <div class="error-msg" id="reset-error"></div>
+      <div class="success-msg" id="reset-success">Reset-link verzonden! Controleer je e-mail.</div>
+
+      <div class="field">
+        <label>E-mailadres</label>
+        <input type="email" id="reset-email" placeholder="naam@biolectric.com"
+          onkeydown="if(event.key==='Enter')doReset()">
+      </div>
+
+      <button class="btn-login" onclick="doReset()">Reset-link versturen</button>
+      <a class="forgot-link" onclick="showLogin()">← Terug naar inloggen</a>
+    </div>
+
+  </div>
+
+  <div class="footer-note">Biolectric Commissioning App · <a href="mailto:info@biolectric.com" style="color:inherit">info@biolectric.com</a></div>
+</div>
+
+<script>
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// If already logged in, redirect to home
+sb.auth.getSession().then(({ data: { session } }) => {
+  if (session) redirectAfterLogin();
+});
+
+// Listen for password reset confirmation
+sb.auth.onAuthStateChange((event) => {
+  if (event === 'SIGNED_IN') redirectAfterLogin();
+});
+
+function redirectAfterLogin() {
+  const redirect = new URLSearchParams(location.search).get('redirect') || 'index.html';
+  location.href = redirect;
+}
+
+async function doLogin() {
+  const email = document.getElementById('email').value.trim();
+  const pw = document.getElementById('password').value;
+  const btn = document.getElementById('login-btn');
+  const errEl = document.getElementById('login-error');
+
+  if (!email || !pw) { showError(errEl, 'Vul je e-mail en wachtwoord in.'); return; }
+
+  btn.disabled = true; btn.textContent = 'Inloggen…';
+  errEl.classList.remove('show');
+
+  const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+
+  if (error) {
+    btn.disabled = false; btn.textContent = 'Inloggen';
+    const msg = error.message.includes('Invalid') ? 'Ongeldig e-mailadres of wachtwoord.' : error.message;
+    showError(errEl, msg);
+  }
+  // onAuthStateChange handles redirect on success
+}
+
+async function doReset() {
+  const email = document.getElementById('reset-email').value.trim();
+  const errEl = document.getElementById('reset-error');
+  const sucEl = document.getElementById('reset-success');
+
+  if (!email) { showError(errEl, 'Vul je e-mailadres in.'); return; }
+
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: location.origin + location.pathname.replace('login.html','') + 'login.html'
+  });
+
+  if (error) { showError(errEl, error.message); }
+  else { sucEl.classList.add('show'); errEl.classList.remove('show'); }
+}
+
+function showReset() {
+  document.getElementById('login-panel').classList.add('hide');
+  document.getElementById('reset-panel').classList.add('show');
+}
+function showLogin() {
+  document.getElementById('reset-panel').classList.remove('show');
+  document.getElementById('login-panel').classList.remove('hide');
+}
+function showError(el, msg) { el.textContent = msg; el.classList.add('show'); }
+</script>
+</body>
+</html>
