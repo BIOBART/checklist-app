@@ -26,13 +26,6 @@ const AUTH = (() => {
     _user = session.user;
     _isAdmin = _user?.user_metadata?.role === 'admin';
 
-    // ── Key fix: reassign the page-level `sb` variable so all queries
-    //    use the authenticated client with the correct session token ──
-    if (typeof sb !== 'undefined') {
-      // eslint-disable-next-line no-global-assign
-      sb = _sb;
-    }
-
     // Render user pill in header if #user-pill exists
     const pill = document.getElementById('user-pill');
     if (pill) {
