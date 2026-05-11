@@ -107,13 +107,6 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); hei
   .nav-link span { display: none; }
 }
 
-/* USER PILL */
-.user-pill { display:flex; align-items:center; gap:8px; }
-.user-avatar { width:28px; height:28px; border-radius:50%; background:var(--accent); color:white; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.user-name { font-size:13px; color:var(--text); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.user-role-badge { font-size:10px; background:var(--accent-bg); color:var(--accent); padding:2px 7px; border-radius:99px; font-weight:600; white-space:nowrap; }
-.user-logout { background:none; border:none; cursor:pointer; color:var(--muted); display:flex; align-items:center; padding:4px; border-radius:6px; transition:color 0.15s; }
-.user-logout:hover { color:var(--danger); }
 
 </style>
 </head>
@@ -135,7 +128,6 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); hei
       <span>Admin</span>
     </a>
   </nav>
-  <div id="user-pill"></div>
 </header>
 
 <div class="hero">
@@ -188,20 +180,8 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); hei
 <div class="toast" id="toast"></div>
 
 <script>
-// sb getter — always returns the authenticated Supabase client
-function getSb() {
-  // Prefer AUTH client (has session), fall back to anon
-  if (typeof AUTH !== 'undefined' && AUTH.getClient && AUTH.getClient()) {
-    return AUTH.getClient();
-  }
-  return supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-}
-// Proxy object so existing sb.from() calls still work
-const sb = new Proxy({}, {
-  get(_, prop) {
-    return (...args) => getSb()[prop](...args);
-  }
-});
+// sb is set after AUTH.init() — uses the authenticated session
+let sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 const CATEGORY_ICONS = {
   oplevering: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`,
@@ -299,16 +279,9 @@ async function loadRecent() {
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 // Init
-</script>
-<script src="auth.js"></script>
-<script>
-AUTH.init().then(ctx => {
-  if (!ctx) return;
-  window._authCtx = ctx;
-  Promise.all([loadStats(), loadTemplates(), loadRecent()]).catch(e => {
-    toast('Kan geen verbinding maken met de database. Controleer config.js');
-    console.error(e);
-  });
+Promise.all([loadStats(), loadTemplates(), loadRecent()]).catch(e => {
+  toast('Kan geen verbinding maken met de database. Controleer config.js');
+  console.error(e);
 });
 </script>
 </body>
