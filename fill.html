@@ -733,7 +733,7 @@ function setRadio(id, val) {
   const a = getAns(id); a.value = val; a.checked = true;
   scheduleSave(); updateProgress();
   renderRadioHighlight(id, val);
-  toggleCheckUI(id, true);
+  // No toggleCheckUI for radio/yesno — no strikethrough on label
   // show/hide follow-up field
   const item = findItem(id);
   if (item?.followUp?.trigger) {
@@ -1310,7 +1310,7 @@ async function generatePDF(mode = 'download') {
           }
           const unit = item.unit ? ' ' + item.unit : '';
           doc.setFontSize(9); doc.setTextColor(...M);
-          doc.text('> ' + displayVal + unit, mg+4, y); y += 4.5;
+          doc.text(displayVal + unit, mg+4, y); y += 4.5;
         }
         y += 2; continue;
       }
@@ -1343,7 +1343,7 @@ async function generatePDF(mode = 'download') {
         doc.text(ll, mg, y);
         if (ans.value) {
           doc.setFontSize(9); doc.setTextColor(...M);
-          doc.text('> '+ans.value, mg+4, y + ll.length*4.5);
+          doc.text(ans.value, mg+4, y + ll.length*4.5);
         }
         // draw option pills right-aligned
         const ropts = item.options||['Ja','Nee','N/A'];
