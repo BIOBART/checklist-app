@@ -6,7 +6,7 @@
 <title>Admin — Checklist App</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="config.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -342,7 +342,7 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
   <div class="qr-modal" onclick="event.stopPropagation()">
     <h3 id="qr-title">Template</h3>
     <p>Scan om deze checklist te openen</p>
-    <canvas id="qr-canvas"></canvas>
+    <div id="qr-wrap" style="display:inline-block;border-radius:var(--radius);border:1px solid var(--border);padding:8px;background:white"></div>
     <div class="qr-modal-url" id="qr-url"></div>
     <div style="display:flex;gap:8px;justify-content:center;margin-top:1rem">
       <button class="qr-close" onclick="downloadQR()">
@@ -1044,24 +1044,31 @@ function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').repla
 
 // ── QR CODE ──
 function showQR(templateId, name) {
-  const base = location.origin + location.pathname.replace('admin.html','');
+  const base = location.origin + location.pathname.replace(/[^/]*$/, '');
   const url = base + 'fill.html?template=' + templateId;
   document.getElementById('qr-title').textContent = name;
   document.getElementById('qr-url').textContent = url;
-  const canvas = document.getElementById('qr-canvas');
-  QRCode.toCanvas(canvas, url, {
-    width: 200, margin: 2,
-    color: { dark: '#2D5A3D', light: '#FFFFFF' }
+  // Clear previous QR
+  const wrap = document.getElementById('qr-wrap');
+  wrap.innerHTML = '';
+  new QRCode(wrap, {
+    text: url,
+    width: 200, height: 200,
+    colorDark: '#2D5A3D',
+    colorLight: '#FFFFFF',
+    correctLevel: QRCode.CorrectLevel.M
   });
   document.getElementById('qr-overlay').classList.add('open');
 }
 function closeQR() { document.getElementById('qr-overlay').classList.remove('open'); }
 function downloadQR() {
-  const canvas = document.getElementById('qr-canvas');
+  const wrap = document.getElementById('qr-wrap');
+  const canvas = wrap.querySelector('canvas');
+  const img = wrap.querySelector('img');
   const title = document.getElementById('qr-title').textContent.replace(/\s+/g,'_');
   const a = document.createElement('a');
   a.download = 'QR_' + title + '.png';
-  a.href = canvas.toDataURL('image/png');
+  a.href = canvas ? canvas.toDataURL('image/png') : img.src;
   a.click();
 }
 
