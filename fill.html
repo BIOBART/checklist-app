@@ -125,6 +125,12 @@ textarea.ff:focus, input.ff:focus { border-color:var(--accent); background:var(-
 .bottom-bar { position:fixed; bottom:0; left:0; right:0; background:var(--surface); border-top:1px solid var(--border); padding:0.75rem 1.5rem; display:flex; align-items:center; justify-content:space-between; gap:12px; z-index:40; flex-wrap:wrap; }
 .bottom-left { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 
+/* INSTRUCTION TYPE */
+.instruction-block { padding:12px 1.25rem; border-bottom:1px solid var(--border); display:flex; gap:14px; align-items:flex-start; background:#F0F7FF; border-left:3px solid #3B82F6; }
+.instruction-block:last-child { border-bottom:none; }
+.instruction-img { width:120px; height:90px; object-fit:cover; border-radius:var(--radius); border:1px solid #BFDBFE; flex-shrink:0; }
+.instruction-text { font-size:13px; color:#1E40AF; line-height:1.6; flex:1; }
+
 /* LABEL TYPE */
 .item-label-block { padding:10px 1.25rem 8px; border-bottom:1px solid var(--border); }
 .item-label-block:last-child { border-bottom:none; }
@@ -521,6 +527,16 @@ function renderItem(secId, item) {
     </div>`;
   };
 
+  // ── INSTRUCTION type: fixed image + text from template ──
+  if (item.type === 'instruction') {
+    const instrText = gl(item.label);
+    el.className = 'instruction-block';
+    el.innerHTML = `
+      ${item.image ? `<img class="instruction-img" src="${item.image}" alt="Instructie">` : ''}
+      ${instrText ? `<div class="instruction-text">${esc(instrText)}</div>` : ''}`;
+    return el;
+  }
+
   // ── LABEL type: informational text, no input ──
   if (item.type === 'label') {
     const labelText = gl(item.label);
@@ -876,7 +892,7 @@ function updateProgress() {
   if (!template) return;
   let total=0, done=0;
   (template.schema?.sections||[]).forEach(s => s.items.forEach(i => {
-    if (i.type === 'label') return;  // labels don't count toward progress
+    if (i.type === 'label' || i.type === 'instruction') return;  // info blocks don't count
     total++; if(answers[i.id]?.checked) done++;
   }));
   const pct = total ? Math.round((done/total)*100) : 0;
@@ -968,7 +984,7 @@ async function markComplete() {
   // Check required question fields
   const missing = [];
   (template.schema?.sections||[]).forEach(sec => sec.items.forEach(item => {
-    if (item.type === 'label') return;
+    if (item.type === 'label' || item.type === 'instruction') return;
     if (item.required && !answers[item.id]?.checked) missing.push(gl(item.label));
   }));
   if (missing.length) {
@@ -1268,6 +1284,33 @@ async function generatePDF(mode = 'download') {
           y+=ph2+gap+3;
         }
         y+=2;
+        continue;
+      }
+
+      // ── instruction type: image + text block ──
+      if (item.type === 'instruction') {
+        if (y > ph-40) { doc.addPage(); y=mg; }
+        const instrText = gl(item.label);
+        const hasImg = !!item.image;
+        const imgW=50, imgH=38;
+        if (hasImg) {
+          try {
+            const imgData = await resizeImageForPdf(item.image, 600, 450);
+            doc.addImage(imgData, 'JPEG', mg, y, imgW, imgH);
+            doc.setDrawColor(191,219,254); doc.setLineWidth(0.3); doc.rect(mg,y,imgW,imgH);
+          } catch(e){}
+        }
+        if (instrText) {
+          doc.setFillColor(239,246,255);
+          const textX = hasImg ? mg+imgW+4 : mg;
+          const textW = hasImg ? cw-imgW-4 : cw;
+          const lines = doc.splitTextToSize(instrText, textW);
+          const boxH = Math.max(imgH, lines.length*4.5+6);
+          if (!hasImg) doc.roundedRect(mg, y-1, cw, boxH+2, 2, 2, 'F');
+          doc.setTextColor(30,64,175); doc.setFontSize(9); doc.setFont('helvetica','normal');
+          doc.text(lines, textX, y+5);
+        }
+        y += (hasImg ? Math.max(imgH, (gl(item.label)||'').split('\n').length*4.5+6) : 20) + 4;
         continue;
       }
 
