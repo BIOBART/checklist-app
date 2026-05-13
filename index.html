@@ -6,6 +6,7 @@
 <title>Checklist App</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script src="config.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -66,6 +67,19 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); hei
 .card-arrow { color: var(--accent); opacity: 0; transition: opacity 0.15s; }
 .template-card:hover .card-arrow { opacity: 1; }
 .card-arrow svg { width: 16px; height: 16px; }
+.qr-btn { background:none; border:1px solid var(--border); border-radius:var(--radius); padding:4px 8px; cursor:pointer; color:var(--muted); display:flex; align-items:center; gap:4px; font-size:11px; font-family:'DM Sans',sans-serif; transition:all 0.15s; text-decoration:none; }
+.qr-btn:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-bg); }
+.qr-btn svg { width:13px; height:13px; }
+/* QR MODAL */
+.qr-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:200; align-items:center; justify-content:center; }
+.qr-overlay.open { display:flex; }
+.qr-modal { background:var(--surface); border-radius:var(--radius-lg); padding:2rem; width:280px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.2); }
+.qr-modal h3 { font-family:'DM Serif Display',serif; font-size:18px; margin-bottom:4px; }
+.qr-modal p { font-size:12px; color:var(--muted); margin-bottom:1.25rem; }
+.qr-modal canvas { border-radius:var(--radius); border:1px solid var(--border); }
+.qr-modal-url { font-size:10px; color:var(--light); margin-top:8px; word-break:break-all; }
+.qr-close { margin-top:1rem; font-size:13px; color:var(--muted); background:none; border:1px solid var(--border); border-radius:var(--radius); padding:6px 16px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.15s; }
+.qr-close:hover { background:var(--surface2); }
 
 /* RECENT LIST */
 .recent-list { display: flex; flex-direction: column; gap: 8px; }
@@ -244,7 +258,13 @@ async function loadTemplates() {
       <div class="card-desc">${esc(t.description||'')}</div>
       <div class="card-footer">
         <span class="card-count">${itemCount(t.schema)} vragen</span>
-        <span class="card-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="qr-btn" onclick="event.preventDefault();showQR('${t.id}','${esc(t.name)}')" title="QR code">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><line x1="17" y1="18" x2="20" y2="18"/><line x1="20" y1="15" x2="20" y2="18"/></svg>
+            QR
+          </button>
+          <span class="card-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+        </div>
       </div>
     </a>
   `).join('');
@@ -278,11 +298,52 @@ async function loadRecent() {
 
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+// ── QR CODE ──
+function showQR(templateId, name) {
+  const url = location.origin + location.pathname.replace('index.html','') + 'fill.html?template=' + templateId;
+  document.getElementById('qr-title').textContent = name;
+  document.getElementById('qr-url').textContent = url;
+  const canvas = document.getElementById('qr-canvas');
+  QRCode.toCanvas(canvas, url, {
+    width: 200, margin: 2,
+    color: { dark: '#2D5A3D', light: '#FFFFFF' }
+  });
+  document.getElementById('qr-overlay').classList.add('open');
+}
+
+function closeQR() {
+  document.getElementById('qr-overlay').classList.remove('open');
+}
+
+function downloadQR() {
+  const canvas = document.getElementById('qr-canvas');
+  const title = document.getElementById('qr-title').textContent.replace(/\s+/g,'_');
+  const a = document.createElement('a');
+  a.download = 'QR_' + title + '.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+
 // Init
 Promise.all([loadStats(), loadTemplates(), loadRecent()]).catch(e => {
   toast('Kan geen verbinding maken met de database. Controleer config.js');
   console.error(e);
 });
 </script>
+<!-- QR Modal -->
+<div class="qr-overlay" id="qr-overlay" onclick="closeQR()">
+  <div class="qr-modal" onclick="event.stopPropagation()">
+    <h3 id="qr-title">Template</h3>
+    <p>Scan om deze checklist te openen</p>
+    <canvas id="qr-canvas"></canvas>
+    <div class="qr-modal-url" id="qr-url"></div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:1rem">
+      <button class="qr-close" onclick="downloadQR()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download
+      </button>
+      <button class="qr-close" onclick="closeQR()">Sluiten</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
