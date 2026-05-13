@@ -6,7 +6,6 @@
 <title>Checklist App</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="config.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -304,16 +303,11 @@ function showQR(templateId, name) {
   const url = base + 'fill.html?template=' + templateId;
   document.getElementById('qr-title').textContent = name;
   document.getElementById('qr-url').textContent = url;
-  // Clear previous QR
   const wrap = document.getElementById('qr-wrap');
-  wrap.innerHTML = '';
-  new QRCode(wrap, {
-    text: url,
-    width: 200, height: 200,
-    colorDark: '#2D5A3D',
-    colorLight: '#FFFFFF',
-    correctLevel: QRCode.CorrectLevel.M
-  });
+  const encoded = encodeURIComponent(url);
+  wrap.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=2D5A3D&data=' + encoded + '" width="200" height="200" style="border-radius:6px">';
+  document.getElementById('qr-overlay').classList.add('open');
+});
   document.getElementById('qr-overlay').classList.add('open');
 }
 
@@ -322,13 +316,12 @@ function closeQR() {
 }
 
 function downloadQR() {
-  const wrap = document.getElementById('qr-wrap');
-  const canvas = wrap.querySelector('canvas');
-  const img = wrap.querySelector('img');
-  const title = document.getElementById('qr-title').textContent.replace(/\s+/g,'_');
+  const img = document.getElementById('qr-wrap').querySelector('img');
+  const title = document.getElementById('qr-title').textContent.replace(/[^a-zA-Z0-9]/g,'_');
   const a = document.createElement('a');
   a.download = 'QR_' + title + '.png';
-  a.href = canvas ? canvas.toDataURL('image/png') : img.src;
+  a.href = img.src;
+  a.target = '_blank';
   a.click();
 }
 
