@@ -307,8 +307,6 @@ function showQR(templateId, name) {
   const encoded = encodeURIComponent(url);
   wrap.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=2D5A3D&data=' + encoded + '" width="200" height="200" style="border-radius:6px">';
   document.getElementById('qr-overlay').classList.add('open');
-});
-  document.getElementById('qr-overlay').classList.add('open');
 }
 
 function closeQR() {
