@@ -6,6 +6,7 @@
 <title>Admin — Checklist App</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script src="config.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -130,6 +131,16 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
 .toast.show { opacity:1; transform:translateY(0); }
 .toast.success { background:var(--accent); }
 .toast.error { background:var(--danger); }
+
+/* QR MODAL */
+.qr-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:300; align-items:center; justify-content:center; }
+.qr-overlay.open { display:flex; }
+.qr-modal { background:var(--surface); border-radius:var(--radius-lg); padding:2rem; width:280px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.2); }
+.qr-modal h3 { font-family:'DM Serif Display',serif; font-size:18px; margin-bottom:4px; }
+.qr-modal p { font-size:12px; color:var(--muted); margin-bottom:1.25rem; }
+.qr-modal-url { font-size:10px; color:var(--light); margin-top:8px; word-break:break-all; }
+.qr-close { margin-top:0; font-size:13px; color:var(--muted); background:none; border:1px solid var(--border); border-radius:var(--radius); padding:6px 16px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.15s; }
+.qr-close:hover { background:var(--surface2); }
 
 /* OVERLAY & MODAL */
 .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:200; align-items:center; justify-content:center; padding:1rem; }
@@ -326,6 +337,22 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
   </div>
 </div>
 
+<!-- QR Modal -->
+<div class="qr-overlay" id="qr-overlay" onclick="closeQR()">
+  <div class="qr-modal" onclick="event.stopPropagation()">
+    <h3 id="qr-title">Template</h3>
+    <p>Scan om deze checklist te openen</p>
+    <canvas id="qr-canvas"></canvas>
+    <div class="qr-modal-url" id="qr-url"></div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:1rem">
+      <button class="qr-close" onclick="downloadQR()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download
+      </button>
+      <button class="qr-close" onclick="closeQR()">Sluiten</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -475,6 +502,9 @@ async function loadTemplates() {
         <a href="fill.html?template=${t.id}" class="btn" target="_blank" title="Preview">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Preview
         </a>
+        <button class="btn" onclick="showQR('${t.id}','${esc(t.name)}')" title="QR code">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/></svg>QR
+        </button>
         <button class="btn${isActive?'':' btn-primary'}" onclick="toggleActive('${t.id}',${isActive})" title="${isActive?'Deactiveer':'Activeer'}">
           ${isActive
             ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>Deactiveer`
@@ -1011,6 +1041,29 @@ function toast(msg, type='') {
   setTimeout(()=>el.className='toast',2800);
 }
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── QR CODE ──
+function showQR(templateId, name) {
+  const base = location.origin + location.pathname.replace('admin.html','');
+  const url = base + 'fill.html?template=' + templateId;
+  document.getElementById('qr-title').textContent = name;
+  document.getElementById('qr-url').textContent = url;
+  const canvas = document.getElementById('qr-canvas');
+  QRCode.toCanvas(canvas, url, {
+    width: 200, margin: 2,
+    color: { dark: '#2D5A3D', light: '#FFFFFF' }
+  });
+  document.getElementById('qr-overlay').classList.add('open');
+}
+function closeQR() { document.getElementById('qr-overlay').classList.remove('open'); }
+function downloadQR() {
+  const canvas = document.getElementById('qr-canvas');
+  const title = document.getElementById('qr-title').textContent.replace(/\s+/g,'_');
+  const a = document.createElement('a');
+  a.download = 'QR_' + title + '.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
 
 checkAuth();
 </script>
