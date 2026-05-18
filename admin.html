@@ -700,7 +700,9 @@ function conditionValueOpts(sourceItem) {
   if (sourceItem.type === 'statuscheck') return (sourceItem.statusLabels||['OK','Niet OK','Onderdelen nodig','Niet gecheckt']);
   if (sourceItem.type === 'radio') return sourceItem.options || [];
   if (sourceItem.type === 'check') return ['aangevinkt'];
-  if (['text','number','date'].includes(sourceItem.type)) return ['ingevuld'];
+  if (sourceItem.type === 'date') return ['ingevuld'];
+  if (['text'].includes(sourceItem.type)) return ['ingevuld'];
+  if (sourceItem.type === 'number') return ['__number__'];
   return [];
 }
 
@@ -729,7 +731,19 @@ function renderCondHtml(si, ii, item, prevItems) {
         </select>
         ${cond.itemId && condSrc?.type === 'check'
           ? `<span class="cond-val-badge">= aangevinkt</span>`
-          : cond.itemId && condVals.length
+          : cond.itemId && condSrc?.type === 'number'
+            ? `<select class="item-rule-select" style="min-width:100px;flex:0 0 auto" onchange="setCondNumOp(${si},${ii},${ci},this.value)">
+                <option value="ingevuld"${(!cond.numOp||cond.numOp==='ingevuld')?' selected':''}>is ingevuld</option>
+                <option value=">"${cond.numOp==='>'?' selected':''}>groter dan (&gt;)</option>
+                <option value=">="${cond.numOp==='>='?' selected':''}>min. (&ge;)</option>
+                <option value="<"${cond.numOp==='<'?' selected':''}>kleiner dan (&lt;)</option>
+                <option value="<="${cond.numOp==='<='?' selected':''}>max. (&le;)</option>
+                <option value="="${cond.numOp==='='?' selected':''}>gelijk aan (=)</option>
+               </select>
+               ${cond.numOp && cond.numOp !== 'ingevuld'
+                 ? `<input type="number" class="item-rule-select" style="width:72px;flex:0 0 auto;padding:2px 6px" value="${cond.numValue??''}" onchange="setCondNumValue(${si},${ii},${ci},this.value)" placeholder="waarde" />`
+                 : ''}`
+          : cond.itemId && condVals.length && condVals[0] !== '__number__'
             ? `<select class="item-rule-select" style="min-width:80px;flex:0 0 auto" onchange="setCondValue(${si},${ii},${ci},this.value)">
                 ${condVals.map(v=>`<option value="${v}"${v===cond.value?' selected':''}>${esc(v==='ingevuld'?'is ingevuld':v)}</option>`).join('')}
                </select>`
@@ -1135,9 +1149,23 @@ function setCondItemId(si, ii, ci, itemId) {
   norm.conditions[ci].itemId = itemId;
   if (itemId) {
     const srcItem = sections.flatMap(s=>s.items).find(it=>it.id===itemId);
-    norm.conditions[ci].value = srcItem?.type === 'check' ? 'aangevinkt' : '';
+    if (srcItem?.type === 'check') {
+      norm.conditions[ci].value = 'aangevinkt';
+      delete norm.conditions[ci].numOp;
+      delete norm.conditions[ci].numValue;
+    } else if (srcItem?.type === 'number') {
+      norm.conditions[ci].value = '';
+      norm.conditions[ci].numOp = 'ingevuld';
+      delete norm.conditions[ci].numValue;
+    } else {
+      norm.conditions[ci].value = '';
+      delete norm.conditions[ci].numOp;
+      delete norm.conditions[ci].numValue;
+    }
   } else {
     norm.conditions[ci].value = '';
+    delete norm.conditions[ci].numOp;
+    delete norm.conditions[ci].numValue;
   }
   item.showIf = norm;
   renderSections();
@@ -1147,6 +1175,22 @@ function setCondValue(si, ii, ci, val) {
   const norm = normalizeShowIf(item.showIf);
   if (!norm?.conditions[ci]) return;
   norm.conditions[ci].value = val;
+  item.showIf = norm;
+}
+function setCondNumOp(si, ii, ci, op) {
+  const item = sections[si].items[ii];
+  const norm = normalizeShowIf(item.showIf);
+  if (!norm?.conditions[ci]) return;
+  norm.conditions[ci].numOp = op;
+  if (op === 'ingevuld') delete norm.conditions[ci].numValue;
+  item.showIf = norm;
+  renderSections();
+}
+function setCondNumValue(si, ii, ci, val) {
+  const item = sections[si].items[ii];
+  const norm = normalizeShowIf(item.showIf);
+  if (!norm?.conditions[ci]) return;
+  norm.conditions[ci].numValue = val === '' ? '' : Number(val);
   item.showIf = norm;
 }
 function toggleCondNegate(si, ii, ci) {

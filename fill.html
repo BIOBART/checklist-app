@@ -398,7 +398,17 @@ function evalShowIf(showIf) {
     const srcItem = findItem(cond.itemId);
     const srcAns = answers[cond.itemId] || {};
     let match;
-    if (cond.value === 'ingevuld') {
+    if (cond.numOp && cond.numOp !== 'ingevuld') {
+      const n = parseFloat(srcAns.value);
+      const threshold = parseFloat(cond.numValue);
+      if (isNaN(n) || isNaN(threshold)) { match = false; }
+      else if (cond.numOp === '>') match = n > threshold;
+      else if (cond.numOp === '>=') match = n >= threshold;
+      else if (cond.numOp === '<') match = n < threshold;
+      else if (cond.numOp === '<=') match = n <= threshold;
+      else if (cond.numOp === '=') match = n === threshold;
+      else match = false;
+    } else if (cond.numOp === 'ingevuld' || cond.value === 'ingevuld') {
       match = srcAns.checked === true || (srcAns.value && srcAns.value.trim() !== '');
     } else if (srcItem?.type === 'check') {
       match = (srcAns.checked ? 'aangevinkt' : '') === cond.value;
