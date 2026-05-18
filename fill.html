@@ -383,18 +383,46 @@ async function loadSubmission() {
   renderPage();
 }
 
-// Fix any showIf rules where value is empty for check-type sources
-// (caused by old admin bug where value was never set)
+function normalizeShowIf(showIf) {
+  if (!showIf) return null;
+  if (showIf.conditions) return showIf;
+  if (showIf.itemId) return { operator:'AND', conditions:[{ itemId:showIf.itemId, value:showIf.value||'', negate:false }] };
+  return null;
+}
+
+function evalShowIf(showIf) {
+  const norm = normalizeShowIf(showIf);
+  if (!norm?.conditions?.length) return true;
+  const results = norm.conditions.map(cond => {
+    if (!cond.itemId) return true;
+    const srcItem = findItem(cond.itemId);
+    const srcAns = answers[cond.itemId] || {};
+    let match;
+    if (cond.value === 'ingevuld') {
+      match = srcAns.checked === true || (srcAns.value && srcAns.value.trim() !== '');
+    } else if (srcItem?.type === 'check') {
+      match = (srcAns.checked ? 'aangevinkt' : '') === cond.value;
+    } else {
+      match = (srcAns.value || '') === cond.value;
+    }
+    return cond.negate ? !match : match;
+  });
+  return norm.operator === 'OR' ? results.some(r => r) : results.every(r => r);
+}
+
 function fixShowIfValues(tpl) {
   const allItems = (tpl.schema?.sections||[]).flatMap(s => s.items||[]);
   (tpl.schema?.sections||[]).forEach(sec => {
     (sec.items||[]).forEach(item => {
-      if (item.showIf?.itemId && !item.showIf.value) {
-        const srcItem = allItems.find(it => it.id === item.showIf.itemId);
-        if (srcItem?.type === 'check') {
-          item.showIf.value = 'aangevinkt';
+      const norm = normalizeShowIf(item.showIf);
+      if (!norm) return;
+      norm.conditions.forEach(cond => {
+        if (cond.itemId && !cond.value) {
+          const srcItem = allItems.find(it => it.id === cond.itemId);
+          if (srcItem?.type === 'check') cond.value = 'aangevinkt';
         }
-      }
+      });
+      item.showIf = norm;
     });
   });
 }
@@ -821,23 +849,10 @@ function findItem(id) {
 function evalConditionals() {
   (template.schema?.sections||[]).forEach(sec => {
     sec.items.forEach(item => {
-      if (!item.showIf?.itemId) return;
+      if (!normalizeShowIf(item.showIf)) return;
       const el = document.getElementById('item-' + item.id);
       if (!el) return;
-      // No trigger value = no valid rule → always visible
-      if (!item.showIf.value) {
-        el.classList.remove('cond-hidden');
-        return;
-      }
-      const srcAns = answers[item.showIf.itemId] || {};
-      const srcItem = findItem(item.showIf.itemId);
-      let srcVal;
-      if (srcItem?.type === 'check') {
-        srcVal = srcAns.checked ? 'aangevinkt' : '';
-      } else {
-        srcVal = srcAns.value || '';
-      }
-      const visible = srcVal === item.showIf.value;
+      const visible = evalShowIf(item.showIf);
       el.classList.toggle('cond-hidden', !visible);
       if (!visible && answers[item.id]) {
         answers[item.id].checked = false;
@@ -1193,14 +1208,7 @@ async function generatePDF(mode = 'download') {
 
     for (const item of (sec.items||[])) {
       // Skip items hidden by conditional rules
-      if (item.showIf?.itemId) {
-        const srcItem = findItem(item.showIf.itemId);
-        const srcAns = answers[item.showIf.itemId] || {};
-        const srcVal = srcItem?.type === 'check'
-          ? (srcAns.checked ? 'aangevinkt' : '')
-          : (srcAns.value || '');
-        if (srcVal !== item.showIf.value) continue;
-      }
+      if (normalizeShowIf(item.showIf) && !evalShowIf(item.showIf)) continue;
       if (y > ph-20) { doc.addPage(); y=mg; }
       const ans = answers[item.id]||{};
       const cbSize = 5;

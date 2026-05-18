@@ -108,6 +108,19 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
 .item-rule-select:focus { border-color:var(--accent); }
 .item-rule-check { display:flex; align-items:center; gap:4px; font-size:12px; color:var(--muted); cursor:pointer; white-space:nowrap; }
 .item-rule-check input { accent-color:var(--accent); }
+/* MULTI-CONDITION */
+.cond-block { flex-direction:column; align-items:stretch; gap:6px; }
+.cond-header { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.cond-op-select { font-family:'DM Sans',sans-serif; font-size:12px; padding:4px 8px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text); outline:none; cursor:pointer; }
+.cond-row { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.cond-not-btn { font-family:'DM Sans',sans-serif; font-size:11px; font-weight:600; padding:3px 8px; border:1.5px solid var(--border-strong); border-radius:var(--radius); background:var(--surface); color:var(--muted); cursor:pointer; transition:all 0.15s; white-space:nowrap; }
+.cond-not-btn.active { background:#FEF3C7; border-color:#D97706; color:#92400E; }
+.cond-val-badge { font-size:12px; color:var(--accent); background:var(--accent-bg); padding:4px 10px; border-radius:99px; white-space:nowrap; }
+.cond-del-btn { background:none; border:none; cursor:pointer; color:var(--light); font-size:16px; line-height:1; padding:2px 4px; border-radius:4px; transition:color 0.15s; flex-shrink:0; }
+.cond-del-btn:hover { color:var(--danger); }
+.cond-add-btn { display:inline-flex; align-items:center; gap:5px; font-family:'DM Sans',sans-serif; font-size:12px; color:var(--muted); background:none; border:1px dashed var(--border-strong); border-radius:var(--radius); padding:4px 10px; cursor:pointer; transition:all 0.15s; }
+.cond-add-btn:hover { border-color:var(--accent); color:var(--accent); }
+.cond-add-btn svg { width:11px; height:11px; }
 
 /* TRANSLATION TABS */
 .trans-tabs { display:flex; gap:2px; margin-bottom:0; }
@@ -684,10 +697,63 @@ function allItemsBefore(si, ii) {
 function conditionValueOpts(sourceItem) {
   if (!sourceItem) return [];
   if (sourceItem.type === 'yesno') return ['Ja','Nee','N.v.t.'];
-  if (sourceItem.type === 'statuscheck') return ['OK','Niet OK','Onderdelen nodig','Niet gecheckt'];
+  if (sourceItem.type === 'statuscheck') return (sourceItem.statusLabels||['OK','Niet OK','Onderdelen nodig','Niet gecheckt']);
   if (sourceItem.type === 'radio') return sourceItem.options || [];
   if (sourceItem.type === 'check') return ['aangevinkt'];
+  if (['text','number','date'].includes(sourceItem.type)) return ['ingevuld'];
   return [];
+}
+
+function normalizeShowIf(showIf) {
+  if (!showIf) return null;
+  if (showIf.conditions) return showIf;
+  if (showIf.itemId) return { operator:'AND', conditions:[{ itemId:showIf.itemId, value:showIf.value||'', negate:false }] };
+  return null;
+}
+
+function renderCondHtml(si, ii, item, prevItems) {
+  const norm = normalizeShowIf(item.showIf) || { operator:'AND', conditions:[] };
+  const conditions = norm.conditions;
+  const operator = norm.operator || 'AND';
+
+  const condRowsHtml = conditions.map((cond, ci) => {
+    const condSrc = prevItems.find(p => p.id === cond.itemId);
+    const condVals = condSrc ? conditionValueOpts(condSrc) : (cond.itemId ? [cond.value] : []);
+    const valLabel = cond.value === 'ingevuld' ? 'is ingevuld' : `= ${esc(cond.value)}`;
+    return `
+      <div class="cond-row">
+        <button class="cond-not-btn${cond.negate?' active':''}" onclick="toggleCondNegate(${si},${ii},${ci})" title="Omgekeerde voorwaarde">NOT</button>
+        <select class="item-rule-select" style="flex:1;min-width:100px" onchange="setCondItemId(${si},${ii},${ci},this.value)">
+          <option value="">— kies veld —</option>
+          ${prevItems.map(p=>`<option value="${p.id}"${p.id===cond.itemId?' selected':''}>${esc(typeof p.label==='object'?(p.label.nl||p.label.en||'?'):p.label)}</option>`).join('')}
+        </select>
+        ${cond.itemId && condSrc?.type === 'check'
+          ? `<span class="cond-val-badge">= aangevinkt</span>`
+          : cond.itemId && condVals.length
+            ? `<select class="item-rule-select" style="min-width:80px;flex:0 0 auto" onchange="setCondValue(${si},${ii},${ci},this.value)">
+                ${condVals.map(v=>`<option value="${v}"${v===cond.value?' selected':''}>${esc(v==='ingevuld'?'is ingevuld':v)}</option>`).join('')}
+               </select>`
+            : ''}
+        <button class="cond-del-btn" onclick="removeCondition(${si},${ii},${ci})" title="Verwijder voorwaarde">×</button>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="item-rule-row cond-block">
+      <div class="cond-header">
+        <span class="item-rule-label">Toon alleen als:</span>
+        ${conditions.length > 1 ? `
+          <select class="cond-op-select" onchange="setCondOperator(${si},${ii},this.value)">
+            <option value="AND"${operator==='AND'?' selected':''}>ALLE voorwaarden gelden</option>
+            <option value="OR"${operator==='OR'?' selected':''}>MINSTENS ÉÉN voorwaarde geldt</option>
+          </select>` : ''}
+      </div>
+      ${condRowsHtml}
+      <button class="cond-add-btn" onclick="addCondition(${si},${ii})">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Voorwaarde toevoegen
+      </button>
+    </div>`;
 }
 
 function renderItem(si, ii, item) {
@@ -695,10 +761,7 @@ function renderItem(si, ii, item) {
   el.className = 'item-card';
   const prevItems = allItemsBefore(si, ii);
 
-  const condSrcId = item.showIf?.itemId || '';
-  const condVal   = item.showIf?.value  || '';
-  const condSrc   = prevItems.find(p => p.id === condSrcId);
-  const condVals  = condSrc ? conditionValueOpts(condSrc) : (condSrcId ? [condVal] : []);
+  // condHtml is now rendered via renderCondHtml()
 
   const hasTrigger = ['yesno','radio','statuscheck'].includes(item.type);
   const triggerVals = item.type==='yesno' ? ['Nee','N.v.t.'] :
@@ -756,21 +819,7 @@ function renderItem(si, ii, item) {
         </label>` : ''}
     </div>` : '';
 
-  // Condition rule
-  const condHtml = `
-    <div class="item-rule-row">
-      <span class="item-rule-label">Toon alleen als:</span>
-      <select class="item-rule-select" onchange="setCondSrc(${si},${ii},this.value)">
-        <option value="">— altijd zichtbaar —</option>
-        ${prevItems.map(p=>`<option value="${p.id}"${p.id===condSrcId?' selected':''}>${esc(typeof p.label==='object'?(p.label.nl||p.label.en||'?'):p.label)}</option>`).join('')}
-      </select>
-      ${condSrcId && condSrc?.type === 'check' ? `
-        <span style="font-size:12px;color:var(--accent);background:var(--accent-bg);padding:4px 10px;border-radius:99px;white-space:nowrap">= aangevinkt</span>` :
-       condSrcId && condVals.length ? `
-        <select class="item-rule-select" style="min-width:80px;flex:0 0 auto" onchange="setCondVal(${si},${ii},this.value)">
-          ${condVals.map(v=>`<option value="${v}"${v===condVal?' selected':''}>${esc(v)}</option>`).join('')}
-        </select>` : ''}
-    </div>`;
+  const condHtml = renderCondHtml(si, ii, item, prevItems);
 
   const isFirst = ii === 0;
   const isLast  = ii === sections[si].items.length - 1;
@@ -1058,21 +1107,55 @@ function setStatusFollowUp(si, ii, idx, checked, currentLabels) {
   saveData();
 }
 
-function setCondSrc(si, ii, srcId) {
-  if (!sections[si].items[ii].showIf) sections[si].items[ii].showIf = {};
-  sections[si].items[ii].showIf.itemId = srcId;
-  // Auto-set value for check type (only one possible value)
-  if (srcId) {
-    const srcItem = sections.flatMap(s=>s.items).find(it=>it.id===srcId);
-    sections[si].items[ii].showIf.value = srcItem?.type === 'check' ? 'aangevinkt' : '';
-  } else {
-    sections[si].items[ii].showIf.value = '';
-  }
+function addCondition(si, ii) {
+  const item = sections[si].items[ii];
+  const norm = normalizeShowIf(item.showIf) || { operator:'AND', conditions:[] };
+  norm.conditions.push({ itemId:'', value:'', negate:false });
+  item.showIf = norm;
   renderSections();
 }
-function setCondVal(si, ii, val) {
-  if (!sections[si].items[ii].showIf) sections[si].items[ii].showIf = {};
-  sections[si].items[ii].showIf.value = val;
+function removeCondition(si, ii, ci) {
+  const item = sections[si].items[ii];
+  const norm = normalizeShowIf(item.showIf);
+  if (!norm) return;
+  norm.conditions.splice(ci, 1);
+  item.showIf = norm.conditions.length ? norm : null;
+  renderSections();
+}
+function setCondOperator(si, ii, op) {
+  const item = sections[si].items[ii];
+  const norm = normalizeShowIf(item.showIf) || { operator:'AND', conditions:[] };
+  norm.operator = op;
+  item.showIf = norm;
+}
+function setCondItemId(si, ii, ci, itemId) {
+  const item = sections[si].items[ii];
+  const norm = normalizeShowIf(item.showIf) || { operator:'AND', conditions:[] };
+  while (norm.conditions.length <= ci) norm.conditions.push({ itemId:'', value:'', negate:false });
+  norm.conditions[ci].itemId = itemId;
+  if (itemId) {
+    const srcItem = sections.flatMap(s=>s.items).find(it=>it.id===itemId);
+    norm.conditions[ci].value = srcItem?.type === 'check' ? 'aangevinkt' : '';
+  } else {
+    norm.conditions[ci].value = '';
+  }
+  item.showIf = norm;
+  renderSections();
+}
+function setCondValue(si, ii, ci, val) {
+  const item = sections[si].items[ii];
+  const norm = normalizeShowIf(item.showIf);
+  if (!norm?.conditions[ci]) return;
+  norm.conditions[ci].value = val;
+  item.showIf = norm;
+}
+function toggleCondNegate(si, ii, ci) {
+  const item = sections[si].items[ii];
+  const norm = normalizeShowIf(item.showIf);
+  if (!norm?.conditions[ci]) return;
+  norm.conditions[ci].negate = !norm.conditions[ci].negate;
+  item.showIf = norm;
+  renderSections();
 }
 function setFollowTrigger(si, ii, val) {
   if (!sections[si].items[ii].followUp) sections[si].items[ii].followUp = {};
