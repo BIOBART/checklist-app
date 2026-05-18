@@ -810,7 +810,7 @@ function renderItem(si, ii, item) {
           const lbl = labels[di]||def;
           const checked = (item.statusFollowUp||[]).includes(lbl) || (item.statusFollowUp||[]).includes(def);
           return `<label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);cursor:pointer;padding:4px 8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface)">
-            <input type="checkbox" ${checked?'checked':''} onchange="setStatusFollowUp(${si},${ii},${di},this.checked,sections[${si}].items[${ii}].statusLabels||${JSON.stringify(defaults)})">
+            <input type="checkbox" ${checked?'checked':''} onchange="setStatusFollowUp(${si},${ii},${di},this.checked)">
             ${esc(lbl)}
           </label>`;
         }).join('')}
@@ -1112,16 +1112,14 @@ function setStatusLabel(si, ii, idx, val) {
   const item = sections[si].items[ii];
   if (!item.statusLabels) item.statusLabels = ['OK','Niet OK','Onderdelen nodig','Niet gecheckt'];
   item.statusLabels[idx] = val;
-  saveData();
 }
 
-function setStatusFollowUp(si, ii, idx, checked, currentLabels) {
+function setStatusFollowUp(si, ii, idx, checked) {
   const item = sections[si].items[ii];
-  const label = (item.statusLabels||currentLabels)[idx];
+  const label = (item.statusLabels||['OK','Niet OK','Onderdelen nodig','Niet gecheckt'])[idx];
   if (!item.statusFollowUp) item.statusFollowUp = [];
   if (checked) { if (!item.statusFollowUp.includes(label)) item.statusFollowUp.push(label); }
   else { item.statusFollowUp = item.statusFollowUp.filter(v => v !== label); }
-  saveData();
 }
 
 function addCondition(si, ii) {
