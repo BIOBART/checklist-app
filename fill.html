@@ -191,6 +191,18 @@ textarea.ff:focus, input.ff:focus { border-color:var(--accent); background:var(-
 .user-logout { background:none; border:none; cursor:pointer; color:var(--muted); display:flex; align-items:center; padding:4px; border-radius:6px; transition:color 0.15s; }
 .user-logout:hover { color:var(--danger); }
 
+/* LINKS */
+.link-section { margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+.link-chip { display:inline-flex; align-items:center; gap:5px; padding:3px 8px 3px 10px; background:var(--accent-bg); border:1px solid #C3D9CA; border-radius:99px; font-size:12px; color:var(--accent); max-width:260px; }
+.link-chip a { color:var(--accent); text-decoration:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:200px; display:inline-block; vertical-align:middle; }
+.link-chip a:hover { text-decoration:underline; }
+.link-chip-del { background:none; border:none; cursor:pointer; color:var(--accent); opacity:0.6; padding:0 0 0 2px; display:flex; align-items:center; flex-shrink:0; }
+.link-chip-del:hover { opacity:1; color:var(--danger); }
+.link-chip-del svg { width:11px; height:11px; }
+.link-add-btn { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:99px; border:1.5px dashed var(--border-strong); font-size:12px; color:var(--muted); background:none; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.15s; }
+.link-add-btn:hover { border-color:var(--accent); color:var(--accent); }
+.link-add-btn svg { width:12px; height:12px; }
+
 </style>
 </head>
 <body>
@@ -280,6 +292,28 @@ textarea.ff:focus, input.ff:focus { border-color:var(--accent); background:var(-
       <button class="btn btn-primary" id="send-email-btn" onclick="sendEmail()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         Versturen
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Link Modal -->
+<div class="overlay" id="link-overlay">
+  <div class="modal">
+    <h2>Link toevoegen</h2>
+    <div style="margin-bottom:1rem">
+      <label class="field-label">URL <span style="color:var(--danger)">*</span></label>
+      <input class="field-input" id="link-url-input" type="url" placeholder="https://…">
+    </div>
+    <div style="margin-bottom:1rem">
+      <label class="field-label">Label (optioneel)</label>
+      <input class="field-input" id="link-label-input" type="text" placeholder="bv. Technische fiche…">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeLinkModal()">Annuleer</button>
+      <button class="btn btn-primary" onclick="confirmAddLink()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        Toevoegen
       </button>
     </div>
   </div>
@@ -663,6 +697,7 @@ function renderItem(secId, item) {
       </div>
       ${gl(item.hint) ? `<div class="item-hint">${esc(gl(item.hint))}</div>` : ''}
       ${followUpHtml(item)}
+      ${linkSectionHtml(item.id, ans.links || [])}
     </div>`;
   return el;
 }
@@ -886,6 +921,71 @@ async function deletePhoto(itemId, idx) {
 function openLightbox(src) { document.getElementById('lb-img').src=src; document.getElementById('lightbox').classList.add('open'); }
 function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
 document.getElementById('lightbox').addEventListener('click', closeLightbox);
+
+// ── LINKS ──
+let _linkTargetId = null;
+
+function openLinkModal(itemId) {
+  _linkTargetId = itemId;
+  document.getElementById('link-url-input').value = '';
+  document.getElementById('link-label-input').value = '';
+  document.getElementById('link-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('link-url-input').focus(), 50);
+}
+
+function closeLinkModal() {
+  document.getElementById('link-overlay').classList.remove('open');
+  _linkTargetId = null;
+}
+
+function confirmAddLink() {
+  const url = document.getElementById('link-url-input').value.trim();
+  if (!url) { document.getElementById('link-url-input').focus(); return; }
+  const label = document.getElementById('link-label-input').value.trim();
+  const a = getAns(_linkTargetId);
+  if (!a.links) a.links = [];
+  a.links.push({ url, label: label || url });
+  closeLinkModal();
+  scheduleSave();
+  refreshLinkSection(_linkTargetId);
+}
+
+function removeLink(itemId, idx) {
+  const a = getAns(itemId);
+  if (a.links) a.links.splice(idx, 1);
+  scheduleSave();
+  refreshLinkSection(itemId);
+}
+
+function refreshLinkSection(itemId) {
+  const container = document.getElementById('links-' + itemId);
+  if (!container) return;
+  const links = getAns(itemId).links || [];
+  container.innerHTML = renderLinkChips(itemId, links) + renderLinkAddBtn(itemId);
+}
+
+function renderLinkChips(itemId, links) {
+  return (links || []).map((l, i) =>
+    `<span class="link-chip">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11" style="flex-shrink:0"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      <a href="${esc(l.url)}" target="_blank" rel="noopener" title="${esc(l.url)}">${esc(l.label)}</a>
+      <button class="link-chip-del" onclick="removeLink('${itemId}',${i})" title="Verwijder link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </span>`
+  ).join('');
+}
+
+function renderLinkAddBtn(itemId) {
+  return `<button class="link-add-btn" onclick="openLinkModal('${itemId}')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Link
+  </button>`;
+}
+
+function linkSectionHtml(itemId, links) {
+  return `<div class="link-section" id="links-${itemId}">${renderLinkChips(itemId, links)}${renderLinkAddBtn(itemId)}</div>`;
+}
 
 // ── PROGRESS ──
 function updateProgress() {
