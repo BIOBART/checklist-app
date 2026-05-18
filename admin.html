@@ -625,6 +625,9 @@ function renderSections() {
         <button class="add-item-btn" onclick="addItem(${si},'instruction')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>Instructieblok
         </button>
+        <button class="add-item-btn" onclick="addItem(${si},'link')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Link
+        </button>
         <button class="add-item-btn" onclick="addItem(${si},'check')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Vinkpunt
         </button>
@@ -661,7 +664,7 @@ function renderSections() {
 }
 
 const TYPE_LABELS = {
-  label:'Tekstlabel', instruction:'Instructieblok', check:'Vinkpunt', yesno:'Ja/Nee/N.v.t.', statuscheck:'Statuscheck (OK/Niet OK/…)',
+  label:'Tekstlabel', instruction:'Instructieblok', link:'Link', check:'Vinkpunt', yesno:'Ja/Nee/N.v.t.', statuscheck:'Statuscheck (OK/Niet OK/…)',
   text:'Tekstveld', radio:'Keuze', photo:'Foto', date:'Datum', number:'Getal', signature:'Handtekening'
 };
 
@@ -812,6 +815,39 @@ function renderItem(si, ii, item) {
               ${lPanels}
             </div>
           </div>
+        </div>
+        <div class="item-card-actions">
+          <button class="icon-btn" onclick="moveItem(${si},${ii},-1)" ${isFirst?'disabled style="opacity:0.25"':''}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+          </button>
+          <button class="icon-btn" onclick="moveItem(${si},${ii},1)" ${isLast?'disabled style="opacity:0.25"':''}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <button class="icon-btn" onclick="deleteItem(${si},${ii})" style="color:var(--danger);opacity:0.7">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          </button>
+        </div>
+      </div>`;
+    return el;
+  }
+
+  // ── LINK type: clickable link, no required ──
+  if (item.type === 'link') {
+    const isFirst = ii === 0, isLast = ii === sections[si].items.length - 1;
+    el.style.borderLeft = '3px solid #3B82F6';
+    el.style.background = '#EFF6FF';
+    el.innerHTML = `
+      <div class="item-card-top">
+        <span class="item-num" style="color:#3B82F6">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        </span>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+          <input class="item-label-input" style="width:100%" value="${esc(typeof item.label==='object'?(item.label.nl||''):item.label||'')}"
+            placeholder="Weergavetekst (bv. Technische fiche…)"
+            oninput="sections[${si}].items[${ii}].label=this.value">
+          <input class="item-options-input" style="width:100%" type="url" value="${esc(item.url||'')}"
+            placeholder="URL (https://…)"
+            oninput="sections[${si}].items[${ii}].url=this.value">
         </div>
         <div class="item-card-actions">
           <button class="icon-btn" onclick="moveItem(${si},${ii},-1)" ${isFirst?'disabled style="opacity:0.25"':''}>
