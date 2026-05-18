@@ -1080,6 +1080,18 @@ function resizeImageForPdf(dataUrl, maxW=800, maxH=600) {
   });
 }
 
+// Replace subscript/superscript and other non-Latin1 chars that break jsPDF helvetica
+function pdfStr(str) {
+  if (!str) return str;
+  return str
+    .replace(/[₀-₉]/g, d => String(d.codePointAt(0) - 0x2080))  // ₀–₉ → 0–9
+    .replace(/[⁰¹²³⁴-⁹]/g, d => {           // ⁰¹²³⁴–⁹ → 0–9
+      const map = {'⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9'};
+      return map[d] || d;
+    })
+    .replace(/[^\x00-\xFF]/g, '?');  // any remaining non-Latin1 → ?
+}
+
 async function generatePDF(mode = 'download') {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'mm', format:'a4' });
@@ -1222,7 +1234,7 @@ async function generatePDF(mode = 'download') {
       // yesno: label left, pills right, no checkbox
       if (item.type === 'yesno') {
         doc.setTextColor(...D); doc.setFontSize(10); doc.setFont('helvetica','normal');
-        const ll = doc.splitTextToSize(gl(item.label)+(item.required?' *':''), cw*0.65);
+        const ll = doc.splitTextToSize(pdfStr(gl(item.label))+(item.required?' *':''), cw*0.65);
         doc.text(ll, mg, y);
         const pills = ['Ja','Nee','N.v.t.'];
         let px2 = pw - mg;
@@ -1259,7 +1271,7 @@ async function generatePDF(mode = 'download') {
       // statuscheck type
       if (item.type === 'statuscheck') {
         doc.setTextColor(...D); doc.setFontSize(10); doc.setFont('helvetica','normal');
-        const ll = doc.splitTextToSize(gl(item.label)+(item.required?' *':''), cw*0.55);
+        const ll = doc.splitTextToSize(pdfStr(gl(item.label))+(item.required?' *':''), cw*0.55);
         doc.text(ll, mg, y);
         const statusDefaults = ['OK','Niet OK','Onderdelen nodig','Niet gecheckt'];
         const statusLabels = item.statusLabels || statusDefaults;
@@ -1267,25 +1279,16 @@ async function generatePDF(mode = 'download') {
           val,
           color:[[45,90,61],[192,57,43],[180,120,10],[120,113,104]][si2] || [120,113,104]
         }));
-        let spx = pw - mg;
         doc.setFontSize(7.5);
-        for (let si2 = statuses.length-1; si2 >= 0; si2--) {
-          const s = statuses[si2];
-          const tw = doc.getTextWidth(s.val);
+        const selStatus = statuses.find(s => s.val === ans.value);
+        if (selStatus) {
+          const tw = doc.getTextWidth(selStatus.val);
           const pillW = tw + 4;
-          spx -= pillW;
-          const sel = ans.value === s.val;
-          if (sel) {
-            doc.setFillColor(...s.color); doc.setDrawColor(...s.color);
-            doc.roundedRect(spx, y-3.5, pillW, 5, 1.2, 1.2, 'FD');
-            doc.setTextColor(...W);
-          } else {
-            doc.setFillColor(...W); doc.setDrawColor(180,174,166);
-            doc.roundedRect(spx, y-3.5, pillW, 5, 1.2, 1.2, 'FD');
-            doc.setTextColor(...M);
-          }
-          doc.text(s.val, spx+2, y);
-          spx -= 2;
+          const spx = pw - mg - pillW;
+          doc.setFillColor(...selStatus.color); doc.setDrawColor(...selStatus.color);
+          doc.roundedRect(spx, y-3.5, pillW, 5, 1.2, 1.2, 'FD');
+          doc.setTextColor(...W);
+          doc.text(selStatus.val, spx+2, y);
         }
         y += Math.max(ll.length,1)*4.5+1;
         // follow-up note + photos for Niet OK / Onderdelen nodig
@@ -1327,7 +1330,7 @@ async function generatePDF(mode = 'download') {
           doc.setFillColor(239,246,255);
           const textX = hasImg ? mg+imgW+4 : mg;
           const textW = hasImg ? cw-imgW-4 : cw;
-          const lines = doc.splitTextToSize(instrText, textW);
+          const lines = doc.splitTextToSize(pdfStr(instrText), textW);
           const boxH = Math.max(imgH, lines.length*4.5+6);
           if (!hasImg) doc.roundedRect(mg, y-1, cw, boxH+2, 2, 2, 'F');
           doc.setTextColor(30,64,175); doc.setFontSize(9); doc.setFont('helvetica','normal');
@@ -1358,9 +1361,9 @@ async function generatePDF(mode = 'download') {
       // ── text / number / date: label + value, no checkbox ──
       if (item.type === 'text' || item.type === 'number' || item.type === 'date') {
         doc.setTextColor(...D); doc.setFontSize(10); doc.setFont('helvetica','normal');
-        const ll = doc.splitTextToSize(gl(item.label)+(item.required?' *':''), cw);
+        const ll = doc.splitTextToSize(pdfStr(gl(item.label))+(item.required?' *':''), cw);
         doc.text(ll, mg, y);
-        y += ll.length * 4.5;
+        y += ll.length * 4.5 + 1;
         if (ans.value) {
           let displayVal = ans.value;
           if (item.type === 'date') {
@@ -1375,8 +1378,14 @@ async function generatePDF(mode = 'download') {
             } catch(e) { displayVal = ans.value.replace(/-/g,'/'); }
           }
           const unit = item.unit ? ' ' + item.unit : '';
-          doc.setFontSize(9); doc.setTextColor(...M);
-          doc.text(displayVal + unit, mg+4, y); y += 4.5;
+          const valLines = doc.splitTextToSize(pdfStr(displayVal + unit), cw - 8);
+          const valBoxH = valLines.length * 4.8 + 4;
+          doc.setFillColor(245,244,241); doc.setDrawColor(...L); doc.setLineWidth(0.3);
+          doc.roundedRect(mg, y, cw, valBoxH, 1.5, 1.5, 'FD');
+          doc.setFontSize(10); doc.setTextColor(...D); doc.setFont('helvetica','bold');
+          doc.text(valLines, mg+4, y+4);
+          doc.setFont('helvetica','normal');
+          y += valBoxH + 1;
         }
         y += 2; continue;
       }
@@ -1405,7 +1414,7 @@ async function generatePDF(mode = 'download') {
       // ── radio: label + pills right, no checkbox ──
       if (item.type === 'radio') {
         doc.setTextColor(...D); doc.setFontSize(10); doc.setFont('helvetica','normal');
-        const ll = doc.splitTextToSize(gl(item.label)+(item.required?' *':''), cw*0.6);
+        const ll = doc.splitTextToSize(pdfStr(gl(item.label))+(item.required?' *':''), cw*0.6);
         doc.text(ll, mg, y);
         if (ans.value) {
           doc.setFontSize(9); doc.setTextColor(...M);
@@ -1439,7 +1448,7 @@ async function generatePDF(mode = 'download') {
       // ── Standard item (check only): label left, checkbox right ──
       doc.setTextColor(...D);
       doc.setFontSize(10); doc.setFont('helvetica','normal');
-      const ll = doc.splitTextToSize(gl(item.label)+(item.required?' *':''), cw-8);
+      const ll = doc.splitTextToSize(pdfStr(gl(item.label))+(item.required?' *':''), cw-8);
       doc.text(ll, mg, y);
 
       // Checkbox right-aligned
