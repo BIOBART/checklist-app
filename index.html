@@ -9,6 +9,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="branding.js"></script>
+<script src="auth.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"></script>
 <style>
@@ -139,6 +140,14 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); hei
 .blank-btn.primary:hover { background:#234830; }
 .blank-btn svg { width:20px; height:20px; }
 
+/* USER PILL */
+.user-pill { display:flex; align-items:center; gap:8px; }
+.user-avatar { width:28px; height:28px; border-radius:50%; background:var(--accent); color:white; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.user-name { font-size:13px; color:var(--text); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.user-role-badge { font-size:10px; background:var(--accent-bg); color:var(--accent); padding:2px 7px; border-radius:99px; font-weight:600; white-space:nowrap; }
+.user-logout { background:none; border:none; cursor:pointer; color:var(--muted); display:flex; align-items:center; padding:4px; border-radius:6px; transition:color 0.15s; }
+.user-logout:hover { color:var(--danger); }
+
 </style>
 </head>
 <body>
@@ -163,6 +172,7 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); hei
       <span data-i18n="settings">Instellingen</span>
     </a>
   </nav>
+  <div id="user-pill"></div>
 </header>
 
 <div class="hero">
@@ -340,8 +350,8 @@ function applyUiTranslations() {
   if (blankLangSel) blankLangSel.value = uiLang;
 }
 
-// sb is set after AUTH.init() — uses the authenticated session
-let sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+// sb uses the authenticated shared client from auth.js
+const sb = window.sb;
 let allTemplates = {};
 
 const CATEGORY_ICONS = {
@@ -728,9 +738,12 @@ async function generateBlankWord() {
 
 // Init
 applyUiTranslations();
-Promise.all([loadStats(), loadTemplates(), loadRecent()]).catch(e => {
-  toast('Kan geen verbinding maken met de database. Controleer config.js');
-  console.error(e);
+AUTH.init({ requireAuth: true }).then(profile => {
+  if (!profile) return;
+  Promise.all([loadStats(), loadTemplates(), loadRecent()]).catch(e => {
+    toast('Kan geen verbinding maken met de database. Controleer config.js');
+    console.error(e);
+  });
 });
 </script>
 <!-- Blank Export Modal -->

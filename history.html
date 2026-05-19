@@ -9,6 +9,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="branding.js"></script>
+<script src="auth.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -138,6 +139,7 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41"/></svg>Admin
     </a>
   </nav>
+  <div id="user-pill"></div>
 </header>
 
 <div class="container">
@@ -208,8 +210,8 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
 <div class="toast" id="toast"></div>
 
 <script>
-// sb is set after AUTH.init() — uses the authenticated session
-let sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+// sb uses the authenticated shared client from auth.js
+const sb = window.sb;
 let allData = [];
 let activeFilter = 'all';
 let deleteId = null;
@@ -381,7 +383,10 @@ function toast(msg, type='') {
 }
 const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-load();
+AUTH.init({ requireAuth: true }).then(profile => {
+  if (!profile) return;
+  load();
+});
 </script>
 </body>
 </html>

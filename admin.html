@@ -9,6 +9,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="branding.js"></script>
+<script src="auth.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -36,16 +37,6 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
 .btn-danger { color:var(--danger); border-color:var(--danger); }
 .btn-danger:hover { background:var(--danger-bg); }
 .btn svg { width:14px; height:14px; }
-
-/* LOGIN SCREEN */
-#login-screen { display:flex; align-items:center; justify-content:center; min-height:calc(100vh - 60px); padding:2rem; }
-.login-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:2rem; width:100%; max-width:380px; box-shadow:var(--shadow); }
-.login-card h2 { font-family:'DM Serif Display',serif; font-size:22px; margin-bottom:0.5rem; }
-.login-card p { font-size:13px; color:var(--muted); margin-bottom:1.5rem; }
-.field-label { font-size:12px; color:var(--muted); font-weight:500; display:block; margin-bottom:4px; }
-.field-input { width:100%; font-family:'DM Sans',sans-serif; font-size:14px; padding:9px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); color:var(--text); outline:none; }
-.field-input:focus { border-color:var(--accent); background:var(--surface); }
-.login-error { font-size:13px; color:var(--danger); margin-bottom:12px; display:none; }
 
 /* MAIN LAYOUT */
 #admin-screen { display:none; }
@@ -243,35 +234,12 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
     <a href="settings.html" class="nav-link">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Instellingen
     </a>
-    <button class="btn" id="logout-btn" style="display:none" onclick="logout()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      Uitloggen
-    </button>
   </nav>
   <div id="user-pill"></div>
 </header>
 
-<!-- LOGIN -->
-<div id="login-screen">
-  <div class="login-card">
-    <h2>Admin login</h2>
-    <p>Enkel beheerders kunnen templates aanmaken en bewerken.</p>
-    <div class="login-error" id="login-error">Ongeldig e-mailadres of wachtwoord.</div>
-    <div class="field-group" style="margin-bottom:12px">
-      <label class="field-label">E-mailadres</label>
-      <input class="field-input" type="email" id="login-email" placeholder="admin@bedrijf.be" autocomplete="email" style="margin-bottom:0">
-    </div>
-    <div class="field-group" style="margin-bottom:16px">
-      <label class="field-label">Wachtwoord</label>
-      <input class="field-input" type="password" id="login-pw" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" style="margin-bottom:0">
-    </div>
-    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doLogin()">Inloggen</button>
-    <p style="font-size:12px;color:var(--light);margin-top:1rem;text-align:center">Account aanmaken via Supabase → Authentication → Users</p>
-  </div>
-</div>
-
 <!-- ADMIN SCREEN -->
-<div id="admin-screen">
+<div id="admin-screen" style="display:none">
   <div class="container">
     <div class="page-header">
       <div>
@@ -360,7 +328,14 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
     <!-- Users tab -->
     <div id="tab-panel-users" style="display:none">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:10px">
-        <div style="font-size:14px;color:var(--muted)">Beheer wie toegang heeft tot de app.</div>
+        <div>
+          <div style="font-size:14px;color:var(--muted)">Beheer wie toegang heeft tot de app.</div>
+          <div style="margin-top:6px">
+            <input id="users-search" type="search" placeholder="Zoeken op naam of e-mail…"
+              style="font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);outline:none;width:260px"
+              oninput="filterUsers(this.value)">
+          </div>
+        </div>
         <button class="btn btn-primary" onclick="openInviteModal()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Gebruiker uitnodigen
@@ -376,29 +351,52 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
 
 <!-- Invite modal -->
 <div class="overlay" id="invite-overlay">
-  <div class="modal">
-    <h2>Gebruiker uitnodigen</h2>
-    <div class="modal-field">
-      <label class="modal-label">E-mailadres</label>
-      <input class="modal-input" id="invite-email" type="email" placeholder="naam@bedrijf.com">
+  <div class="modal" style="max-width:480px">
+    <h2>Gebruiker toevoegen</h2>
+
+    <!-- Step 1: form -->
+    <div id="invite-form-wrap">
+      <div class="modal-field">
+        <label class="modal-label">E-mailadres *</label>
+        <input class="modal-input" id="invite-email" type="email" placeholder="naam@bedrijf.com">
+      </div>
+      <div class="modal-field">
+        <label class="modal-label">Volledige naam</label>
+        <input class="modal-input" id="invite-name" type="text" placeholder="Voornaam Achternaam">
+      </div>
+      <div class="modal-field">
+        <label class="modal-label">Rol</label>
+        <select class="modal-input" id="invite-role">
+          <option value="technician">Technieker — enkel eigen checklists</option>
+          <option value="admin">Admin — alle checklists + gebruikersbeheer</option>
+        </select>
+      </div>
+      <div id="invite-error" style="font-size:13px;color:var(--danger);margin-bottom:8px;display:none"></div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeInviteModal()">Annuleer</button>
+        <button class="btn btn-primary" id="invite-send-btn" onclick="sendInvite()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Account aanmaken
+        </button>
+      </div>
     </div>
-    <div class="modal-field">
-      <label class="modal-label">Volledige naam</label>
-      <input class="modal-input" id="invite-name" type="text" placeholder="Voornaam Achternaam">
-    </div>
-    <div class="modal-field">
-      <label class="modal-label">Rol</label>
-      <select class="modal-input" id="invite-role">
-        <option value="technician">Technieker — eigen checklists</option>
-        <option value="admin">Admin — alle checklists + beheer</option>
-      </select>
-    </div>
-    <div class="modal-actions">
-      <button class="btn" onclick="closeInviteModal()">Annuleer</button>
-      <button class="btn btn-primary" onclick="sendInvite()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-        Uitnodiging versturen
-      </button>
+
+    <!-- Step 2: temp password display -->
+    <div id="invite-result-wrap" style="display:none">
+      <div style="background:var(--accent-bg);border:1px solid var(--accent-mid);border-radius:var(--radius);padding:1rem;margin-bottom:1rem">
+        <div style="font-size:13px;font-weight:600;color:var(--accent);margin-bottom:6px">✓ Account aangemaakt</div>
+        <div style="font-size:13px;color:var(--text);margin-bottom:8px">Deel het tijdelijke wachtwoord met de gebruiker. Ze kunnen dit na het inloggen wijzigen via <em>Wachtwoord vergeten</em>.</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:500">Tijdelijk wachtwoord</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <code id="invite-temp-pw" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:14px;letter-spacing:0.08em;font-family:monospace;word-break:break-all"></code>
+          <button class="btn" onclick="copyTempPw()" style="flex-shrink:0" title="Kopieer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="modal-actions" style="justify-content:flex-end">
+        <button class="btn btn-primary" onclick="closeInviteModal()">Sluiten</button>
+      </div>
     </div>
   </div>
 </div>
@@ -422,8 +420,8 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
 <div class="toast" id="toast"></div>
 
 <script>
-// sb starts as anon — refreshed to authenticated after login
-let sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+// window.sb is created by auth.js at parse time
+const sb = window.sb;
 let currentId = null;
 let sections = [];
 let idN = 100;
@@ -440,108 +438,185 @@ function switchTab(tab) {
 }
 
 // ── USER MANAGEMENT ──
+let _allUsers = [];  // cache for client-side search
+
 async function loadUsers() {
   const el = document.getElementById('users-list');
   el.innerHTML = '<div style="color:var(--muted);font-size:14px;padding:2rem;text-align:center">Laden…</div>';
 
-  // Use admin API via edge function or list from auth.users via service role
-  // Since we only have anon key, we use a workaround: list from submissions unique emails
-  const { data: subs } = await sb.from('submissions').select('user_id,user_email,filled_by').neq('user_id', null);
+  const { data, error } = await sb.from('user_profiles').select('*').order('created_at');
+  if (error) {
+    el.innerHTML = `<div style="color:var(--danger);font-size:14px;padding:2rem;text-align:center">Fout: ${esc(error.message)}</div>`;
+    return;
+  }
+  _allUsers = data || [];
+  renderUsers(_allUsers);
+}
 
-  // Also get invited users from a users_profile table if it exists, otherwise show from submissions
-  const seen = new Set();
-  const users = [];
-  (subs||[]).forEach(s => {
-    if (s.user_email && !seen.has(s.user_email)) {
-      seen.add(s.user_email);
-      users.push({ email: s.user_email, name: s.filled_by||'', id: s.user_id });
-    }
-  });
+function filterUsers(query) {
+  const q = (query || '').toLowerCase();
+  if (!q) { renderUsers(_allUsers); return; }
+  renderUsers(_allUsers.filter(u =>
+    (u.full_name || '').toLowerCase().includes(q) ||
+    (u.email || '').toLowerCase().includes(q)
+  ));
+}
+
+function renderUsers(users) {
+  const el = document.getElementById('users-list');
+  const currentUserId = AUTH.getUserId();
 
   if (!users.length) {
     el.innerHTML = `<div style="color:var(--muted);font-size:14px;padding:2rem;text-align:center">
-      Nog geen gebruikers actief.<br><br>
-      <small>Uitgenodigde gebruikers verschijnen hier zodra ze hun eerste checklist hebben opgeslagen.</small>
-    </div>`;
+      Geen gebruikers gevonden.</div>`;
     return;
   }
 
-  el.innerHTML = users.map(u => `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;display:flex;align-items:center;gap:14px;margin-bottom:8px;box-shadow:var(--shadow)">
-      <div style="width:36px;height:36px;border-radius:50%;background:var(--accent-bg);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0">
-        ${esc((u.name||u.email).charAt(0).toUpperCase())}
+  const ROLE_LABELS = { admin: 'Admin', technician: 'Technieker', viewer: 'Viewer' };
+
+  el.innerHTML = users.map(u => {
+    const initials = (u.full_name || u.email || '?').split(/\s+/).map(w=>w[0]||'').join('').toUpperCase().slice(0,2);
+    const isSelf = u.id === currentUserId;
+    const isActive = u.is_active !== false;
+
+    return `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;display:flex;align-items:center;gap:14px;margin-bottom:8px;box-shadow:var(--shadow);opacity:${isActive?1:0.65}">
+      <div style="width:36px;height:36px;border-radius:50%;background:${isActive?'var(--accent-bg)':'var(--surface2)'};color:${isActive?'var(--accent)':'var(--muted)'};display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0">
+        ${esc(initials)}
       </div>
       <div style="flex:1;min-width:0">
-        <div style="font-weight:500;font-size:14px">${esc(u.name||'—')}</div>
+        <div style="font-weight:500;font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          ${esc(u.full_name || '—')}
+          ${isSelf ? '<span style="font-size:10px;background:var(--surface2);color:var(--muted);padding:1px 7px;border-radius:99px;font-weight:500">jij</span>' : ''}
+          ${!isActive ? '<span style="font-size:10px;background:#FEF3C7;color:#92400E;padding:1px 7px;border-radius:99px;font-weight:500">inactief</span>' : ''}
+        </div>
         <div style="font-size:12px;color:var(--muted)">${esc(u.email)}</div>
       </div>
-    </div>`).join('');
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0">
+        <select onchange="changeRole('${u.id}', this.value)" ${isSelf ? 'disabled title="Je kan je eigen rol niet wijzigen"' : ''}
+          style="font-family:'DM Sans',sans-serif;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);outline:none;cursor:pointer">
+          <option value="technician" ${u.role==='technician'?'selected':''}>Technieker</option>
+          <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+        </select>
+        <button class="btn" onclick="toggleUserActive('${u.id}', ${isActive})" ${isSelf?'disabled title="Je kan je eigen account niet deactiveren"':''}
+          style="font-size:12px;padding:5px 10px;${isActive?'':'background:var(--accent);color:white;border-color:var(--accent)'}">
+          ${isActive ? 'Deactiveer' : 'Activeer'}
+        </button>
+        <button class="btn btn-danger" onclick="deleteUser('${u.id}','${esc(u.full_name||u.email)}')" ${isSelf?'disabled title="Je kan je eigen account niet verwijderen"':''}
+          style="font-size:12px;padding:5px 10px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
-function openInviteModal()  { document.getElementById('invite-overlay').classList.add('open'); }
-function closeInviteModal() { document.getElementById('invite-overlay').classList.remove('open'); }
+async function changeRole(userId, newRole) {
+  const { error } = await sb.from('user_profiles').update({ role: newRole }).eq('id', userId);
+  if (error) { toast('Fout: ' + error.message, 'error'); loadUsers(); return; }
+  const u = _allUsers.find(u => u.id === userId);
+  if (u) u.role = newRole;
+  toast('Rol bijgewerkt', 'success');
+}
+
+async function toggleUserActive(userId, currentlyActive) {
+  const { error } = await sb.from('user_profiles').update({ is_active: !currentlyActive }).eq('id', userId);
+  if (error) { toast('Fout: ' + error.message, 'error'); return; }
+  toast(currentlyActive ? 'Gebruiker gedeactiveerd' : 'Gebruiker geactiveerd', 'success');
+  loadUsers();
+}
+
+async function deleteUser(userId, displayName) {
+  if (!confirm(`Profiel van "${displayName}" verwijderen?\n\nDit verwijdert het profiel en de toegang. Ingevulde checklists blijven bewaard.\n\nVerwijder ook het auth-account via het Supabase Dashboard als je volledige verwijdering wil.`)) return;
+  const { error } = await sb.from('user_profiles').delete().eq('id', userId);
+  if (error) { toast('Fout: ' + error.message, 'error'); return; }
+  toast('Gebruiker verwijderd', 'success');
+  loadUsers();
+}
+
+function _generatePassword() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
+  const arr = new Uint8Array(12);
+  crypto.getRandomValues(arr);
+  return Array.from(arr).map(b => chars[b % chars.length]).join('');
+}
+
+function openInviteModal() {
+  document.getElementById('invite-form-wrap').style.display = '';
+  document.getElementById('invite-result-wrap').style.display = 'none';
+  document.getElementById('invite-email').value = '';
+  document.getElementById('invite-name').value = '';
+  document.getElementById('invite-role').value = 'technician';
+  document.getElementById('invite-error').style.display = 'none';
+  document.getElementById('invite-overlay').classList.add('open');
+}
+
+function closeInviteModal() {
+  document.getElementById('invite-overlay').classList.remove('open');
+  loadUsers();
+}
 
 async function sendInvite() {
   const email = document.getElementById('invite-email').value.trim();
   const name  = document.getElementById('invite-name').value.trim();
   const role  = document.getElementById('invite-role').value;
-  if (!email) { toast('Vul een e-mailadres in', 'error'); return; }
+  const errEl = document.getElementById('invite-error');
+  const btn   = document.getElementById('invite-send-btn');
 
-  // Supabase invite via admin API — requires service role key
-  // With anon key we can only use signUp or magiclink
-  const { error } = await sb.auth.signInWithOtp({
+  errEl.style.display = 'none';
+  if (!email) { errEl.textContent = 'Vul een e-mailadres in.'; errEl.style.display = 'block'; return; }
+
+  btn.disabled = true; btn.textContent = 'Bezig…';
+
+  const tempPw = _generatePassword();
+
+  const { data, error } = await sb.auth.signUp({
     email,
+    password: tempPw,
     options: {
-      emailRedirectTo: location.origin + location.pathname.replace('admin.html','') + 'login.html',
-      data: { full_name: name, role }
+      data: { full_name: name, role },
+      emailRedirectTo: location.origin + location.pathname.replace(/[^/]*$/, '') + 'login.html'
     }
   });
 
-  if (error) { toast('Fout: ' + error.message, 'error'); return; }
-  toast(`Uitnodiging verstuurd naar ${email}`, 'success');
-  closeInviteModal();
-  document.getElementById('invite-email').value = '';
-  document.getElementById('invite-name').value = '';
+  btn.disabled = false; btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Account aanmaken';
+
+  if (error) {
+    errEl.textContent = error.message.includes('already registered')
+      ? 'Dit e-mailadres is al geregistreerd.' : 'Fout: ' + error.message;
+    errEl.style.display = 'block';
+    return;
+  }
+
+  // Update profile role in case trigger used default
+  if (data?.user?.id) {
+    await sb.from('user_profiles').upsert({
+      id: data.user.id,
+      email,
+      full_name: name || email.split('@')[0],
+      role,
+      is_active: true
+    }, { onConflict: 'id' });
+  }
+
+  document.getElementById('invite-temp-pw').textContent = tempPw;
+  document.getElementById('invite-form-wrap').style.display = 'none';
+  document.getElementById('invite-result-wrap').style.display = '';
+}
+
+function copyTempPw() {
+  const pw = document.getElementById('invite-temp-pw').textContent;
+  navigator.clipboard.writeText(pw).then(() => toast('Wachtwoord gekopieerd', 'success'));
 }
 const uid = () => 's' + (++idN) + Date.now().toString(36);
 
 // ── AUTH ──
-async function checkAuth() {
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    refreshSb();
-    showAdmin(session.user);
-  }
-}
-
-async function doLogin() {
-  const email = document.getElementById('login-email').value.trim();
-  const pw = document.getElementById('login-pw').value;
-  document.getElementById('login-error').style.display = 'none';
-  const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
-  if (error) { document.getElementById('login-error').style.display = 'block'; return; }
-  refreshSb();
-  showAdmin(data.user);
-}
-
-// Recreate sb so it picks up the session from localStorage
-function refreshSb() {
-  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-}
-
-function showAdmin(user) {
-  document.getElementById('login-screen').style.display = 'none';
+AUTH.init({ requireAuth: true, requireAdmin: true }).then(profile => {
+  if (!profile) return; // redirecting
   document.getElementById('admin-screen').style.display = 'block';
-  document.getElementById('logout-btn').style.display = 'flex';
-  const name = user.user_metadata?.full_name || user.email;
-  document.getElementById('user-email').textContent = 'Ingelogd als ' + name;
+  document.getElementById('user-email').textContent = 'Ingelogd als ' + (profile.full_name || profile.email);
   loadTemplates();
-}
-
-async function logout() {
-  await sb.auth.signOut();
-  location.reload();
-}
+});
 
 // ── TEMPLATE LIST ──
 const _tplCache = {};  // id → full template object, avoids JSON-in-onclick
@@ -1651,7 +1726,6 @@ function downloadQR() {
   a.click();
 }
 
-checkAuth();
 </script>
 
 <!-- Link insert dialog -->
