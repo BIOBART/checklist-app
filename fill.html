@@ -1610,7 +1610,7 @@ async function generatePDF(mode = 'download') {
             doc.setDrawColor(...L); doc.setLineWidth(0.3); doc.roundedRect(mg, y-3, cbS, cbS, 0.8, 0.8);
           }
           doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
-          doc.setTextColor(isChk ? ...D : ...M);
+          doc.setTextColor(...(isChk ? D : M));
           const sl = doc.splitTextToSize(pdfStr(gl(sub.label)||''), cw-cbS-4);
           doc.text(sl, mg+cbS+3, y);
           y += sl.length*4.5 + 1;
