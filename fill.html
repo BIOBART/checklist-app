@@ -1423,8 +1423,9 @@ async function generatePDF(mode = 'download') {
     y+=12;
 
     for (const item of (sec.items||[])) {
-      // Skip items hidden by conditional rules
+      // Skip items hidden by conditional rules or hidden from report
       if (normalizeShowIf(item.showIf) && !evalShowIf(item.showIf)) continue;
+      if (item.hideFromReport) continue;
       if (y > ph-20) { doc.addPage(); y=mg; }
       const ans = answers[item.id]||{};
       const cbSize = 5;
@@ -1866,6 +1867,7 @@ async function generateWord() {
 
     for (const item of (sec.items||[])) {
       if (normalizeShowIf(item.showIf) && !evalShowIf(item.showIf)) continue;
+      if (item.hideFromReport) continue;
       const ans = answers[item.id]||{};
       const lbl = esc(pdfStr(gl(item.label))||'');
       const req = item.required ? ' <span style="color:#C0392B">*</span>' : '';

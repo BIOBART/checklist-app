@@ -983,6 +983,13 @@ function renderItem(si, ii, item) {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
           </button>
         </div>
+      </div>
+      <div class="item-card-meta" style="border-top:1px solid #BFDBFE;background:transparent">
+        <label class="item-req" style="color:var(--muted)">
+          <input type="checkbox" ${item.hideFromReport?'checked':''} onchange="sections[${si}].items[${ii}].hideFromReport=this.checked" style="accent-color:var(--accent);width:13px;height:13px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11" style="flex-shrink:0"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          Verbergen in rapport
+        </label>
       </div>`;
     return el;
   }
@@ -1016,6 +1023,13 @@ function renderItem(si, ii, item) {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
           </button>
         </div>
+      </div>
+      <div class="item-card-meta" style="border-top:1px solid #BFDBFE;background:transparent">
+        <label class="item-req" style="color:var(--muted)">
+          <input type="checkbox" ${item.hideFromReport?'checked':''} onchange="sections[${si}].items[${ii}].hideFromReport=this.checked" style="accent-color:var(--accent);width:13px;height:13px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11" style="flex-shrink:0"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          Verbergen in rapport
+        </label>
       </div>`;
     return el;
   }
@@ -1054,6 +1068,13 @@ function renderItem(si, ii, item) {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
           </button>
         </div>
+      </div>
+      <div class="item-card-meta" style="background:transparent">
+        <label class="item-req" style="color:var(--muted)">
+          <input type="checkbox" ${item.hideFromReport?'checked':''} onchange="sections[${si}].items[${ii}].hideFromReport=this.checked" style="accent-color:var(--accent);width:13px;height:13px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11" style="flex-shrink:0"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          Verbergen in rapport
+        </label>
       </div>`;
     return el;
   }
@@ -1134,6 +1155,11 @@ function renderItem(si, ii, item) {
       <label class="item-req">
         <input type="checkbox" ${item.required?'checked':''} onchange="sections[${si}].items[${ii}].required=this.checked">
         Verplicht
+      </label>
+      <label class="item-req" style="color:var(--muted)">
+        <input type="checkbox" ${item.hideFromReport?'checked':''} onchange="sections[${si}].items[${ii}].hideFromReport=this.checked">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11" style="flex-shrink:0"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        Verbergen in rapport
       </label>
     </div>
     ${extraHtml || followHtml || condHtml ? `<div class="item-extra" style="padding-left:0">${extraHtml}${followHtml}${condHtml}</div>` : ''}`;
