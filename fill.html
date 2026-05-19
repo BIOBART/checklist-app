@@ -638,7 +638,7 @@ function renderItem(secId, item) {
         <div class="checkbox${checked?' checked':''}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
-        <div class="item-label${checked?' done':''}" style="cursor:pointer;padding-top:1px">${esc(sub.label||'')}</div>
+        <div class="item-label${checked?' done':''}" style="cursor:pointer;padding-top:1px">${esc(gl(sub.label)||'')}</div>
       </div>`;
     }).join('');
     el.innerHTML = `
@@ -1611,7 +1611,7 @@ async function generatePDF(mode = 'download') {
           }
           doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
           doc.setTextColor(isChk ? ...D : ...M);
-          const sl = doc.splitTextToSize(pdfStr(sub.label||''), cw-cbS-4);
+          const sl = doc.splitTextToSize(pdfStr(gl(sub.label)||''), cw-cbS-4);
           doc.text(sl, mg+cbS+3, y);
           y += sl.length*4.5 + 1;
         }
@@ -1876,7 +1876,7 @@ async function generateWord() {
         body += `<p style="font-weight:600;font-size:11pt;margin:8pt 0 3pt 0">${lbl}${req}</p>`;
         subs.forEach(sub => {
           const chk = !!gi[sub.id];
-          body += `<p style="margin:2pt 0 2pt 8pt;font-size:10pt;color:${chk?'var(--text)':'#786E68'}">${chk?'☑':'☐'} ${esc(sub.label||'')}</p>`;
+          body += `<p style="margin:2pt 0 2pt 8pt;font-size:10pt;color:${chk?'var(--text)':'#786E68'}">${chk?'☑':'☐'} ${esc(gl(sub.label)||'')}</p>`;
         });
         body += '<p style="margin:4pt 0"></p>';
         continue;
