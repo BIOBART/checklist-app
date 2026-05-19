@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8/build/index.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script src="config.js"></script>
@@ -255,6 +256,10 @@ textarea.ff:focus, input.ff:focus { border-color:var(--accent); background:var(-
       <button class="btn" onclick="downloadAndEmail()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         Verstuur per mail
+      </button>
+      <button class="btn" onclick="generateWord()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Download Word
       </button>
       <button class="btn btn-primary" onclick="generatePDF('download')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -1552,6 +1557,308 @@ async function generatePDF(mode = 'download') {
     // Return base64 string for emailing (strip data: prefix if present)
     const base64 = doc.output('datauristring').split(',')[1];
     return { base64, fname };
+  }
+}
+
+async function generateWord() {
+  if (!window.docx) { alert('Word-library niet geladen'); return; }
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+          HeadingLevel, AlignmentType, WidthType, ShadingType, BorderStyle,
+          ImageRun, HorizontalPositionRelativeFrom, VerticalPositionRelativeFrom,
+          TableLayoutType } = window.docx;
+
+  const author   = document.getElementById('pdf-author')?.value || document.getElementById('f-filled-by')?.value || '';
+  const org      = document.getElementById('pdf-org')?.value    || document.getElementById('f-org')?.value || '';
+  const note     = document.getElementById('pdf-note')?.value   || document.getElementById('f-notes')?.value || '';
+  const customer = (document.getElementById('f-customer')?.value||'').trim();
+  const ref      = (document.getElementById('f-ref')?.value||'').trim();
+  const location = document.getElementById('f-location')?.value||'';
+  const locale   = typeof t === 'function' ? t('locale') : 'nl-BE';
+  const dateStr  = new Date().toLocaleDateString(locale, {day:'2-digit',month:'long',year:'numeric'});
+  const docTitle = [template?.name||'Checklist', customer, ref].filter(Boolean).join(' — ');
+  const fname    = [template?.name||'checklist', customer, ref].filter(Boolean)
+                    .map(p=>p.replace(/[^a-zA-Z0-9_\-]/g,'_')).join('_') + '.docx';
+
+  const EM = { top:0, bottom:0, left:0, right:0 };
+  const noBorder = { style: BorderStyle.NONE, size:0, color:'FFFFFF' };
+  const allNoBorder = { top:noBorder, bottom:noBorder, left:noBorder, right:noBorder };
+
+  function hRun(text, size=22, bold=false, color='2D5A3D') {
+    return new TextRun({ text: String(text||''), size, bold, color, font:'Calibri' });
+  }
+  function nRun(text, size=20, bold=false, color='1A1714') {
+    return new TextRun({ text: String(text||''), size, bold, color, font:'Calibri' });
+  }
+  function mRun(text, size=18, italic=false, color='786E68') {
+    return new TextRun({ text: String(text||''), size, italic, color, font:'Calibri' });
+  }
+  function cell(children, opts={}) {
+    return new TableCell({
+      children: Array.isArray(children) ? children : [new Paragraph({ children: Array.isArray(children)?children:[children] })],
+      margins: { top:60, bottom:60, left:100, right:100 },
+      borders: allNoBorder,
+      shading: opts.shade ? { type: ShadingType.SOLID, color: opts.shade } : undefined,
+      width: opts.width ? { size: opts.width, type: WidthType.PERCENTAGE } : undefined,
+      columnSpan: opts.span,
+    });
+  }
+  function labelCell(label, pct=25) {
+    return cell([mRun(label+':', 18)], { width: pct });
+  }
+  function valueCell(val, pct=75, bold=false) {
+    return cell([nRun(val||'—', 20, bold)], { width: pct });
+  }
+
+  const sections = [];
+  const children = [];
+
+  // ── Title ──
+  children.push(new Paragraph({
+    children: [hRun(docTitle, 28, true)],
+    spacing: { after: 100 },
+  }));
+  children.push(new Paragraph({
+    children: [mRun(template?.category||'', 18)],
+    spacing: { after: 200 },
+  }));
+
+  // ── Info table ──
+  const infoRows = [
+    ['Datum', dateStr,              'Ingevuld door', author||'—'],
+    ['Klantnaam', customer||'—',    'Organisatie',   org||'—'],
+    ['Locatie', location||'—',      'Referentie',    ref||'—'],
+  ];
+  if (note) infoRows.push(['Opmerking', note, '', '']);
+
+  const infoTableRows = infoRows.map(([l1,v1,l2,v2]) => new TableRow({
+    children: [
+      labelCell(l1, 15), valueCell(v1, 35),
+      labelCell(l2, 15), valueCell(v2, 35),
+    ]
+  }));
+  children.push(new Table({
+    rows: infoTableRows,
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    layout: TableLayoutType.FIXED,
+  }));
+  children.push(new Paragraph({ children: [], spacing: { after: 200 } }));
+
+  // ── Sections & Items ──
+  for (const sec of (template.schema?.sections||[])) {
+    // Section heading
+    children.push(new Paragraph({
+      children: [hRun(gl(sec.title)||'', 22, true, '2D5A3D')],
+      heading: HeadingLevel.HEADING_2,
+      spacing: { before: 300, after: 100 },
+      shading: { type: ShadingType.SOLID, color: 'EEF0EC' },
+    }));
+
+    for (const item of (sec.items||[])) {
+      if (normalizeShowIf(item.showIf) && !evalShowIf(item.showIf)) continue;
+      const ans = answers[item.id]||{};
+      const label = pdfStr(gl(item.label))||'';
+
+      // ── label / instruction ──
+      if (item.type === 'label') {
+        children.push(new Paragraph({
+          children: [nRun(label, 20, true)],
+          spacing: { before: 160, after: 40 },
+        }));
+        continue;
+      }
+      if (item.type === 'instruction') {
+        children.push(new Paragraph({
+          children: [mRun(label, 18, true)],
+          spacing: { before: 100, after: 80 },
+        }));
+        continue;
+      }
+
+      // ── link ──
+      if (item.type === 'link') {
+        children.push(new Paragraph({
+          children: [nRun('🔗 ' + (label || item.url||''), 20)],
+          spacing: { before: 80, after: 80 },
+        }));
+        continue;
+      }
+
+      // ── check ──
+      if (item.type === 'check') {
+        const ticked = ans.checked === true;
+        children.push(new Paragraph({
+          children: [
+            nRun(ticked ? '☑  ' : '☐  ', 20, false, ticked ? '2D5A3D' : '786E68'),
+            nRun(label + (item.required?' *':''), 20, false, ticked ? '1A1714' : '786E68'),
+          ],
+          spacing: { before: 60, after: 60 },
+        }));
+        continue;
+      }
+
+      // ── yesno ──
+      if (item.type === 'yesno') {
+        const opts = ['Ja','Nee','N.v.t.'];
+        const selected = ans.value||'';
+        const pillTexts = opts.map(o => (o === selected ? `[${o}]` : o)).join('   ');
+        children.push(new Table({
+          rows: [new TableRow({ children: [
+            cell([nRun(label+(item.required?' *':''), 20)], { width: 65 }),
+            cell([nRun(pillTexts, 18, false, '2D5A3D')], { width: 35 }),
+          ]})],
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          layout: TableLayoutType.FIXED,
+        }));
+        if (ans.followNote && item.followUp?.trigger && ans.value===item.followUp.trigger) {
+          children.push(new Paragraph({ children: [mRun('  > ' + ans.followNote, 18, true)], spacing:{before:40,after:60} }));
+        }
+        children.push(new Paragraph({ children:[], spacing:{after:60} }));
+        continue;
+      }
+
+      // ── statuscheck ──
+      if (item.type === 'statuscheck') {
+        const statusLabels = item.statusLabels || ['OK','Niet OK','Onderdelen nodig','Niet gecheckt'];
+        const selected = ans.value||'';
+        const selIdx = statusLabels.indexOf(selected);
+        const statusColors = ['2D5A3D','C0392B','B47808','786E68'];
+        const selColor = selIdx >= 0 ? statusColors[selIdx] : '786E68';
+        children.push(new Table({
+          rows: [new TableRow({ children: [
+            cell([nRun(label+(item.required?' *':''), 20)], { width: 65 }),
+            cell([nRun(selected ? `[${selected}]` : '—', 18, true, selColor)], { width: 35 }),
+          ]})],
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          layout: TableLayoutType.FIXED,
+        }));
+        if (ans.followNote && item.statusFollowUp?.includes(selected)) {
+          children.push(new Paragraph({ children: [mRun('  > ' + ans.followNote, 18, true)], spacing:{before:40,after:60} }));
+        }
+        children.push(new Paragraph({ children:[], spacing:{after:60} }));
+        continue;
+      }
+
+      // ── radio ──
+      if (item.type === 'radio') {
+        const opts = item.options||[];
+        const selected = ans.value||'';
+        const pillTexts = opts.map(o => (o === selected ? `[${o}]` : o)).join('   ');
+        children.push(new Table({
+          rows: [new TableRow({ children: [
+            cell([nRun(label+(item.required?' *':''), 20)], { width: 55 }),
+            cell([nRun(pillTexts, 18, false, '2D5A3D')], { width: 45 }),
+          ]})],
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          layout: TableLayoutType.FIXED,
+        }));
+        if (ans.followNote && item.followUp?.trigger && ans.value===item.followUp.trigger) {
+          children.push(new Paragraph({ children: [mRun('  > ' + ans.followNote, 18, true)], spacing:{before:40,after:60} }));
+        }
+        children.push(new Paragraph({ children:[], spacing:{after:60} }));
+        continue;
+      }
+
+      // ── text / number / date ──
+      if (['text','number','date'].includes(item.type)) {
+        const unit = item.unit ? ' ' + item.unit : '';
+        const displayVal = ans.value ? (pdfStr(ans.value) + unit) : '—';
+        children.push(new Paragraph({
+          children: [nRun(label+(item.required?' *':''), 20)],
+          spacing: { before: 80, after: 40 },
+        }));
+        children.push(new Paragraph({
+          children: [nRun(displayVal, 20, true, '1A1714')],
+          spacing: { after: 100 },
+          shading: { type: ShadingType.SOLID, color: 'F5F4F1' },
+          indent: { left: 200, right: 200 },
+        }));
+        continue;
+      }
+
+      // ── photo ──
+      if (item.type === 'photo') {
+        const photos = ans.photos||[];
+        if (!photos.length) continue;
+        children.push(new Paragraph({
+          children: [mRun(label, 18, true)],
+          spacing: { before: 100, after: 60 },
+        }));
+        for (const photo of photos) {
+          try {
+            // Strip data URI prefix and get base64
+            const b64 = photo.data.includes(',') ? photo.data.split(',')[1] : photo.data;
+            const binaryStr = atob(b64);
+            const bytes = new Uint8Array(binaryStr.length);
+            for (let i=0;i<binaryStr.length;i++) bytes[i]=binaryStr.charCodeAt(i);
+            children.push(new Paragraph({
+              children: [new ImageRun({
+                data: bytes.buffer,
+                transformation: { width: 350, height: 263 },
+                type: 'jpg',
+              })],
+              spacing: { after: 80 },
+            }));
+          } catch(e) {
+            children.push(new Paragraph({ children:[mRun('[foto]',18,true)], spacing:{after:80} }));
+          }
+        }
+        continue;
+      }
+
+      // ── signature ──
+      if (item.type === 'signature') {
+        children.push(new Paragraph({
+          children: [nRun(label+(item.required?' *':''), 20)],
+          spacing: { before: 80, after: 40 },
+        }));
+        if (ans.value) {
+          try {
+            const b64 = ans.value.includes(',') ? ans.value.split(',')[1] : ans.value;
+            const binaryStr = atob(b64);
+            const bytes = new Uint8Array(binaryStr.length);
+            for (let i=0;i<binaryStr.length;i++) bytes[i]=binaryStr.charCodeAt(i);
+            children.push(new Paragraph({
+              children: [new ImageRun({
+                data: bytes.buffer,
+                transformation: { width: 200, height: 80 },
+                type: 'png',
+              })],
+              spacing: { after: 100 },
+            }));
+          } catch(e) {
+            children.push(new Paragraph({ children:[mRun('[handtekening aanwezig]',18,true)], spacing:{after:80} }));
+          }
+        } else {
+          children.push(new Paragraph({ children:[mRun('— geen handtekening —',18,false,'786E68')], spacing:{after:80} }));
+        }
+        continue;
+      }
+    }
+  }
+
+  const wordDoc = new Document({
+    creator: author||'Biolectric',
+    title: docTitle,
+    sections: [{ properties:{}, children }],
+    styles: {
+      default: {
+        document: {
+          run: { font: 'Calibri', size: 20 },
+        },
+      },
+    },
+  });
+
+  try {
+    const blob = await Packer.toBlob(wordDoc);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fname; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 5000);
+    closePdfModal();
+  } catch(err) {
+    console.error('Word export error:', err);
+    alert('Fout bij Word export: ' + err.message);
   }
 }
 
