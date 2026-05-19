@@ -8,6 +8,8 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -121,6 +123,20 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); hei
   .nav-link span { display: none; }
 }
 
+/* BLANK EXPORT MODAL */
+.blank-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:300; align-items:center; justify-content:center; padding:1rem; }
+.blank-overlay.open { display:flex; }
+.blank-modal { background:var(--surface); border-radius:var(--radius-lg); padding:1.75rem; width:100%; max-width:360px; box-shadow:0 20px 60px rgba(0,0,0,0.18); }
+.blank-modal h3 { font-family:'DM Serif Display',serif; font-size:18px; margin-bottom:4px; }
+.blank-modal .sub { font-size:13px; color:var(--muted); margin-bottom:1.25rem; }
+.field-label-sm { display:block; font-size:11px; font-weight:500; color:var(--muted); margin-bottom:4px; }
+.field-select-sm { width:100%; font-family:'DM Sans',sans-serif; font-size:13px; padding:8px 10px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); color:var(--text); outline:none; margin-bottom:1.1rem; }
+.blank-btns { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
+.blank-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:14px 10px; border-radius:var(--radius); font-family:'DM Sans',sans-serif; font-size:12px; font-weight:500; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--text); transition:all 0.15s; }
+.blank-btn:hover { background:var(--surface2); border-color:var(--border-strong); }
+.blank-btn.primary { background:var(--accent); color:white; border-color:var(--accent); }
+.blank-btn.primary:hover { background:#234830; }
+.blank-btn svg { width:20px; height:20px; }
 
 </style>
 </head>
@@ -196,6 +212,7 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); hei
 <script>
 // sb is set after AUTH.init() — uses the authenticated session
 let sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+let allTemplates = {};
 
 const CATEGORY_ICONS = {
   oplevering: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`,
@@ -248,6 +265,7 @@ async function loadTemplates() {
     </div>`;
     return;
   }
+  data.forEach(t => allTemplates[t.id] = t);
   grid.innerHTML = data.map(t => `
     <a href="fill.html?template=${t.id}" class="template-card">
       <div class="card-icon">${icon(t.category)}</div>
@@ -259,6 +277,10 @@ async function loadTemplates() {
       <div class="card-footer">
         <span class="card-count">${itemCount(t.schema)} vragen</span>
         <div style="display:flex;gap:6px;align-items:center">
+          <button class="qr-btn" onclick="event.preventDefault();openBlankExport('${t.id}')" title="Leeg formulier downloaden">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Leeg
+          </button>
           <button class="qr-btn" onclick="event.preventDefault();showQR('${t.id}','${esc(t.name)}')" title="QR code">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><line x1="17" y1="18" x2="20" y2="18"/><line x1="20" y1="15" x2="20" y2="18"/></svg>
             QR
@@ -324,12 +346,290 @@ function downloadQR() {
   a.click();
 }
 
+// ── BLANK EXPORT ──
+let _blankTemplateId = null;
+
+function openBlankExport(templateId) {
+  _blankTemplateId = templateId;
+  const t = allTemplates[templateId];
+  document.getElementById('blank-title').textContent = t?.name || 'Template';
+  document.getElementById('blank-overlay').classList.add('open');
+}
+function closeBlankExport() {
+  document.getElementById('blank-overlay').classList.remove('open');
+}
+
+function glB(field, lang) {
+  if (!field) return '';
+  if (typeof field === 'string') return field;
+  return field[lang] || field.nl || field.en || field.fr || field.de || '';
+}
+
+function infoLabelsFor(lang) {
+  if (lang === 'en') return ['Customer','Reference','Location','Filled by','Date'];
+  if (lang === 'fr') return ['Client','Référence','Lieu','Rempli par','Date'];
+  if (lang === 'de') return ['Kunde','Referenz','Ort','Ausgefüllt von','Datum'];
+  return ['Klant','Referentie','Locatie','Ingevuld door','Datum'];
+}
+
+async function generateBlankPDF() {
+  const t = allTemplates[_blankTemplateId];
+  if (!t || !window.jspdf) return;
+  const lang = document.getElementById('blank-lang').value || 'nl';
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+
+  const pw=210, ph=297, mg=15, cw=pw-mg*2;
+  const G=[45,90,61], D=[26,23,20], M=[122,113,104], L=[176,168,152];
+  let y = mg;
+
+  // Header bar
+  doc.setFillColor(...G);
+  doc.rect(0,0,pw,20,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bold'); doc.setFontSize(13);
+  doc.text(t.name, mg, 13);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  const today = new Date().toLocaleDateString('nl-BE',{day:'2-digit',month:'short',year:'numeric'});
+  doc.text(today, pw-mg, 13, {align:'right'});
+  y = 28;
+
+  // Info box
+  const infoL = infoLabelsFor(lang);
+  doc.setFillColor(239,236,229);
+  doc.roundedRect(mg, y, cw, 30, 2, 2, 'F');
+  const col = cw/3;
+  [[0,1],[2,3],[4]].forEach((row, ri) => {
+    row.forEach((idx, ci) => {
+      const ix = mg + ci*col + 4, iy = y + 7 + ri*11;
+      doc.setTextColor(...M); doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
+      doc.text(infoL[idx], ix, iy);
+      doc.setTextColor(...L); doc.setFont('helvetica','normal'); doc.setFontSize(9);
+      doc.text('_____________________', ix, iy+5);
+    });
+  });
+  y += 38;
+
+  const cbSize=4.5;
+  for (const section of t.schema?.sections||[]) {
+    if (y > ph-20) { doc.addPage(); y=mg; }
+    // Section header
+    doc.setFillColor(...G);
+    doc.rect(mg, y-4, cw, 8, 'F');
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(10);
+    doc.text(section.title||'', mg+4, y+1);
+    y += 10;
+
+    for (const item of section.items||[]) {
+      if (['label','instruction','link'].includes(item.type)) continue;
+      const label = glB(item.label, lang);
+      if (!label) continue;
+      if (y > ph-18) { doc.addPage(); y=mg; }
+
+      if (item.type === 'check') {
+        doc.setDrawColor(...M); doc.setLineWidth(0.3);
+        doc.rect(mg, y-3.5, cbSize, cbSize);
+        doc.setTextColor(...D); doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
+        const ll = doc.splitTextToSize(label, cw-8);
+        doc.text(ll, mg+7, y);
+        y += ll.length*4.5 + 3;
+        continue;
+      }
+
+      // Label line
+      doc.setTextColor(...D); doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
+      const ll = doc.splitTextToSize(label+(item.required?' *':''), cw*0.58);
+      doc.text(ll, mg, y);
+
+      if (item.type === 'yesno') {
+        const pills = lang==='en'?['Yes','No','N/A']:lang==='fr'?['Oui','Non','N.d.']:lang==='de'?['Ja','Nein','N.z.']:['Ja','Nee','N.v.t.'];
+        let px=pw-mg; doc.setFontSize(8);
+        [...pills].reverse().forEach(p => {
+          const w=doc.getTextWidth(p)+6; px-=w+2;
+          doc.setDrawColor(...M); doc.setLineWidth(0.3); doc.roundedRect(px,y-3.5,w,5.5,1,1);
+          doc.setTextColor(...M); doc.text(p,px+w/2,y+0.5,{align:'center'});
+        });
+        y += ll.length*4.5+4; continue;
+      }
+
+      if (item.type === 'statuscheck') {
+        const sl = item.statusLabels||['OK','Niet OK','Onderdelen nodig','Niet gecheckt'];
+        let px=pw-mg; doc.setFontSize(8);
+        [...sl].reverse().forEach(s => {
+          const w=Math.min(doc.getTextWidth(s)+6,38); px-=w+2;
+          if (px < mg+cw*0.58) return;
+          doc.setDrawColor(...M); doc.setLineWidth(0.3); doc.roundedRect(px,y-3.5,w,5.5,1,1);
+          doc.setTextColor(...M);
+          const tw=doc.splitTextToSize(s,w-2);
+          doc.text(tw[0],px+w/2,y+0.5,{align:'center'});
+        });
+        y += ll.length*4.5+4; continue;
+      }
+
+      if (item.type === 'radio') {
+        y += ll.length*4.5;
+        let px=mg+4; doc.setFontSize(8.5);
+        (item.options||[]).forEach(o => {
+          const w=doc.getTextWidth(o)+8;
+          if (px+w > pw-mg) { px=mg+4; y+=6; }
+          doc.setDrawColor(...M); doc.setLineWidth(0.3); doc.roundedRect(px,y-3.5,w,5.5,1,1);
+          doc.setTextColor(...M); doc.text(o,px+w/2,y+0.5,{align:'center'});
+          px+=w+3;
+        });
+        y+=8; continue;
+      }
+
+      if (item.type === 'date') {
+        doc.setTextColor(...M); doc.setFontSize(10);
+        doc.text('__ / __ / ____', pw-mg, y, {align:'right'});
+        y+=ll.length*4.5+4; continue;
+      }
+      if (item.type === 'photo') {
+        doc.setTextColor(...L); doc.setFontSize(8.5);
+        doc.text('[foto]', pw-mg, y, {align:'right'});
+        y+=ll.length*4.5+4; continue;
+      }
+      if (item.type === 'signature') {
+        doc.setDrawColor(...L); doc.setLineWidth(0.3);
+        doc.line(pw-mg-55, y+6, pw-mg, y+6);
+        doc.setTextColor(...L); doc.setFontSize(7);
+        doc.text('handtekening', pw-mg, y+10, {align:'right'});
+        y+=ll.length*4.5+14; continue;
+      }
+      // text / number
+      y+=ll.length*4.5+2;
+      if (item.unit) { doc.setTextColor(...L); doc.setFontSize(8); doc.text('('+item.unit+')', pw-mg, y-1, {align:'right'}); }
+      doc.setDrawColor(...L); doc.setLineWidth(0.3); doc.line(mg, y+1, pw-mg, y+1);
+      y+=7;
+    }
+    y+=4;
+  }
+
+  // Page numbers
+  const pCount=doc.getNumberOfPages();
+  for (let i=1;i<=pCount;i++) {
+    doc.setPage(i); doc.setFontSize(8); doc.setTextColor(...L);
+    doc.text('Biolectric', mg, ph-6);
+    doc.text(i+' / '+pCount, pw-mg, ph-6, {align:'right'});
+  }
+
+  const fname=(t.name||'template').replace(/[^a-zA-Z0-9_\-]/g,'_')+'_leeg.pdf';
+  doc.save(fname);
+  closeBlankExport();
+}
+
+async function generateBlankWord() {
+  if (!window.htmlDocx) { alert('Word-library niet geladen'); return; }
+  const t = allTemplates[_blankTemplateId];
+  if (!t) return;
+  const lang = document.getElementById('blank-lang').value || 'nl';
+  const infoL = infoLabelsFor(lang);
+
+  let body = `<h1 style="color:#2D5A3D;font-size:20pt;margin-bottom:8pt">${t.name||''}</h1>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:16pt">
+    ${infoL.map(l=>`<tr>
+      <td style="width:28%;font-weight:bold;font-size:9pt;padding:3pt 6pt;color:#7A7168;white-space:nowrap">${l}</td>
+      <td style="font-size:9pt;padding:3pt 6pt;border-bottom:1px solid #C5C0B5">&nbsp;</td>
+    </tr>`).join('')}
+  </table>`;
+
+  for (const section of t.schema?.sections||[]) {
+    body += `<h2 style="background:#2D5A3D;color:white;font-size:11pt;padding:5pt 8pt;margin:14pt 0 6pt 0">${section.title||''}</h2>`;
+    for (const item of section.items||[]) {
+      if (['label','instruction','link'].includes(item.type)) continue;
+      const label = glB(item.label, lang);
+      if (!label) continue;
+      const req = item.required ? ' <span style="color:red">*</span>' : '';
+
+      if (item.type === 'check') {
+        body += `<p style="margin:4pt 0;font-size:10pt">&#9744; ${label}${req}</p>`;
+        continue;
+      }
+      if (item.type === 'yesno') {
+        const opts = lang==='en'?['Yes','No','N/A']:lang==='fr'?['Oui','Non','N.d.']:lang==='de'?['Ja','Nein','N.z.']:['Ja','Nee','N.v.t.'];
+        body += `<p style="margin:4pt 0;font-size:10pt"><strong>${label}</strong>${req} &nbsp;&nbsp; ${opts.map(o=>`&#9744; ${o}`).join(' &nbsp; ')}</p>`;
+        continue;
+      }
+      if (item.type === 'statuscheck') {
+        const sl=item.statusLabels||['OK','Niet OK','Onderdelen nodig','Niet gecheckt'];
+        body += `<p style="margin:4pt 0;font-size:10pt"><strong>${label}</strong>${req}</p>
+          <p style="margin:2pt 0 8pt;font-size:9.5pt">${sl.map(s=>`&#9744; ${s}`).join(' &nbsp;&nbsp; ')}</p>`;
+        continue;
+      }
+      if (item.type === 'radio') {
+        body += `<p style="margin:4pt 0;font-size:10pt"><strong>${label}</strong>${req}</p>
+          <p style="margin:2pt 0 8pt;font-size:9.5pt">${(item.options||[]).map(o=>`&#9744; ${o}`).join(' &nbsp;&nbsp; ')}</p>`;
+        continue;
+      }
+      if (item.type === 'date') {
+        body += `<p style="margin:4pt 0;font-size:10pt"><strong>${label}</strong>${req} &nbsp;&nbsp; __ / __ / ____</p>`;
+        continue;
+      }
+      if (item.type === 'photo') {
+        body += `<p style="margin:4pt 0;font-size:10pt"><strong>${label}</strong>${req} &nbsp; <span style="color:#B0A898;font-style:italic">[foto bijvoegen]</span></p>`;
+        continue;
+      }
+      if (item.type === 'signature') {
+        body += `<p style="margin:4pt 0;font-size:10pt"><strong>${label}</strong>${req}</p>
+          <p style="border-bottom:1px solid #B0A898;width:55mm;margin:2pt 0 10pt">&nbsp;</p>`;
+        continue;
+      }
+      // text / number
+      const unit = item.unit ? ` <span style="color:#7A7168;font-weight:normal">(${item.unit})</span>` : '';
+      body += `<p style="margin:4pt 0;font-size:10pt"><strong>${label}${unit}</strong>${req}</p>
+        <p style="border-bottom:1px solid #C5C0B5;margin:2pt 0 8pt">&nbsp;</p>`;
+    }
+  }
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <style>body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1A1714}</style>
+    </head><body>${body}</body></html>`;
+
+  try {
+    const blob = htmlDocx.asBlob(html, {orientation:'portrait', margins:{top:720,bottom:720,left:900,right:900}});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const fname=(t.name||'template').replace(/[^a-zA-Z0-9_\-]/g,'_')+'_leeg.docx';
+    a.href=url; a.download=fname; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),5000);
+    closeBlankExport();
+  } catch(err) { alert('Fout bij Word export: '+err.message); }
+}
+
 // Init
 Promise.all([loadStats(), loadTemplates(), loadRecent()]).catch(e => {
   toast('Kan geen verbinding maken met de database. Controleer config.js');
   console.error(e);
 });
 </script>
+<!-- Blank Export Modal -->
+<div class="blank-overlay" id="blank-overlay" onclick="closeBlankExport()">
+  <div class="blank-modal" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <h3 id="blank-title">Template</h3>
+      <button onclick="closeBlankExport()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1">×</button>
+    </div>
+    <div class="sub">Download een leeg invulformulier</div>
+    <label class="field-label-sm">Taal van het formulier</label>
+    <select class="field-select-sm" id="blank-lang">
+      <option value="nl">🇧🇪 NL – Nederlands</option>
+      <option value="en">🇬🇧 EN – English</option>
+      <option value="fr">🇫🇷 FR – Français</option>
+      <option value="de">🇩🇪 DE – Deutsch</option>
+    </select>
+    <div class="blank-btns">
+      <button class="blank-btn primary" onclick="generateBlankPDF()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6M9 15l3 3 3-3"/></svg>
+        Download PDF
+      </button>
+      <button class="blank-btn" onclick="generateBlankWord()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6M9 15l3 3 3-3"/></svg>
+        Download Word
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- QR Modal -->
 <div class="qr-overlay" id="qr-overlay" onclick="closeQR()">
   <div class="qr-modal" onclick="event.stopPropagation()">
