@@ -361,7 +361,7 @@ const TR = {
   fr:{ progress:'Progression', of:'sur', checked:'cochés', saved:'Sauvegardé', saving:'Enregistrement…', photos:'photos', addphoto:'Photo', required:'Champs obligatoires manquants', completed:'Terminé!', confirm_complete:'Marquer comme terminé ?', missing:'Veuillez remplir tous les champs obligatoires.', locale:'fr-FR' },
   de:{ progress:'Fortschritt', of:'von', checked:'abgehakt', saved:'Gespeichert', saving:'Speichern…', photos:'Fotos', addphoto:'Foto', required:'Pflichtfelder fehlen', completed:'Abgeschlossen!', confirm_complete:'Als abgeschlossen markieren?', missing:'Bitte alle Pflichtfelder ausfüllen.', locale:'de-DE' }
 };
-let lang = 'nl';
+let lang = localStorage.getItem('platformLang') || 'nl';
 const t = k => (TR[lang]||TR.nl)[k]||k;
 
 // Resolve multilingual field: object {nl,en,fr,de} or plain string

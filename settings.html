@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" href="favicon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instellingen — Checklist App</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#F6F4EF; --surface:#FFFFFF; --surface2:#EFECE5;
+  --border:#E0DDD5; --border-strong:#C5C0B5;
+  --text:#1A1714; --muted:#7A7168; --light:#B0A898;
+  --accent:#2D5A3D; --accent-bg:#E8F0EB; --accent-mid:#4A8A5E;
+  --radius:10px; --radius-lg:16px;
+  --shadow:0 1px 3px rgba(0,0,0,0.05),0 4px 14px rgba(0,0,0,0.04);
+}
+body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+header { background:var(--surface); border-bottom:1px solid var(--border); height:60px; display:flex; align-items:center; justify-content:space-between; padding:0 2rem; position:sticky; top:0; z-index:50; }
+.logo { font-family:'DM Serif Display',serif; font-size:20px; display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--text); }
+.logo-dot { width:8px; height:8px; border-radius:50%; background:var(--accent); }
+nav { display:flex; gap:6px; align-items:center; }
+.nav-link { font-size:13px; color:var(--muted); text-decoration:none; padding:6px 12px; border-radius:var(--radius); transition:all 0.15s; display:flex; align-items:center; gap:5px; }
+.nav-link:hover { background:var(--surface2); color:var(--text); }
+.nav-link.active { color:var(--accent); font-weight:500; }
+.nav-link svg { width:14px; height:14px; }
+
+.container { max-width:720px; margin:0 auto; padding:2.5rem 2rem; }
+.page-header { margin-bottom:2rem; }
+.page-title { font-family:'DM Serif Display',serif; font-size:28px; }
+.page-subtitle { font-size:14px; color:var(--muted); margin-top:6px; }
+
+.settings-group { display:flex; flex-direction:column; gap:1rem; margin-bottom:2.5rem; }
+.settings-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:1.5rem; box-shadow:var(--shadow); }
+.settings-card-title { font-weight:600; font-size:15px; margin-bottom:4px; display:flex; align-items:center; gap:8px; }
+.settings-card-title svg { width:16px; height:16px; color:var(--accent); }
+.settings-card-desc { font-size:13px; color:var(--muted); margin-bottom:1.25rem; line-height:1.6; }
+
+/* Language picker */
+.lang-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+@media(min-width:480px){ .lang-grid { grid-template-columns:repeat(4,1fr); } }
+.lang-btn {
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+  padding:1rem 0.75rem; border:2px solid var(--border); border-radius:var(--radius-lg);
+  background:var(--bg); cursor:pointer; transition:all 0.15s;
+  font-family:'DM Sans',sans-serif; color:var(--text);
+}
+.lang-btn:hover { border-color:var(--accent-mid); background:var(--accent-bg); }
+.lang-btn.active {
+  border-color:var(--accent); background:var(--accent-bg);
+  box-shadow:0 0 0 3px rgba(45,90,61,0.12);
+}
+.lang-flag { font-size:28px; line-height:1; }
+.lang-name { font-size:13px; font-weight:600; }
+.lang-native { font-size:11px; color:var(--muted); }
+.lang-btn.active .lang-name { color:var(--accent); }
+
+.save-indicator { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--accent); margin-top:1rem; opacity:0; transition:opacity 0.3s; }
+.save-indicator.show { opacity:1; }
+.save-indicator svg { width:14px; height:14px; }
+
+.toast { position:fixed; bottom:2rem; left:50%; transform:translateX(-50%) translateY(10px); background:var(--text); color:white; padding:10px 18px; border-radius:var(--radius); font-size:13px; opacity:0; transition:all 0.25s; pointer-events:none; white-space:nowrap; z-index:9999; }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="index.html" class="logo">
+    <div class="logo-dot"></div>
+    Checklist App
+  </a>
+  <nav>
+    <a href="index.html" class="nav-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Home
+    </a>
+    <a href="admin.html" class="nav-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+      Admin
+    </a>
+    <a href="settings.html" class="nav-link active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Instellingen
+    </a>
+  </nav>
+</header>
+
+<div class="container">
+  <div class="page-header">
+    <div class="page-title" id="pg-title">Instellingen</div>
+    <div class="page-subtitle" id="pg-sub">Pas de app aan naar jouw voorkeur.</div>
+  </div>
+
+  <div class="settings-group">
+
+    <!-- TAAL / LANGUAGE -->
+    <div class="settings-card">
+      <div class="settings-card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <span id="card-lang-title">Taal van het platform</span>
+      </div>
+      <div class="settings-card-desc" id="card-lang-desc">
+        Kies in welke taal de interface wordt weergegeven. Dit geldt voor alle pagina's van de app.
+      </div>
+      <div class="lang-grid">
+        <button class="lang-btn" data-lang="nl" onclick="setLang('nl')">
+          <span class="lang-flag">🇧🇪</span>
+          <span class="lang-name">NL</span>
+          <span class="lang-native">Nederlands</span>
+        </button>
+        <button class="lang-btn" data-lang="en" onclick="setLang('en')">
+          <span class="lang-flag">🇬🇧</span>
+          <span class="lang-name">EN</span>
+          <span class="lang-native">English</span>
+        </button>
+        <button class="lang-btn" data-lang="fr" onclick="setLang('fr')">
+          <span class="lang-flag">🇫🇷</span>
+          <span class="lang-name">FR</span>
+          <span class="lang-native">Français</span>
+        </button>
+        <button class="lang-btn" data-lang="de" onclick="setLang('de')">
+          <span class="lang-flag">🇩🇪</span>
+          <span class="lang-name">DE</span>
+          <span class="lang-native">Deutsch</span>
+        </button>
+      </div>
+      <div class="save-indicator" id="save-indicator">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span id="save-indicator-text">Opgeslagen</span>
+      </div>
+    </div>
+
+    <!-- Placeholder voor toekomstige instellingen -->
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const PLATFORM_LANG_KEY = 'platformLang';
+
+const SETTINGS_TR = {
+  nl: {
+    pageTitle: 'Instellingen',
+    pageSub: 'Pas de app aan naar jouw voorkeur.',
+    langTitle: 'Taal van het platform',
+    langDesc: 'Kies in welke taal de interface wordt weergegeven. Dit geldt voor alle pagina\'s van de app.',
+    saved: 'Opgeslagen',
+  },
+  en: {
+    pageTitle: 'Settings',
+    pageSub: 'Customize the app to your preference.',
+    langTitle: 'Platform language',
+    langDesc: 'Choose the language in which the interface is displayed. This applies to all pages of the app.',
+    saved: 'Saved',
+  },
+  fr: {
+    pageTitle: 'Paramètres',
+    pageSub: 'Personnalisez l\'application selon vos préférences.',
+    langTitle: 'Langue de la plateforme',
+    langDesc: 'Choisissez la langue d\'affichage de l\'interface. Ceci s\'applique à toutes les pages de l\'application.',
+    saved: 'Enregistré',
+  },
+  de: {
+    pageTitle: 'Einstellungen',
+    pageSub: 'Passen Sie die App nach Ihren Wünschen an.',
+    langTitle: 'Plattformsprache',
+    langDesc: 'Wählen Sie die Sprache der Benutzeroberfläche. Dies gilt für alle Seiten der App.',
+    saved: 'Gespeichert',
+  }
+};
+
+let currentLang = localStorage.getItem(PLATFORM_LANG_KEY) || 'nl';
+
+function t(key) {
+  return (SETTINGS_TR[currentLang] || SETTINGS_TR.nl)[key] || key;
+}
+
+function applyTranslations() {
+  document.getElementById('pg-title').textContent = t('pageTitle');
+  document.getElementById('pg-sub').textContent = t('pageSub');
+  document.getElementById('card-lang-title').textContent = t('langTitle');
+  document.getElementById('card-lang-desc').textContent = t('langDesc');
+  document.getElementById('save-indicator-text').textContent = t('saved');
+  document.title = t('pageTitle') + ' — Checklist App';
+}
+
+function highlightActive() {
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === currentLang);
+  });
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem(PLATFORM_LANG_KEY, lang);
+  highlightActive();
+  applyTranslations();
+  // Show saved indicator
+  const ind = document.getElementById('save-indicator');
+  ind.classList.add('show');
+  setTimeout(() => ind.classList.remove('show'), 2000);
+}
+
+// Init
+highlightActive();
+applyTranslations();
+</script>
+</body>
+</html>

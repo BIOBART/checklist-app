@@ -157,20 +157,24 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); hei
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
       <span>Admin</span>
     </a>
+    <a href="settings.html" class="nav-link">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span data-i18n="settings">Instellingen</span>
+    </a>
   </nav>
 </header>
 
 <div class="hero">
-  <h1>Welke checklist<br>wil je invullen?</h1>
-  <p>Kies een template hieronder, vul hem in van op elk toestel, en exporteer als PDF.</p>
+  <h1 id="hero-title">Welke checklist<br>wil je invullen?</h1>
+  <p id="hero-sub">Kies een template hieronder, vul hem in van op elk toestel, en exporteer als PDF.</p>
   <div class="hero-actions">
     <a href="history.html" class="btn">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
-      Mijn ingevulde checklists
+      <span id="btn-history-lbl">Mijn ingevulde checklists</span>
     </a>
     <a href="admin.html" class="btn btn-primary">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Nieuwe template
+      <span id="btn-new-lbl">Nieuwe template</span>
     </a>
   </div>
 </div>
@@ -185,7 +189,7 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); hei
 <!-- Templates -->
 <div class="section">
   <div class="section-header">
-    <h2 class="section-title">Templates</h2>
+    <h2 class="section-title" id="sec-templates">Templates</h2>
   </div>
   <div class="template-grid" id="template-grid">
     <div class="skeleton skel-card"></div>
@@ -197,8 +201,8 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); hei
 <!-- Recent submissions -->
 <div class="section">
   <div class="section-header">
-    <h2 class="section-title">Recent ingevuld</h2>
-    <a href="history.html" class="section-link">Alles bekijken →</a>
+    <h2 class="section-title" id="sec-recent">Recent ingevuld</h2>
+    <a href="history.html" class="section-link" id="sec-recent-link">Alles bekijken →</a>
   </div>
   <div class="recent-list" id="recent-list">
     <div class="skeleton skel-row"></div>
@@ -210,6 +214,131 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); hei
 <div class="toast" id="toast"></div>
 
 <script>
+// ── PLATFORM LANGUAGE ──
+const PLATFORM_LANG_KEY = 'platformLang';
+let uiLang = localStorage.getItem(PLATFORM_LANG_KEY) || 'nl';
+
+const UI_TR = {
+  nl: {
+    heroTitle: 'Welke checklist<br>wil je invullen?',
+    heroSub: 'Kies een template hieronder, vul hem in van op elk toestel, en exporteer als PDF.',
+    btnHistory: 'Mijn ingevulde checklists',
+    btnNew: 'Nieuwe template',
+    secTemplates: 'Templates',
+    secRecent: 'Recent ingevuld',
+    secRecentLink: 'Alles bekijken →',
+    settings: 'Instellingen',
+    statActive: 'Actieve templates',
+    statTotal: 'Ingevulde checklists',
+    statOpen: 'Nog open',
+    statDone: 'Voltooid',
+    empty: 'Nog geen templates.',
+    emptyLink: 'Maak er een aan →',
+    noRecent: 'Nog geen ingevulde checklists.',
+    downloadBlank: 'Leeg',
+    dlPdf: 'Leeg PDF',
+    dlWord: 'Leeg Word',
+    dlLang: 'Taal',
+    open: 'Open', completed: 'Voltooid', archived: 'Gearchiveerd',
+    locale: 'nl-BE',
+  },
+  en: {
+    heroTitle: 'Which checklist<br>would you like to fill in?',
+    heroSub: 'Choose a template below, fill it in on any device, and export as PDF.',
+    btnHistory: 'My completed checklists',
+    btnNew: 'New template',
+    secTemplates: 'Templates',
+    secRecent: 'Recently completed',
+    secRecentLink: 'View all →',
+    settings: 'Settings',
+    statActive: 'Active templates',
+    statTotal: 'Completed checklists',
+    statOpen: 'Still open',
+    statDone: 'Completed',
+    empty: 'No templates yet.',
+    emptyLink: 'Create one →',
+    noRecent: 'No completed checklists yet.',
+    downloadBlank: 'Blank',
+    dlPdf: 'Blank PDF',
+    dlWord: 'Blank Word',
+    dlLang: 'Language',
+    open: 'Open', completed: 'Completed', archived: 'Archived',
+    locale: 'en-GB',
+  },
+  fr: {
+    heroTitle: 'Quelle checklist<br>voulez-vous remplir ?',
+    heroSub: 'Choisissez un modèle ci-dessous, remplissez-le sur n\'importe quel appareil et exportez en PDF.',
+    btnHistory: 'Mes checklists remplies',
+    btnNew: 'Nouveau modèle',
+    secTemplates: 'Modèles',
+    secRecent: 'Récemment rempli',
+    secRecentLink: 'Tout voir →',
+    settings: 'Paramètres',
+    statActive: 'Modèles actifs',
+    statTotal: 'Checklists remplies',
+    statOpen: 'Encore ouvert',
+    statDone: 'Terminé',
+    empty: 'Pas encore de modèles.',
+    emptyLink: 'Créer un modèle →',
+    noRecent: 'Aucune checklist remplie pour l\'instant.',
+    downloadBlank: 'Vide',
+    dlPdf: 'PDF vide',
+    dlWord: 'Word vide',
+    dlLang: 'Langue',
+    open: 'Ouvert', completed: 'Terminé', archived: 'Archivé',
+    locale: 'fr-FR',
+  },
+  de: {
+    heroTitle: 'Welche Checkliste<br>möchten Sie ausfüllen?',
+    heroSub: 'Wählen Sie eine Vorlage unten, füllen Sie sie auf jedem Gerät aus und exportieren Sie als PDF.',
+    btnHistory: 'Meine ausgefüllten Checklisten',
+    btnNew: 'Neue Vorlage',
+    secTemplates: 'Vorlagen',
+    secRecent: 'Zuletzt ausgefüllt',
+    secRecentLink: 'Alles anzeigen →',
+    settings: 'Einstellungen',
+    statActive: 'Aktive Vorlagen',
+    statTotal: 'Ausgefüllte Checklisten',
+    statOpen: 'Noch offen',
+    statDone: 'Abgeschlossen',
+    empty: 'Noch keine Vorlagen.',
+    emptyLink: 'Eine erstellen →',
+    noRecent: 'Noch keine ausgefüllten Checklisten.',
+    downloadBlank: 'Leer',
+    dlPdf: 'Leere PDF',
+    dlWord: 'Leeres Word',
+    dlLang: 'Sprache',
+    open: 'Offen', completed: 'Abgeschlossen', archived: 'Archiviert',
+    locale: 'de-DE',
+  }
+};
+
+function ui(key) { return (UI_TR[uiLang] || UI_TR.nl)[key] || key; }
+
+function applyUiTranslations() {
+  document.getElementById('hero-title').innerHTML = ui('heroTitle');
+  document.getElementById('hero-sub').textContent = ui('heroSub');
+  document.getElementById('btn-history-lbl').textContent = ui('btnHistory');
+  document.getElementById('btn-new-lbl').textContent = ui('btnNew');
+  document.getElementById('sec-templates').textContent = ui('secTemplates');
+  document.getElementById('sec-recent').textContent = ui('secRecent');
+  document.getElementById('sec-recent-link').textContent = ui('secRecentLink');
+  document.querySelectorAll('[data-i18n="settings"]').forEach(el => el.textContent = ui('settings'));
+  // Blank export modal
+  const blankSub = document.getElementById('blank-sub');
+  const blankLangLbl = document.getElementById('blank-lang-lbl');
+  const blankPdfLbl = document.getElementById('blank-pdf-lbl');
+  const blankWordLbl = document.getElementById('blank-word-lbl');
+  const blankLangSel = document.getElementById('blank-lang');
+  const blankSubTexts = {nl:'Download een leeg invulformulier',en:'Download a blank form',fr:'Télécharger un formulaire vide',de:'Leeres Formular herunterladen'};
+  if (blankSub) blankSub.textContent = blankSubTexts[uiLang] || blankSubTexts.nl;
+  if (blankLangLbl) blankLangLbl.textContent = ui('dlLang');
+  if (blankPdfLbl) blankPdfLbl.textContent = ui('dlPdf');
+  if (blankWordLbl) blankWordLbl.textContent = ui('dlWord');
+  // Pre-select blank form language to platform language
+  if (blankLangSel) blankLangSel.value = uiLang;
+}
+
 // sb is set after AUTH.init() — uses the authenticated session
 let sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 let allTemplates = {};
@@ -232,11 +361,10 @@ function toast(msg) {
   setTimeout(()=>el.classList.remove('show'),2500);
 }
 function fmtDate(d) {
-  return new Date(d).toLocaleDateString('nl-BE',{day:'2-digit',month:'short',year:'numeric'});
+  return new Date(d).toLocaleDateString(ui('locale'),{day:'2-digit',month:'short',year:'numeric'});
 }
 function statusLabel(s) {
-  const map={open:'Open',completed:'Voltooid',archived:'Gearchiveerd'};
-  return map[s]||s;
+  return ui(s) || s;
 }
 
 async function loadStats() {
@@ -248,10 +376,10 @@ async function loadStats() {
   const open = (t2.data||[]).filter(r=>r.status==='open').length;
   const done = (t2.data||[]).filter(r=>r.status==='completed').length;
   document.getElementById('stats-bar').innerHTML = `
-    <div class="stat"><div class="stat-n">${t1.count||0}</div><div class="stat-label">Actieve templates</div></div>
-    <div class="stat"><div class="stat-n">${total}</div><div class="stat-label">Ingevulde checklists</div></div>
-    <div class="stat"><div class="stat-n">${open}</div><div class="stat-label">Nog open</div></div>
-    <div class="stat"><div class="stat-n">${done}</div><div class="stat-label">Voltooid</div></div>
+    <div class="stat"><div class="stat-n">${t1.count||0}</div><div class="stat-label">${ui('statActive')}</div></div>
+    <div class="stat"><div class="stat-n">${total}</div><div class="stat-label">${ui('statTotal')}</div></div>
+    <div class="stat"><div class="stat-n">${open}</div><div class="stat-label">${ui('statOpen')}</div></div>
+    <div class="stat"><div class="stat-n">${done}</div><div class="stat-label">${ui('statDone')}</div></div>
   `;
 }
 
@@ -261,7 +389,7 @@ async function loadTemplates() {
   if (error || !data?.length) {
     grid.innerHTML = `<div class="empty" style="grid-column:1/-1">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      <p>Nog geen templates.<br><a href="admin.html" style="color:var(--accent)">Maak er een aan →</a></p>
+      <p>${ui('empty')}<br><a href="admin.html" style="color:var(--accent)">${ui('emptyLink')}</a></p>
     </div>`;
     return;
   }
@@ -277,9 +405,9 @@ async function loadTemplates() {
       <div class="card-footer">
         <span class="card-count">${itemCount(t.schema)} vragen</span>
         <div style="display:flex;gap:6px;align-items:center">
-          <button class="qr-btn" onclick="event.preventDefault();openBlankExport('${t.id}')" title="Leeg formulier downloaden">
+          <button class="qr-btn" onclick="event.preventDefault();openBlankExport('${t.id}')" title="${ui('downloadBlank')}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Leeg
+            ${ui('downloadBlank')}
           </button>
           <button class="qr-btn" onclick="event.preventDefault();showQR('${t.id}','${esc(t.name)}')" title="QR code">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><line x1="17" y1="18" x2="20" y2="18"/><line x1="20" y1="15" x2="20" y2="18"/></svg>
@@ -296,7 +424,7 @@ async function loadRecent() {
   const { data } = await sb.from('submissions').select('*').order('updated_at',{ascending:false}).limit(5);
   const el = document.getElementById('recent-list');
   if (!data?.length) {
-    el.innerHTML = `<div class="empty"><p>Nog geen ingevulde checklists.</p></div>`;
+    el.innerHTML = `<div class="empty"><p>${ui('noRecent')}</p></div>`;
     return;
   }
   el.innerHTML = data.map(r => {
@@ -597,6 +725,7 @@ async function generateBlankWord() {
 }
 
 // Init
+applyUiTranslations();
 Promise.all([loadStats(), loadTemplates(), loadRecent()]).catch(e => {
   toast('Kan geen verbinding maken met de database. Controleer config.js');
   console.error(e);
@@ -609,8 +738,8 @@ Promise.all([loadStats(), loadTemplates(), loadRecent()]).catch(e => {
       <h3 id="blank-title">Template</h3>
       <button onclick="closeBlankExport()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1">×</button>
     </div>
-    <div class="sub">Download een leeg invulformulier</div>
-    <label class="field-label-sm">Taal van het formulier</label>
+    <div class="sub" id="blank-sub">Download een leeg invulformulier</div>
+    <label class="field-label-sm" id="blank-lang-lbl">Taal van het formulier</label>
     <select class="field-select-sm" id="blank-lang">
       <option value="nl">🇧🇪 NL – Nederlands</option>
       <option value="en">🇬🇧 EN – English</option>
@@ -620,11 +749,11 @@ Promise.all([loadStats(), loadTemplates(), loadRecent()]).catch(e => {
     <div class="blank-btns">
       <button class="blank-btn primary" onclick="generateBlankPDF()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6M9 15l3 3 3-3"/></svg>
-        Download PDF
+        <span id="blank-pdf-lbl">Download PDF</span>
       </button>
       <button class="blank-btn" onclick="generateBlankWord()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6M9 15l3 3 3-3"/></svg>
-        Download Word
+        <span id="blank-word-lbl">Download Word</span>
       </button>
     </div>
   </div>
