@@ -138,6 +138,13 @@ textarea.ff:focus, input.ff:focus { border-color:var(--accent); background:var(-
 .instr-check-btn.done { background:var(--accent); border-color:var(--accent); color:white; }
 .instr-check-btn.done:hover { background:#234830; }
 
+/* CHECKGROUP TYPE */
+.checkgroup-block { padding:10px 1.25rem 6px; border-bottom:1px solid var(--border); }
+.checkgroup-block:last-child { border-bottom:none; }
+.checkgroup-heading { font-weight:600; font-size:14px; color:var(--text); margin-bottom:6px; line-height:1.4; }
+.checkgroup-sub { display:flex; align-items:flex-start; gap:10px; padding:5px 0; cursor:pointer; }
+.checkgroup-sub:hover .checkbox { border-color:var(--accent-mid); }
+
 /* LABEL TYPE */
 .item-label-block { padding:10px 1.25rem 8px; border-bottom:1px solid var(--border); }
 .item-label-block:last-child { border-bottom:none; }
@@ -620,6 +627,26 @@ function renderItem(secId, item) {
     return el;
   }
 
+  // ── CHECKGROUP type: label + list of checkable sub-items ──
+  if (item.type === 'checkgroup') {
+    const subitems = item.subitems || [];
+    const groupAns = answers[item.id] || { items: {} };
+    el.className = 'checkgroup-block';
+    const subsHtml = subitems.map(sub => {
+      const checked = groupAns.items?.[sub.id] || false;
+      return `<div class="checkgroup-sub" onclick="toggleSubCheck('${item.id}','${sub.id}',this)" data-sub-id="${sub.id}">
+        <div class="checkbox${checked?' checked':''}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="item-label${checked?' done':''}" style="cursor:pointer;padding-top:1px">${esc(sub.label||'')}</div>
+      </div>`;
+    }).join('');
+    el.innerHTML = `
+      <div class="checkgroup-heading">${esc(gl(item.label))}${item.required?`<span class="req-star">*</span>`:''}</div>
+      ${subsHtml}`;
+    return el;
+  }
+
   // ── LINK type: clickable link set by template maker ──
   if (item.type === 'link') {
     const linkUrl = item.url || '';
@@ -817,6 +844,17 @@ function clearSig(id) {
 // ── ANSWERS ──
 function getAns(id) { if (!answers[id]) answers[id]={checked:false,value:'',photos:[]}; return answers[id]; }
 
+function toggleSubCheck(itemId, subId, row) {
+  if (!answers[itemId]) answers[itemId] = { items: {} };
+  if (!answers[itemId].items) answers[itemId].items = {};
+  answers[itemId].items[subId] = !answers[itemId].items[subId];
+  const checked = answers[itemId].items[subId];
+  row.querySelector('.checkbox').classList.toggle('checked', checked);
+  row.querySelector('.item-label').classList.toggle('done', checked);
+  scheduleSave();
+  updateProgress();
+}
+
 function toggleInstrCheck(itemId, btn) {
   const a = getAns(itemId);
   a.checked = !a.checked;
@@ -993,7 +1031,15 @@ function updateProgress() {
   let total=0, done=0;
   (template.schema?.sections||[]).forEach(s => s.items.forEach(i => {
     if (i.type === 'label') return;
-    if (i.type === 'instruction' && !i.checkable) return;  // non-checkable instructions don't count
+    if (i.type === 'instruction' && !i.checkable) return;
+    if (i.type === 'checkgroup') {
+      const subs = i.subitems || []; if (!subs.length) return;
+      total++;
+      const gi = answers[i.id]?.items || {};
+      const n = subs.filter(s => gi[s.id]).length;
+      if (i.requireAll ? n === subs.length : n > 0) done++;
+      return;
+    }
     total++; if(answers[i.id]?.checked) done++;
   }));
   const pct = total ? Math.round((done/total)*100) : 0;
@@ -1087,6 +1133,15 @@ async function markComplete() {
   (template.schema?.sections||[]).forEach(sec => sec.items.forEach(item => {
     if (item.type === 'label') return;
     if (item.type === 'instruction' && !item.checkable) return;
+    if (item.type === 'checkgroup') {
+      if (!item.required) return;
+      const subs = item.subitems || [];
+      const gi = answers[item.id]?.items || {};
+      const n = subs.filter(s => gi[s.id]).length;
+      const met = item.requireAll ? n === subs.length : n > 0;
+      if (!met) missing.push(gl(item.label) || '(checkgroep)');
+      return;
+    }
     if (item.required && !answers[item.id]?.checked) missing.push(gl(item.label) || '(instructieblok)');
   }));
   if (missing.length) {
@@ -1533,6 +1588,37 @@ async function generatePDF(mode = 'download') {
         continue;
       }
 
+      // ── checkgroup type: heading + sub-item checkboxes ──
+      if (item.type === 'checkgroup') {
+        const subs = item.subitems || [];
+        if (y > ph-20) { doc.addPage(); y=mg; }
+        doc.setTextColor(...D); doc.setFontSize(10); doc.setFont('helvetica','bold');
+        const hl = doc.splitTextToSize(pdfStr(gl(item.label))+(item.required?' *':''), cw);
+        doc.text(hl, mg, y);
+        y += hl.length*4.5 + 2;
+        const gi = answers[item.id]?.items || {};
+        const cbS = 3.8;
+        for (const sub of subs) {
+          if (y > ph-12) { doc.addPage(); y=mg; }
+          const isChk = !!gi[sub.id];
+          if (isChk) {
+            doc.setFillColor(...G); doc.roundedRect(mg, y-3, cbS, cbS, 0.8, 0.8, 'F');
+            doc.setDrawColor(255,255,255); doc.setLineWidth(0.5);
+            doc.line(mg+0.6, y-1.2, mg+cbS/2-0.2, y+cbS-3.5);
+            doc.line(mg+cbS/2-0.2, y+cbS-3.5, mg+cbS-0.6, y-2.8);
+          } else {
+            doc.setDrawColor(...L); doc.setLineWidth(0.3); doc.roundedRect(mg, y-3, cbS, cbS, 0.8, 0.8);
+          }
+          doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
+          doc.setTextColor(isChk ? ...D : ...M);
+          const sl = doc.splitTextToSize(pdfStr(sub.label||''), cw-cbS-4);
+          doc.text(sl, mg+cbS+3, y);
+          y += sl.length*4.5 + 1;
+        }
+        y += 3;
+        continue;
+      }
+
       // ── label type: informational sub-heading ──
       if (item.type === 'label') {
         const labelText = gl(item.label);
@@ -1784,6 +1870,17 @@ async function generateWord() {
       const lbl = esc(pdfStr(gl(item.label))||'');
       const req = item.required ? ' <span style="color:#C0392B">*</span>' : '';
 
+      if (item.type === 'checkgroup') {
+        const subs = item.subitems || [];
+        const gi = answers[item.id]?.items || {};
+        body += `<p style="font-weight:600;font-size:11pt;margin:8pt 0 3pt 0">${lbl}${req}</p>`;
+        subs.forEach(sub => {
+          const chk = !!gi[sub.id];
+          body += `<p style="margin:2pt 0 2pt 8pt;font-size:10pt;color:${chk?'var(--text)':'#786E68'}">${chk?'☑':'☐'} ${esc(sub.label||'')}</p>`;
+        });
+        body += '<p style="margin:4pt 0"></p>';
+        continue;
+      }
       if (item.type === 'label') {
         body += `<p style="font-weight:bold;font-size:12pt;margin:10pt 0 3pt 0">${lbl}</p>`;
         continue;
