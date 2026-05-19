@@ -301,6 +301,7 @@ textarea.ff:focus, input.ff:focus { border-color:var(--accent); background:var(-
       <label class="field-label">Bericht (optioneel)</label>
       <textarea class="field-input" id="email-message" rows="3" placeholder="Bijkomende boodschap…" style="resize:vertical;min-height:70px"></textarea>
     </div>
+    <div id="email-link-info" style="display:none;background:var(--accent-bg);border:1px solid var(--accent-mid);border-radius:var(--radius);padding:10px 14px;font-size:13px;color:var(--accent);margin-bottom:1rem"></div>
     <div id="email-status" style="display:none;padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:1rem"></div>
     <div class="modal-actions">
       <button class="btn" onclick="closeEmailModal()">Annuleer</button>
@@ -1093,21 +1094,57 @@ function closeEmailModal() {
 }
 
 // Cached PDF data for email sending
-let _cachedPdfBase64 = null;
+let _cachedPdfUrl      = null;
 let _cachedPdfFilename = null;
 
 async function downloadAndEmail() {
-  // Generate PDF silently, then open email modal
+  // 1. Generate PDF
   const result = await generatePDF('email');
   if (!result) return;
-  _cachedPdfBase64 = result.base64;
   _cachedPdfFilename = result.fname;
+  _cachedPdfUrl = null;
   closePdfModal();
-  // Check EmailJS config
+
+  // 2. Upload PDF to Supabase Storage so we can send a link instead of attachment
+  const uploadPath = `exports/${Date.now()}_${result.fname}`;
+  try {
+    // base64 → Uint8Array
+    const binary = atob(result.base64);
+    const bytes  = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+
+    const { error: upErr } = await sb.storage
+      .from(STORAGE_BUCKET)
+      .upload(uploadPath, blob, { contentType: 'application/pdf', upsert: true });
+
+    if (!upErr) {
+      const { data: urlData } = sb.storage
+        .from(STORAGE_BUCKET)
+        .getPublicUrl(uploadPath);
+      _cachedPdfUrl = urlData?.publicUrl || null;
+    } else {
+      console.warn('PDF upload mislukt:', upErr.message);
+    }
+  } catch(e) {
+    console.warn('PDF upload fout:', e);
+  }
+
+  // 3. Open email modal
   const configured = typeof EMAILJS_SERVICE_ID !== 'undefined'
     && EMAILJS_SERVICE_ID && EMAILJS_SERVICE_ID !== 'YOUR_SERVICE_ID';
   document.getElementById('email-config-warning').style.display = configured ? 'none' : 'block';
-  // Pre-fill recipient with customer email if known
+  // Show link-status in modal
+  const linkInfo = document.getElementById('email-link-info');
+  if (linkInfo) {
+    if (_cachedPdfUrl) {
+      linkInfo.style.display = 'block';
+      linkInfo.innerHTML = `📎 PDF-link klaar: <a href="${_cachedPdfUrl}" target="_blank" style="color:var(--accent)">${_cachedPdfFilename}</a>`;
+    } else {
+      linkInfo.style.display = 'block';
+      linkInfo.textContent = '⚠️ PDF-upload mislukt — mail wordt verstuurd zonder link.';
+    }
+  }
   openEmailModal();
 }
 
@@ -1748,7 +1785,7 @@ async function sendEmail() {
   const sendBtn  = document.getElementById('send-email-btn');
 
   if (!to) { showEmailStatus('Vul een ontvanger in.', 'error'); return; }
-  if (!_cachedPdfBase64) { showEmailStatus('Geen PDF beschikbaar. Sluit dit venster en probeer opnieuw.', 'error'); return; }
+  if (!_cachedPdfFilename) { showEmailStatus('Geen PDF beschikbaar. Sluit dit venster en probeer opnieuw.', 'error'); return; }
 
   // Check config
   if (typeof EMAILJS_SERVICE_ID === 'undefined' || !EMAILJS_SERVICE_ID || EMAILJS_SERVICE_ID === 'YOUR_SERVICE_ID') {
@@ -1776,7 +1813,7 @@ async function sendEmail() {
     location:    location,
     date:        dateVal,
     message:     message || `Gelieve de bijgevoegde checklist "${docTitle}" te vinden.`,
-    pdf_base64:  _cachedPdfBase64,
+    pdf_url:      _cachedPdfUrl || '',
     pdf_filename: _cachedPdfFilename,
     from_name:   filledBy || 'Biolectric',
   };
