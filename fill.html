@@ -1561,13 +1561,13 @@ async function generatePDF(mode = 'download') {
           } catch(e){}
         }
         if (instrText) {
-          doc.setFillColor(instrChecked ? 232,240,235 : 239,246,255);
+          doc.setFillColor(...(instrChecked ? [232,240,235] : [239,246,255]));
           const textX = hasImg ? mg+imgW+4 : mg;
           const textW = hasImg ? cw-imgW-4 : cw;
           const lines = doc.splitTextToSize(pdfStr(instrText), textW - (item.checkable ? 14 : 0));
           const boxH = Math.max(imgH, lines.length*4.5+6);
           if (!hasImg) doc.roundedRect(mg, y-1, cw, boxH+2, 2, 2, 'F');
-          doc.setTextColor(instrChecked ? 45,90,61 : 30,64,175);
+          doc.setTextColor(...(instrChecked ? [45,90,61] : [30,64,175]));
           doc.setFontSize(9); doc.setFont('helvetica','normal');
           doc.text(lines, textX, y+5);
         }
