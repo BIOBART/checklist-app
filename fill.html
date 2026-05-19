@@ -1179,6 +1179,30 @@ function resizeImageForPdf(dataUrl, maxW=800, maxH=600) {
   });
 }
 
+// ── Business-rule helper: collect all "rejected" statuscheck items ──
+// Returns array of { section, label, answer, note } for idx===1 (second option).
+// Ready to use for email alerts or homepage flags in a future phase.
+function getRejectedItems() {
+  const result = [];
+  for (const section of template?.schema?.sections || []) {
+    for (const item of section.items || []) {
+      if (item.type !== 'statuscheck') continue;
+      const ans = answers[item.id] || {};
+      if (!ans.value) continue;
+      const labels = item.statusLabels || ['OK','Niet OK','Onderdelen nodig','Niet gecheckt'];
+      if (labels.indexOf(ans.value) === 1) {
+        result.push({
+          section: typeof section.title === 'object' ? (section.title[lang]||section.title.nl||'') : section.title||'',
+          label:   stripHtml(gl(item.label)),
+          answer:  ans.value,
+          note:    ans.followNote || '',
+        });
+      }
+    }
+  }
+  return result;
+}
+
 // Strip HTML tags and decode basic entities — used when rendering rich text in PDF
 function stripHtml(html) {
   if (!html) return '';
@@ -1383,16 +1407,22 @@ async function generatePDF(mode = 'download') {
 
       // statuscheck type
       if (item.type === 'statuscheck') {
-        doc.setTextColor(...D); doc.setFontSize(10); doc.setFont('helvetica','normal');
-        const ll = doc.splitTextToSize(pdfStr(stripHtml(gl(item.label)))+(item.required?' *':''), cw*0.55);
-        doc.text(ll, mg, y);
         const statusDefaults = ['OK','Niet OK','Onderdelen nodig','Niet gecheckt'];
         const statusLabels = item.statusLabels || statusDefaults;
+        const selIdx = statusLabels.indexOf(ans.value);
+        // Index 1 = second option = rejection (Niet OK / REJECT / NOT DONE / …)
+        const isRejected = selIdx === 1;
+        const R = [192,57,43]; // red
+        doc.setTextColor(...(isRejected ? R : D));
+        doc.setFontSize(10);
+        doc.setFont('helvetica', isRejected ? 'bold' : 'normal');
+        const ll = doc.splitTextToSize(pdfStr(stripHtml(gl(item.label)))+(item.required?' *':''), cw*0.55);
+        doc.text(ll, mg, y);
         const statuses = statusLabels.map((val,si2) => ({
           val,
           color:[[45,90,61],[192,57,43],[180,120,10],[120,113,104]][si2] || [120,113,104]
         }));
-        doc.setFontSize(7.5);
+        doc.setFontSize(7.5); doc.setFont('helvetica','normal');
         const selStatus = statuses.find(s => s.val === ans.value);
         if (selStatus) {
           const tw = doc.getTextWidth(selStatus.val);
@@ -1404,11 +1434,14 @@ async function generatePDF(mode = 'download') {
           doc.text(selStatus.val, spx+2, y);
         }
         y += Math.max(ll.length,1)*4.5+1;
-        // follow-up note + photos for Niet OK / Onderdelen nodig
-        if (ans.followNote && (ans.value==='Niet OK'||ans.value==='Onderdelen nodig')) {
-          doc.setFontSize(9); doc.setTextColor(...M);
-          const fn=doc.splitTextToSize('>  '+ans.followNote, cw);
+        // follow-up note — red+bold when rejected
+        if (ans.followNote && (item.statusFollowUp||[]).includes(ans.value)) {
+          doc.setFontSize(9);
+          doc.setTextColor(...(isRejected ? R : M));
+          doc.setFont('helvetica', isRejected ? 'bold' : 'normal');
+          const fn=doc.splitTextToSize((isRejected?'! ':'> ')+ans.followNote, cw);
           fn.forEach(l=>{ if(y>ph-15){doc.addPage();y=mg;} doc.text(l,mg+4,y); y+=4.2; });
+          doc.setFont('helvetica','normal');
         }
         const fuPhotos = answers[item.id+'_fu']?.photos||[];
         if (fuPhotos.length>0) {
@@ -1741,13 +1774,17 @@ async function generateWord() {
         const sLabels = item.statusLabels || ['OK','Niet OK','Onderdelen nodig','Niet gecheckt'];
         const sel = ans.value||'';
         const idx = sLabels.indexOf(sel);
+        // Index 1 = second option = rejection
+        const isRejected = idx === 1;
         const col = statusColors[idx] || '#786E68';
-        const badge = sel ? `<span style="color:${col};font-weight:bold">${esc(sel)}</span>` : '—';
-        body += `<table width="100%" style="margin:3pt 0"><tr>
-          <td style="font-size:11pt;width:65%">${lbl}${req}</td>
+        const badge = sel ? `<span style="background:${col};color:#fff;padding:1pt 6pt;border-radius:3pt;font-weight:bold">${esc(sel)}</span>` : '—';
+        const labelStyle = isRejected ? 'color:#C0392B;font-weight:bold' : '';
+        const rowBorder  = isRejected ? 'border-left:3px solid #C0392B;padding-left:6pt;' : '';
+        body += `<table width="100%" style="margin:3pt 0;${rowBorder}"><tr>
+          <td style="font-size:11pt;width:65%;${labelStyle}">${lbl}${req}</td>
           <td style="text-align:right;width:35%">${badge}</td></tr></table>`;
         if (ans.followNote && (item.statusFollowUp||[]).includes(sel))
-          body += `<p style="color:#786E68;font-style:italic;margin:2pt 0 4pt 16pt;font-size:10pt">&gt; ${esc(ans.followNote)}</p>`;
+          body += `<p style="${isRejected?'color:#C0392B;font-weight:bold':'color:#786E68'};font-style:italic;margin:2pt 0 6pt 16pt;font-size:10pt">${isRejected?'! ':'&gt; '}${esc(ans.followNote)}</p>`;
         continue;
       }
       if (item.type === 'radio') {
