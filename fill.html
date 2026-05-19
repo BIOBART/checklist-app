@@ -128,10 +128,15 @@ textarea.ff:focus, input.ff:focus { border-color:var(--accent); background:var(-
 .bottom-left { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 
 /* INSTRUCTION TYPE */
-.instruction-block { padding:12px 1.25rem; border-bottom:1px solid var(--border); display:flex; gap:14px; align-items:flex-start; background:#F0F7FF; border-left:3px solid #3B82F6; }
+.instruction-block { padding:12px 1.25rem; border-bottom:1px solid var(--border); display:flex; gap:14px; align-items:flex-start; background:#F0F7FF; border-left:3px solid #3B82F6; transition:background 0.2s,border-color 0.2s; }
+.instruction-block.instr-checked { background:#E8F4EC; border-left-color:var(--accent); }
 .instruction-block:last-child { border-bottom:none; }
 .instruction-img { width:120px; height:90px; object-fit:cover; border-radius:var(--radius); border:1px solid #BFDBFE; flex-shrink:0; }
-.instruction-text { font-size:13px; color:#1E40AF; line-height:1.6; flex:1; }
+.instruction-text { font-size:13px; color:#1E40AF; line-height:1.6; }
+.instr-check-btn { display:inline-flex; align-items:center; gap:6px; margin-top:8px; padding:5px 14px; border:1.5px solid #93C5FD; border-radius:var(--radius); background:white; cursor:pointer; font-size:12px; font-family:'DM Sans',sans-serif; font-weight:500; color:#1E40AF; transition:all 0.15s; }
+.instr-check-btn:hover { background:#EFF6FF; }
+.instr-check-btn.done { background:var(--accent); border-color:var(--accent); color:white; }
+.instr-check-btn.done:hover { background:#234830; }
 
 /* LABEL TYPE */
 .item-label-block { padding:10px 1.25rem 8px; border-bottom:1px solid var(--border); }
@@ -596,10 +601,22 @@ function renderItem(secId, item) {
   // ── INSTRUCTION type: fixed image + text from template ──
   if (item.type === 'instruction') {
     const instrText = gl(item.label);
-    el.className = 'instruction-block';
+    const checked = answers[item.id]?.checked || false;
+    el.className = 'instruction-block' + (checked ? ' instr-checked' : '');
+    el.dataset.instrId = item.id;
+    const checkBtn = item.checkable ? `
+      <button class="instr-check-btn${checked?' done':''}" onclick="toggleInstrCheck('${item.id}',this)">
+        ${checked
+          ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg> Bevestigd`
+          : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg> Bevestigen`
+        }
+      </button>` : '';
     el.innerHTML = `
       ${item.image ? `<img class="instruction-img" src="${item.image}" alt="Instructie">` : ''}
-      ${instrText ? `<div class="instruction-text">${esc(instrText)}</div>` : ''}`;
+      <div style="flex:1">
+        ${instrText ? `<div class="instruction-text">${esc(instrText)}</div>` : ''}
+        ${checkBtn}
+      </div>`;
     return el;
   }
 
@@ -800,6 +817,19 @@ function clearSig(id) {
 // ── ANSWERS ──
 function getAns(id) { if (!answers[id]) answers[id]={checked:false,value:'',photos:[]}; return answers[id]; }
 
+function toggleInstrCheck(itemId, btn) {
+  const a = getAns(itemId);
+  a.checked = !a.checked;
+  const block = btn.closest('.instruction-block');
+  block.classList.toggle('instr-checked', a.checked);
+  btn.classList.toggle('done', a.checked);
+  btn.innerHTML = a.checked
+    ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg> Bevestigd`
+    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg> Bevestigen`;
+  scheduleSave();
+  updateProgress();
+}
+
 function toggleCheck(secId, itemId) {
   const a = getAns(itemId);
   a.checked = !a.checked;
@@ -962,7 +992,8 @@ function updateProgress() {
   if (!template) return;
   let total=0, done=0;
   (template.schema?.sections||[]).forEach(s => s.items.forEach(i => {
-    if (i.type === 'label' || i.type === 'instruction') return;  // info blocks don't count
+    if (i.type === 'label') return;
+    if (i.type === 'instruction' && !i.checkable) return;  // non-checkable instructions don't count
     total++; if(answers[i.id]?.checked) done++;
   }));
   const pct = total ? Math.round((done/total)*100) : 0;
@@ -1054,8 +1085,9 @@ async function markComplete() {
   // Check required question fields
   const missing = [];
   (template.schema?.sections||[]).forEach(sec => sec.items.forEach(item => {
-    if (item.type === 'label' || item.type === 'instruction') return;
-    if (item.required && !answers[item.id]?.checked) missing.push(gl(item.label));
+    if (item.type === 'label') return;
+    if (item.type === 'instruction' && !item.checkable) return;
+    if (item.required && !answers[item.id]?.checked) missing.push(gl(item.label) || '(instructieblok)');
   }));
   if (missing.length) {
     document.getElementById('req-warning').style.display = 'block';
@@ -1464,6 +1496,7 @@ async function generatePDF(mode = 'download') {
         if (y > ph-40) { doc.addPage(); y=mg; }
         const instrText = gl(item.label);
         const hasImg = !!item.image;
+        const instrChecked = item.checkable && answers[item.id]?.checked;
         const imgW=50, imgH=38;
         if (hasImg) {
           try {
@@ -1473,14 +1506,28 @@ async function generatePDF(mode = 'download') {
           } catch(e){}
         }
         if (instrText) {
-          doc.setFillColor(239,246,255);
+          doc.setFillColor(instrChecked ? 232,240,235 : 239,246,255);
           const textX = hasImg ? mg+imgW+4 : mg;
           const textW = hasImg ? cw-imgW-4 : cw;
-          const lines = doc.splitTextToSize(pdfStr(instrText), textW);
+          const lines = doc.splitTextToSize(pdfStr(instrText), textW - (item.checkable ? 14 : 0));
           const boxH = Math.max(imgH, lines.length*4.5+6);
           if (!hasImg) doc.roundedRect(mg, y-1, cw, boxH+2, 2, 2, 'F');
-          doc.setTextColor(30,64,175); doc.setFontSize(9); doc.setFont('helvetica','normal');
+          doc.setTextColor(instrChecked ? 45,90,61 : 30,64,175);
+          doc.setFontSize(9); doc.setFont('helvetica','normal');
           doc.text(lines, textX, y+5);
+        }
+        // Checkbox indicator for checkable instructions
+        if (item.checkable) {
+          const cbX = pw-mg-5, cbY = y-1, cbS = 4.5;
+          if (instrChecked) {
+            doc.setFillColor(...G); doc.roundedRect(cbX, cbY, cbS, cbS, 1, 1, 'F');
+            doc.setDrawColor(255,255,255); doc.setLineWidth(0.6);
+            doc.line(cbX+0.8, cbY+cbS/2, cbX+cbS/2-0.3, cbY+cbS-1);
+            doc.line(cbX+cbS/2-0.3, cbY+cbS-1, cbX+cbS-0.8, cbY+0.8);
+          } else {
+            doc.setDrawColor(147,197,253); doc.setLineWidth(0.4);
+            doc.roundedRect(cbX, cbY, cbS, cbS, 1, 1);
+          }
         }
         y += (hasImg ? Math.max(imgH, (gl(item.label)||'').split('\n').length*4.5+6) : 20) + 4;
         continue;
@@ -1742,7 +1789,15 @@ async function generateWord() {
         continue;
       }
       if (item.type === 'instruction') {
-        body += `<p style="color:#786E68;font-style:italic;margin:4pt 0 6pt 0;font-size:10pt">${lbl}</p>`;
+        const instrChecked = item.checkable && answers[item.id]?.checked;
+        const instrBg  = instrChecked ? '#E8F4EC' : '#EFF6FF';
+        const instrClr = instrChecked ? '#2D5A3D' : '#1E40AF';
+        const badge = item.checkable
+          ? `<span style="float:right;font-size:9pt;font-weight:bold;color:${instrChecked?'#2D5A3D':'#93C5FD'}">${instrChecked?'☑ Bevestigd':'☐ Nog te bevestigen'}</span>`
+          : '';
+        body += `<table width="100%" style="background:${instrBg};border-left:3px solid ${instrClr};margin:4pt 0 6pt 0"><tr>
+          <td style="font-size:10pt;color:${instrClr};font-style:italic;padding:5pt 8pt">${badge}${lbl}</td>
+        </tr></table>`;
         continue;
       }
       if (item.type === 'link') {

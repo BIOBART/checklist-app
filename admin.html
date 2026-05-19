@@ -925,6 +925,14 @@ function renderItem(si, ii, item) {
             <div style="flex:1;min-width:150px">
               <div class="trans-tabs">${lTabs}</div>
               ${lPanels}
+              <label style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:#1E40AF;cursor:pointer;padding:5px 10px;border:1px solid #BFDBFE;border-radius:var(--radius);background:white">
+                <input type="checkbox" ${item.checkable?'checked':''} onchange="sections[${si}].items[${ii}].checkable=this.checked" style="accent-color:#3B82F6;width:13px;height:13px">
+                Afvinkbaar maken
+              </label>
+              ${item.checkable ? `<label style="display:inline-flex;align-items:center;gap:6px;margin-top:6px;margin-left:6px;font-size:12px;color:var(--muted);cursor:pointer">
+                <input type="checkbox" ${item.required?'checked':''} onchange="sections[${si}].items[${ii}].required=this.checked" style="accent-color:var(--accent);width:13px;height:13px">
+                Verplicht af te vinken
+              </label>` : ''}
             </div>
           </div>
         </div>
