@@ -417,7 +417,7 @@ async function generateBlankPDF() {
     doc.setFillColor(...G);
     doc.rect(mg, y-4, cw, 8, 'F');
     doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(10);
-    doc.text(section.title||'', mg+4, y+1);
+    doc.text(glB(section.title, lang)||'', mg+4, y+1);
     y += 10;
 
     for (const item of section.items||[]) {
@@ -534,7 +534,7 @@ async function generateBlankWord() {
   </table>`;
 
   for (const section of t.schema?.sections||[]) {
-    body += `<h2 style="background:#2D5A3D;color:white;font-size:11pt;padding:5pt 8pt;margin:14pt 0 6pt 0">${section.title||''}</h2>`;
+    body += `<h2 style="background:#2D5A3D;color:white;font-size:11pt;padding:5pt 8pt;margin:14pt 0 6pt 0">${glB(section.title, lang)||''}</h2>`;
     for (const item of section.items||[]) {
       if (['label','instruction','link'].includes(item.type)) continue;
       const label = glB(item.label, lang);
