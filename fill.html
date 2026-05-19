@@ -1106,7 +1106,10 @@ async function downloadAndEmail() {
   closePdfModal();
 
   // 2. Upload PDF to Supabase Storage so we can send a link instead of attachment
-  const uploadPath = `exports/${Date.now()}_${result.fname}`;
+  // Use same path root as photos so the bucket RLS policy allows it
+  const basePath = submission?.id ? `${submission.id}/exports` : 'exports';
+  const uploadPath = `${basePath}/${Date.now()}_${result.fname}`;
+  let uploadErrMsg = null;
   try {
     // base64 → Uint8Array
     const binary = atob(result.base64);
@@ -1124,9 +1127,11 @@ async function downloadAndEmail() {
         .getPublicUrl(uploadPath);
       _cachedPdfUrl = urlData?.publicUrl || null;
     } else {
+      uploadErrMsg = upErr.message;
       console.warn('PDF upload mislukt:', upErr.message);
     }
   } catch(e) {
+    uploadErrMsg = e.message || String(e);
     console.warn('PDF upload fout:', e);
   }
 
@@ -1139,10 +1144,16 @@ async function downloadAndEmail() {
   if (linkInfo) {
     if (_cachedPdfUrl) {
       linkInfo.style.display = 'block';
-      linkInfo.innerHTML = `📎 PDF-link klaar: <a href="${_cachedPdfUrl}" target="_blank" style="color:var(--accent)">${_cachedPdfFilename}</a>`;
+      linkInfo.style.background = 'var(--accent-bg)';
+      linkInfo.style.borderColor = 'var(--accent-mid)';
+      linkInfo.style.color = 'var(--accent)';
+      linkInfo.innerHTML = `📎 PDF-link klaar: <a href="${_cachedPdfUrl}" target="_blank" style="color:var(--accent);font-weight:600">${_cachedPdfFilename}</a>`;
     } else {
       linkInfo.style.display = 'block';
-      linkInfo.textContent = '⚠️ PDF-upload mislukt — mail wordt verstuurd zonder link.';
+      linkInfo.style.background = 'var(--danger-bg)';
+      linkInfo.style.borderColor = '#FCA5A5';
+      linkInfo.style.color = 'var(--danger)';
+      linkInfo.textContent = `⚠️ PDF-upload mislukt${uploadErrMsg ? ': ' + uploadErrMsg : ''} — mail wordt verstuurd zonder link.`;
     }
   }
   openEmailModal();
@@ -1831,7 +1842,12 @@ async function sendEmail() {
   } catch(err) {
     sendBtn.disabled = false;
     sendBtn.textContent = 'Versturen';
-    showEmailStatus('Fout bij versturen: ' + (err.text || err.message || err), 'error');
+    const errText = err.text || err.message || String(err);
+    // Give a more helpful message for the common "recipients address is empty" error
+    const hint = /recipient|address.*empty/i.test(errText)
+      ? ' — Stel in je EmailJS-template het veld "To Email" in op {{to_email}}'
+      : '';
+    showEmailStatus('Fout bij versturen: ' + errText + hint, 'error');
   }
 }
 
