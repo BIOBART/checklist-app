@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
+<script src="branding.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"></script>
 <style>
@@ -456,7 +457,7 @@ function showQR(templateId, name) {
   document.getElementById('qr-url').textContent = url;
   const wrap = document.getElementById('qr-wrap');
   const encoded = encodeURIComponent(url);
-  wrap.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=2D5A3D&data=' + encoded + '" width="200" height="200" style="border-radius:6px">';
+  wrap.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=' + getBranding().accentHex.replace('#','') + '&data=' + encoded + '" width="200" height="200" style="border-radius:6px">';
   document.getElementById('qr-overlay').classList.add('open');
 }
 
@@ -653,7 +654,8 @@ async function generateBlankWord() {
   const lang = document.getElementById('blank-lang').value || 'nl';
   const infoL = infoLabelsFor(lang);
 
-  let body = `<h1 style="color:#2D5A3D;font-size:20pt;margin-bottom:8pt">${t.name||''}</h1>
+  const _iBr = getBranding(); const _iAcc = _iBr.accentHex;
+  let body = `<h1 style="color:${_iAcc};font-size:20pt;margin-bottom:8pt">${t.name||''}</h1>
   <table style="width:100%;border-collapse:collapse;margin-bottom:16pt">
     ${infoL.map(l=>`<tr>
       <td style="width:28%;font-weight:bold;font-size:9pt;padding:3pt 6pt;color:#7A7168;white-space:nowrap">${l}</td>
@@ -662,7 +664,7 @@ async function generateBlankWord() {
   </table>`;
 
   for (const section of t.schema?.sections||[]) {
-    body += `<h2 style="background:#2D5A3D;color:white;font-size:11pt;padding:5pt 8pt;margin:14pt 0 6pt 0">${glB(section.title, lang)||''}</h2>`;
+    body += `<h2 style="background:${_iAcc};color:white;font-size:11pt;padding:5pt 8pt;margin:14pt 0 6pt 0">${glB(section.title, lang)||''}</h2>`;
     for (const item of section.items||[]) {
       if (['label','instruction','link'].includes(item.type)) continue;
       const label = glB(item.label, lang);

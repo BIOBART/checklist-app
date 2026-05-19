@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Instellingen — Checklist App</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script src="branding.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -132,7 +133,102 @@ nav { display:flex; gap:6px; align-items:center; }
       </div>
     </div>
 
-    <!-- Placeholder voor toekomstige instellingen -->
+    <!-- HUISSTIJL & BRANDING -->
+    <div class="settings-card">
+      <div class="settings-card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/>
+          <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/>
+          <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
+        </svg>
+        <span id="card-brand-title">Huisstijl &amp; Branding</span>
+      </div>
+      <div class="settings-card-desc" id="card-brand-desc">
+        Pas het logo, browsericoon en primaire kleur aan. Van toepassing op het platform, PDF's, Word-exports en QR-codes.
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:1.25rem">
+
+        <!-- Company name -->
+        <div>
+          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px" id="lbl-company">Bedrijfsnaam</label>
+          <input type="text" id="brand-name"
+            style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:14px;font-family:inherit;background:var(--bg);color:var(--text);outline:none;transition:border-color 0.15s"
+            placeholder="bv. Biolectric"
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+        </div>
+
+        <!-- Accent color -->
+        <div>
+          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px" id="lbl-color">Primaire kleur</label>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <input type="color" id="brand-color" value="#2D5A3D"
+              style="width:52px;height:38px;border:1.5px solid var(--border);border-radius:var(--radius);cursor:pointer;padding:3px;background:var(--bg)"
+              oninput="previewBrandColor()">
+            <span id="brand-color-hex" style="font-size:13px;color:var(--muted);font-family:monospace;min-width:64px">#2D5A3D</span>
+            <div style="display:flex;gap:5px;align-items:center">
+              <div id="bcp-main" style="width:32px;height:22px;border-radius:5px;background:#2D5A3D;border:1px solid rgba(0,0,0,0.1)"></div>
+              <div id="bcp-mid"  style="width:32px;height:22px;border-radius:5px;background:#4A8A5E;border:1px solid rgba(0,0,0,0.1)"></div>
+              <div id="bcp-bg"   style="width:32px;height:22px;border-radius:5px;background:#E8F0EB;border:1px solid rgba(0,0,0,0.1)"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Logo upload -->
+        <div>
+          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px" id="lbl-logo">
+            Logo <span style="font-weight:400;color:var(--muted)">(paginaheader &amp; PDF)</span>
+          </label>
+          <div id="logo-preview-wrap" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px 14px;display:flex;align-items:center;gap:12px;min-height:58px">
+            <img id="logo-preview" src="" alt="Logo preview" style="max-height:40px;max-width:180px;object-fit:contain;display:none;border-radius:3px">
+            <span id="logo-placeholder" style="font-size:13px;color:var(--light)">Geen logo ingesteld</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+            <input type="file" id="logo-file-input" accept="image/*" style="display:none" onchange="handleLogoUpload(this)">
+            <button style="padding:7px 14px;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--surface);cursor:pointer;font-size:13px;font-family:inherit;transition:all 0.15s"
+              onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'"
+              onclick="document.getElementById('logo-file-input').click()" id="btn-logo-upload">Logo uploaden</button>
+            <button id="logo-clear-btn" onclick="clearLogo()" style="padding:7px 14px;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--surface);cursor:pointer;font-size:13px;font-family:inherit;color:var(--muted);display:none;transition:all 0.15s"
+              onmouseover="this.style.color='#C0392B';this.style.borderColor='#C0392B'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'"
+              id="btn-logo-remove">Verwijderen</button>
+          </div>
+        </div>
+
+        <!-- Favicon upload -->
+        <div>
+          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px" id="lbl-favicon">
+            Favicon <span style="font-weight:400;color:var(--muted)">(browsericoon, PNG of ICO)</span>
+          </label>
+          <div id="favicon-preview-wrap" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px 14px;display:flex;align-items:center;gap:12px;min-height:58px">
+            <img id="favicon-preview" src="" alt="Favicon preview" style="width:32px;height:32px;object-fit:contain;display:none;border-radius:4px">
+            <span id="favicon-placeholder" style="font-size:13px;color:var(--light)">Standaard favicon</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+            <input type="file" id="favicon-file-input" accept="image/png,image/x-icon,image/vnd.microsoft.icon,image/svg+xml" style="display:none" onchange="handleFaviconUpload(this)">
+            <button style="padding:7px 14px;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--surface);cursor:pointer;font-size:13px;font-family:inherit;transition:all 0.15s"
+              onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'"
+              onclick="document.getElementById('favicon-file-input').click()" id="btn-fav-upload">Favicon uploaden</button>
+            <button id="favicon-clear-btn" onclick="clearFavicon()" style="padding:7px 14px;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--surface);cursor:pointer;font-size:13px;font-family:inherit;color:var(--muted);display:none;transition:all 0.15s"
+              onmouseover="this.style.color='#C0392B';this.style.borderColor='#C0392B'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">Verwijderen</button>
+          </div>
+        </div>
+
+        <!-- Save / Reset -->
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-top:4px">
+          <button onclick="saveBrandingSettings()"
+            style="padding:9px 20px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:opacity 0.15s"
+            onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'" id="btn-brand-save">Opslaan</button>
+          <button onclick="resetBrandingSettings()"
+            style="padding:9px 16px;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:13px;font-family:inherit;cursor:pointer;color:var(--muted);transition:all 0.15s"
+            onmouseover="this.style.borderColor='var(--border-strong)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'" id="btn-brand-reset">Standaard herstellen</button>
+        </div>
+        <div class="save-indicator" id="brand-save-indicator">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <span id="brand-save-text">Opgeslagen</span>
+        </div>
+
+      </div>
+    </div>
 
   </div>
 </div>
@@ -149,6 +245,14 @@ const SETTINGS_TR = {
     langTitle: 'Taal van het platform',
     langDesc: 'Kies in welke taal de interface wordt weergegeven. Dit geldt voor alle pagina\'s van de app.',
     saved: 'Opgeslagen',
+    brandTitle: 'Huisstijl & Branding',
+    brandDesc: 'Pas het logo, browsericoon en primaire kleur aan. Van toepassing op het platform, PDF\'s, Word-exports en QR-codes.',
+    brandCompany: 'Bedrijfsnaam', brandColor: 'Primaire kleur',
+    brandLogo: 'Logo', brandLogoHint: '(paginaheader & PDF)',
+    brandFav: 'Favicon', brandFavHint: '(browsericoon, PNG of ICO)',
+    brandUpload: 'Uploaden', brandRemove: 'Verwijderen',
+    brandSave: 'Opslaan', brandReset: 'Standaard herstellen',
+    brandNoLogo: 'Geen logo ingesteld', brandDefaultFav: 'Standaard favicon',
   },
   en: {
     pageTitle: 'Settings',
@@ -156,6 +260,14 @@ const SETTINGS_TR = {
     langTitle: 'Platform language',
     langDesc: 'Choose the language in which the interface is displayed. This applies to all pages of the app.',
     saved: 'Saved',
+    brandTitle: 'Branding',
+    brandDesc: 'Customize the logo, favicon and primary colour. Applies to the platform, PDFs, Word exports and QR codes.',
+    brandCompany: 'Company name', brandColor: 'Primary colour',
+    brandLogo: 'Logo', brandLogoHint: '(page header & PDF)',
+    brandFav: 'Favicon', brandFavHint: '(browser icon, PNG or ICO)',
+    brandUpload: 'Upload', brandRemove: 'Remove',
+    brandSave: 'Save', brandReset: 'Restore defaults',
+    brandNoLogo: 'No logo set', brandDefaultFav: 'Default favicon',
   },
   fr: {
     pageTitle: 'Paramètres',
@@ -163,6 +275,14 @@ const SETTINGS_TR = {
     langTitle: 'Langue de la plateforme',
     langDesc: 'Choisissez la langue d\'affichage de l\'interface. Ceci s\'applique à toutes les pages de l\'application.',
     saved: 'Enregistré',
+    brandTitle: 'Charte graphique',
+    brandDesc: 'Personnalisez le logo, l\'icône et la couleur principale. S\'applique à la plateforme, aux PDF, aux exports Word et aux QR codes.',
+    brandCompany: 'Nom de l\'entreprise', brandColor: 'Couleur principale',
+    brandLogo: 'Logo', brandLogoHint: '(en-tête de page & PDF)',
+    brandFav: 'Favicon', brandFavHint: '(icône navigateur, PNG ou ICO)',
+    brandUpload: 'Télécharger', brandRemove: 'Supprimer',
+    brandSave: 'Enregistrer', brandReset: 'Restaurer les valeurs par défaut',
+    brandNoLogo: 'Aucun logo défini', brandDefaultFav: 'Favicon par défaut',
   },
   de: {
     pageTitle: 'Einstellungen',
@@ -170,6 +290,14 @@ const SETTINGS_TR = {
     langTitle: 'Plattformsprache',
     langDesc: 'Wählen Sie die Sprache der Benutzeroberfläche. Dies gilt für alle Seiten der App.',
     saved: 'Gespeichert',
+    brandTitle: 'Erscheinungsbild',
+    brandDesc: 'Passen Sie Logo, Favicon und Primärfarbe an. Gilt für die Plattform, PDFs, Word-Exporte und QR-Codes.',
+    brandCompany: 'Firmenname', brandColor: 'Primärfarbe',
+    brandLogo: 'Logo', brandLogoHint: '(Seitenkopf & PDF)',
+    brandFav: 'Favicon', brandFavHint: '(Browser-Symbol, PNG oder ICO)',
+    brandUpload: 'Hochladen', brandRemove: 'Entfernen',
+    brandSave: 'Speichern', brandReset: 'Standard wiederherstellen',
+    brandNoLogo: 'Kein Logo festgelegt', brandDefaultFav: 'Standard-Favicon',
   }
 };
 
@@ -186,6 +314,20 @@ function applyTranslations() {
   document.getElementById('card-lang-desc').textContent = t('langDesc');
   document.getElementById('save-indicator-text').textContent = t('saved');
   document.title = t('pageTitle') + ' — Checklist App';
+  // Branding card
+  document.getElementById('card-brand-title').textContent = t('brandTitle');
+  document.getElementById('card-brand-desc').textContent  = t('brandDesc');
+  document.getElementById('lbl-company').textContent      = t('brandCompany');
+  document.getElementById('lbl-color').textContent        = t('brandColor');
+  document.getElementById('btn-logo-upload').textContent  = t('brandUpload');
+  document.getElementById('btn-fav-upload').textContent   = t('brandUpload');
+  document.getElementById('logo-clear-btn').textContent   = t('brandRemove');
+  document.getElementById('favicon-clear-btn').textContent = t('brandRemove');
+  document.getElementById('btn-brand-save').textContent   = t('brandSave');
+  document.getElementById('btn-brand-reset').textContent  = t('brandReset');
+  document.getElementById('logo-placeholder').textContent = t('brandNoLogo');
+  document.getElementById('favicon-placeholder').textContent = t('brandDefaultFav');
+  document.getElementById('brand-save-text').textContent  = t('saved');
 }
 
 function highlightActive() {
@@ -205,9 +347,114 @@ function setLang(lang) {
   setTimeout(() => ind.classList.remove('show'), 2000);
 }
 
-// Init
+// ── Branding settings ──────────────────────────────────────────────
+let _brandData = {};
+
+function loadBrandingForm() {
+  _brandData = getBranding();
+  document.getElementById('brand-name').value = _brandData.companyName || '';
+  const hex = _brandData.accentHex || '#2D5A3D';
+  document.getElementById('brand-color').value = hex;
+  document.getElementById('brand-color-hex').textContent = hex;
+  document.getElementById('bcp-main').style.background = hex;
+  document.getElementById('bcp-mid').style.background  = lightenHex(hex, 0.25);
+  document.getElementById('bcp-bg').style.background   = lightenHex(hex, 0.85);
+
+  // Logo
+  const hasLogo = !!_brandData.logo;
+  document.getElementById('logo-preview').src          = _brandData.logo || '';
+  document.getElementById('logo-preview').style.display     = hasLogo ? '' : 'none';
+  document.getElementById('logo-placeholder').style.display = hasLogo ? 'none' : '';
+  document.getElementById('logo-clear-btn').style.display   = hasLogo ? '' : 'none';
+
+  // Favicon
+  const hasFav = !!_brandData.favicon;
+  document.getElementById('favicon-preview').src          = _brandData.favicon || '';
+  document.getElementById('favicon-preview').style.display     = hasFav ? '' : 'none';
+  document.getElementById('favicon-placeholder').style.display = hasFav ? 'none' : '';
+  document.getElementById('favicon-clear-btn').style.display   = hasFav ? '' : 'none';
+}
+
+function previewBrandColor() {
+  const hex = document.getElementById('brand-color').value;
+  document.getElementById('brand-color-hex').textContent = hex;
+  document.getElementById('bcp-main').style.background = hex;
+  document.getElementById('bcp-mid').style.background  = lightenHex(hex, 0.25);
+  document.getElementById('bcp-bg').style.background   = lightenHex(hex, 0.85);
+  // Live preview CSS vars
+  document.documentElement.style.setProperty('--accent', hex);
+  document.documentElement.style.setProperty('--accent-mid', lightenHex(hex, 0.25));
+  document.documentElement.style.setProperty('--accent-bg', lightenHex(hex, 0.85));
+  document.querySelectorAll('.logo-dot').forEach(d => d.style.background = hex);
+}
+
+function handleLogoUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    _brandData.logo = e.target.result;
+    document.getElementById('logo-preview').src = e.target.result;
+    document.getElementById('logo-preview').style.display     = '';
+    document.getElementById('logo-placeholder').style.display = 'none';
+    document.getElementById('logo-clear-btn').style.display   = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearLogo() {
+  _brandData.logo = null;
+  document.getElementById('logo-preview').src = '';
+  document.getElementById('logo-preview').style.display     = 'none';
+  document.getElementById('logo-placeholder').style.display = '';
+  document.getElementById('logo-clear-btn').style.display   = 'none';
+  document.getElementById('logo-file-input').value = '';
+}
+
+function handleFaviconUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    _brandData.favicon = e.target.result;
+    document.getElementById('favicon-preview').src = e.target.result;
+    document.getElementById('favicon-preview').style.display     = '';
+    document.getElementById('favicon-placeholder').style.display = 'none';
+    document.getElementById('favicon-clear-btn').style.display   = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearFavicon() {
+  _brandData.favicon = null;
+  document.getElementById('favicon-preview').src = '';
+  document.getElementById('favicon-preview').style.display     = 'none';
+  document.getElementById('favicon-placeholder').style.display = '';
+  document.getElementById('favicon-clear-btn').style.display   = 'none';
+  document.getElementById('favicon-file-input').value = '';
+}
+
+function saveBrandingSettings() {
+  _brandData.companyName = document.getElementById('brand-name').value.trim();
+  _brandData.accentHex   = document.getElementById('brand-color').value;
+  saveBranding(_brandData);
+  applyBranding();
+  const ind = document.getElementById('brand-save-indicator');
+  ind.classList.add('show');
+  setTimeout(() => ind.classList.remove('show'), 2000);
+}
+
+function resetBrandingSettings() {
+  _brandData = { companyName:'', accentHex:'#2D5A3D', logo:null, favicon:null };
+  saveBranding(_brandData);
+  loadBrandingForm();
+  applyBranding();
+}
+
+// ── Init ────────────────────────────────────────────────────────────
 highlightActive();
 applyTranslations();
+loadBrandingForm();
 </script>
 </body>
 </html>
