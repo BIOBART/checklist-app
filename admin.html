@@ -94,6 +94,18 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
 .item-num { font-size:11px; color:var(--light); font-weight:600; min-width:18px; padding-top:9px; flex-shrink:0; }
 .item-label-input { font-family:'DM Sans',sans-serif; font-size:14px; padding:7px 11px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); color:var(--text); outline:none; flex:1; min-width:0; }
 .item-label-input:focus { border-color:var(--accent); background:var(--surface); }
+/* Rich text editor */
+.rich-wrap { display:flex; flex-direction:column; }
+.rich-toolbar { display:flex; gap:1px; padding:3px 5px; background:var(--surface2); border:1px solid var(--border); border-bottom:none; border-radius:var(--radius) var(--radius) 0 0; flex-wrap:wrap; }
+.rich-btn { width:26px; height:22px; border:none; background:none; border-radius:3px; cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center; color:var(--muted); padding:0; font-family:'DM Sans',sans-serif; }
+.rich-btn:hover { background:var(--border); color:var(--text); }
+.rich-btn.sep { width:1px; background:var(--border); margin:3px 3px; pointer-events:none; }
+.rich-content { min-height:38px; max-height:180px; overflow-y:auto; padding:7px 10px; border:1px solid var(--border); border-radius:0 0 var(--radius) var(--radius); background:var(--bg); font-family:'DM Sans',sans-serif; font-size:14px; color:var(--text); line-height:1.55; outline:none; }
+.rich-content:focus { border-color:var(--accent); background:var(--surface); }
+.rich-content ul,.rich-content ol { padding-left:1.4em; margin:2px 0; }
+.rich-content li { margin:1px 0; }
+.rich-content b,.rich-content strong { font-weight:600; }
+.rich-content i,.rich-content em { font-style:italic; }
 .item-card-actions { display:flex; gap:4px; flex-shrink:0; align-items:center; padding-top:3px; }
 .item-card-meta { display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding-left:26px; }
 .item-type-select { font-family:'DM Sans',sans-serif; font-size:13px; padding:6px 10px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text); outline:none; cursor:pointer; flex:1; min-width:160px; }
@@ -982,19 +994,38 @@ function renderItem(si, ii, item) {
     `<div class="trans-tab${l==='nl'?' active':''}" onclick="switchTransTab(this,'trans-${si}-${ii}')">${LANG_FLAGS[l]}</div>`
   ).join('');
 
-  const transPanelsHtml = LANGS.map(l => `
+  const transPanelsHtml = LANGS.map(l => {
+    const labelField = item.type === 'statuscheck'
+      ? `<div class="rich-wrap">
+          <div class="rich-toolbar">
+            <button class="rich-btn" type="button" onmousedown="event.preventDefault()" onclick="execRich('rich-${si}-${ii}-${l}','bold')" title="Vet"><b>B</b></button>
+            <button class="rich-btn" type="button" onmousedown="event.preventDefault()" onclick="execRich('rich-${si}-${ii}-${l}','italic')" title="Cursief"><i style="font-style:italic">I</i></button>
+            <button class="rich-btn" type="button" onmousedown="event.preventDefault()" onclick="execRich('rich-${si}-${ii}-${l}','underline')" title="Onderstrepen"><u>U</u></button>
+            <span class="rich-btn sep"></span>
+            <button class="rich-btn" type="button" onmousedown="event.preventDefault()" onclick="execRich('rich-${si}-${ii}-${l}','insertUnorderedList')" title="Opsomming">•≡</button>
+            <button class="rich-btn" type="button" onmousedown="event.preventDefault()" onclick="execRich('rich-${si}-${ii}-${l}','insertOrderedList')" title="Genummerde lijst">1≡</button>
+            <span class="rich-btn sep"></span>
+            <button class="rich-btn" type="button" onmousedown="event.preventDefault()" onclick="execRich('rich-${si}-${ii}-${l}','removeFormat')" title="Opmaak verwijderen" style="font-size:10px">✕</button>
+          </div>
+          <div class="rich-content" contenteditable="true" id="rich-${si}-${ii}-${l}"
+            oninput="setItemLang(${si},${ii},'label','${l}',this.innerHTML)"
+          >${labelObj[l]||''}</div>
+        </div>`
+      : `<input class="item-label-input" style="width:100%" value="${esc(labelObj[l]||'')}" placeholder="Vraagtekst in ${l}…"
+          oninput="setItemLang(${si},${ii},'label','${l}',this.value)">`;
+    return `
     <div class="trans-panel${l==='nl'?'':' hidden'}" id="trans-${si}-${ii}-${l}">
       <div>
         <div class="trans-field-label">Vraagtekst ${LANG_FLAGS[l]}</div>
-        <input class="item-label-input" style="width:100%" value="${esc(labelObj[l]||'')}" placeholder="Vraagtekst in ${l}…"
-          oninput="setItemLang(${si},${ii},'label','${l}',this.value)">
+        ${labelField}
       </div>
       ${hasHint ? `<div>
         <div class="trans-field-label">Hint / instructie ${LANG_FLAGS[l]}</div>
         <input class="item-options-input" value="${esc(hintObj[l]||'')}" placeholder="Hint in ${l}…"
           oninput="setItemLang(${si},${ii},'hint','${l}',this.value)">
       </div>` : ''}
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   el.innerHTML = `
     <div class="item-card-top">
@@ -1059,6 +1090,17 @@ function switchTransTab(clickedTab, panelGroupId) {
   const lang = clickedTab.textContent.trim().slice(-2).toLowerCase();
   const panel = document.getElementById(panelGroupId + '-' + lang);
   if (panel) panel.classList.remove('hidden');
+}
+
+// Rich text editor command
+function execRich(editorId, cmd) {
+  const el = document.getElementById(editorId);
+  if (!el) return;
+  el.focus();
+  document.execCommand(cmd, false, null);
+  // Sync the innerHTML back to the data model
+  const m = editorId.match(/^rich-(\d+)-(\d+)-(\w+)$/);
+  if (m) setItemLang(+m[1], +m[2], 'label', m[3], el.innerHTML);
 }
 
 function setItemLang(si, ii, field, lang, val) {

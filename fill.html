@@ -664,9 +664,11 @@ function renderItem(secId, item) {
         ${photoUploadHtml(item.id+'_fu', (answers[item.id+'_fu']||{}).photos||[])}
       </div>`;
 
+    const scLabelRaw = gl(item.label);
+    const scLabelHtml = /<[a-z][\s\S]*>/i.test(scLabelRaw) ? scLabelRaw : esc(scLabelRaw);
     el.innerHTML = `
       <div class="item-body" style="padding-left:0">
-        <div class="item-label" style="cursor:default">${esc(gl(item.label))}${item.required?`<span class="req-star">*</span>`:''}</div>
+        <div class="item-label" style="cursor:default">${scLabelHtml}${item.required?`<span class="req-star">*</span>`:''}</div>
         ${gl(item.hint)?`<div class="item-hint">${esc(gl(item.hint))}</div>`:''}
         <div class="status-btns">${btns}</div>
         ${scFollowHtml}
@@ -1177,6 +1179,20 @@ function resizeImageForPdf(dataUrl, maxW=800, maxH=600) {
   });
 }
 
+// Strip HTML tags and decode basic entities — used when rendering rich text in PDF
+function stripHtml(html) {
+  if (!html) return '';
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '• ')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').replace(/&#9744;/g, '☐')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 // Replace subscript/superscript and other non-Latin1 chars that break jsPDF helvetica
 function pdfStr(str) {
   if (!str) return str;
@@ -1363,7 +1379,7 @@ async function generatePDF(mode = 'download') {
       // statuscheck type
       if (item.type === 'statuscheck') {
         doc.setTextColor(...D); doc.setFontSize(10); doc.setFont('helvetica','normal');
-        const ll = doc.splitTextToSize(pdfStr(gl(item.label))+(item.required?' *':''), cw*0.55);
+        const ll = doc.splitTextToSize(pdfStr(stripHtml(gl(item.label)))+(item.required?' *':''), cw*0.55);
         doc.text(ll, mg, y);
         const statusDefaults = ['OK','Niet OK','Onderdelen nodig','Niet gecheckt'];
         const statusLabels = item.statusLabels || statusDefaults;
