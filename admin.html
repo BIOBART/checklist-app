@@ -108,16 +108,37 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
 .rich-content i,.rich-content em { font-style:italic; }
 .rich-content a { color:var(--accent); text-decoration:underline; }
 /* Link dialog */
-.rich-link-backdrop { display:none; position:fixed; inset:0; z-index:490; }
+.rich-link-backdrop { display:none; position:fixed; inset:0; z-index:490; background:rgba(0,0,0,0.25); }
 .rich-link-backdrop.open { display:block; }
-.rich-link-dialog { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:500; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:1.25rem 1.5rem; width:320px; box-shadow:0 8px 32px rgba(0,0,0,0.18); }
-.rich-link-dialog.open { display:block; }
-.rich-link-dialog h4 { font-family:'DM Serif Display',serif; font-size:16px; margin-bottom:1rem; }
+.rich-link-dialog { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:500; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:0; width:380px; max-width:95vw; box-shadow:0 8px 40px rgba(0,0,0,0.2); overflow:hidden; }
+.rich-link-dialog.open { display:flex; flex-direction:column; }
+.rich-link-header { display:flex; align-items:center; justify-content:space-between; padding:1rem 1.25rem 0; }
+.rich-link-header h4 { font-family:'DM Serif Display',serif; font-size:16px; margin:0; }
+.rich-link-tabs { display:flex; border-bottom:1px solid var(--border); margin-top:0.75rem; padding:0 1.25rem; }
+.rich-link-tab { font-family:'DM Sans',sans-serif; font-size:12px; font-weight:500; padding:7px 12px; border:none; background:none; cursor:pointer; color:var(--muted); border-bottom:2px solid transparent; margin-bottom:-1px; transition:all 0.15s; }
+.rich-link-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+.rich-link-body { padding:1rem 1.25rem; }
 .rich-link-field { margin-bottom:0.75rem; }
 .rich-link-field label { display:block; font-size:11px; color:var(--muted); font-weight:500; margin-bottom:3px; }
 .rich-link-field input { width:100%; font-family:'DM Sans',sans-serif; font-size:13px; padding:7px 10px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); color:var(--text); outline:none; }
 .rich-link-field input:focus { border-color:var(--accent); background:var(--surface); }
-.rich-link-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:1rem; }
+.rich-link-actions { display:flex; gap:8px; justify-content:flex-end; padding:0 1.25rem 1rem; }
+/* Upload tab */
+.link-upload-zone { border:2px dashed var(--border); border-radius:var(--radius); padding:1.25rem; text-align:center; cursor:pointer; transition:all 0.15s; color:var(--muted); }
+.link-upload-zone:hover { border-color:var(--accent); background:var(--accent-bg); color:var(--accent); }
+.link-upload-zone svg { width:28px; height:28px; margin-bottom:6px; opacity:0.5; }
+.link-upload-zone p { font-size:13px; margin:0; }
+.link-upload-zone .sub { font-size:11px; color:var(--light); margin-top:3px; }
+.link-upload-status { font-size:12px; margin-top:8px; min-height:16px; }
+.link-file-list { margin-top:10px; max-height:160px; overflow-y:auto; display:flex; flex-direction:column; gap:4px; }
+.link-file-item { display:flex; align-items:center; gap:8px; padding:6px 8px; border:1px solid var(--border); border-radius:var(--radius); cursor:pointer; font-size:12px; transition:all 0.15s; }
+.link-file-item:hover { background:var(--accent-bg); border-color:var(--accent-mid); }
+.link-file-item svg { width:14px; height:14px; flex-shrink:0; color:var(--muted); }
+.link-file-item .fname { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.link-file-item .fdate { color:var(--light); font-size:11px; flex-shrink:0; }
+.link-file-item.selected { background:var(--accent-bg); border-color:var(--accent); }
+.link-file-del { background:none; border:none; cursor:pointer; color:var(--light); padding:0 2px; font-size:14px; line-height:1; flex-shrink:0; }
+.link-file-del:hover { color:var(--danger); }
 .item-card-actions { display:flex; gap:4px; flex-shrink:0; align-items:center; padding-top:3px; }
 .item-card-meta { display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding-left:26px; }
 .item-type-select { font-family:'DM Sans',sans-serif; font-size:13px; padding:6px 10px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text); outline:none; cursor:pointer; flex:1; min-width:160px; }
@@ -1179,6 +1200,92 @@ function richCancelLink() {
   _richLinkState = null;
 }
 
+// ── Link dialog tab switching ──
+function switchLinkTab(tab) {
+  document.getElementById('rlb-url').style.display    = tab === 'url'    ? '' : 'none';
+  document.getElementById('rlb-upload').style.display = tab === 'upload' ? '' : 'none';
+  document.getElementById('rlt-url').classList.toggle('active',    tab === 'url');
+  document.getElementById('rlt-upload').classList.toggle('active', tab === 'upload');
+  if (tab === 'upload') loadLinkFileList();
+}
+
+// ── File upload to Supabase Storage ──
+const DOCS_FOLDER = 'documents';
+
+function handleLinkFileDrop(e) {
+  const file = e.dataTransfer.files[0];
+  if (file) uploadLinkFile(file);
+}
+
+async function uploadLinkFile(file) {
+  if (!file) return;
+  if (file.size > 20 * 1024 * 1024) {
+    setLinkUploadStatus('Bestand te groot (max 20 MB)', 'error'); return;
+  }
+  const safeName = file.name.replace(/[^a-zA-Z0-9._\-]/g, '_');
+  const path = `${DOCS_FOLDER}/${Date.now()}_${safeName}`;
+  setLinkUploadStatus('Uploaden…', 'info');
+  document.getElementById('rich-link-confirm-btn').disabled = true;
+
+  const { error } = await sb.storage.from(STORAGE_BUCKET).upload(path, file, { contentType: file.type, upsert: false });
+  document.getElementById('rich-link-confirm-btn').disabled = false;
+
+  if (error) { setLinkUploadStatus('Upload mislukt: ' + error.message, 'error'); return; }
+
+  const { data: urlData } = sb.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+  const publicUrl = urlData?.publicUrl || '';
+  setLinkUploadStatus('✓ Upload geslaagd', 'success');
+
+  // Switch to URL tab and pre-fill fields
+  document.getElementById('rich-link-url').value  = publicUrl;
+  document.getElementById('rich-link-text').value = file.name;
+  switchLinkTab('url');
+  setTimeout(() => setLinkUploadStatus('', ''), 2000);
+}
+
+function setLinkUploadStatus(msg, type) {
+  const el = document.getElementById('link-upload-status');
+  el.textContent = msg;
+  el.style.color = type === 'error' ? 'var(--danger)' : type === 'success' ? 'var(--accent)' : 'var(--muted)';
+}
+
+async function loadLinkFileList() {
+  const el = document.getElementById('link-file-list');
+  el.innerHTML = '<div style="font-size:12px;color:var(--light);padding:4px">Laden…</div>';
+  const { data, error } = await sb.storage.from(STORAGE_BUCKET).list(DOCS_FOLDER, { sortBy: { column: 'created_at', order: 'desc' }, limit: 50 });
+  if (error || !data?.length) {
+    el.innerHTML = data?.length === 0 || !data
+      ? '<div style="font-size:12px;color:var(--light);padding:4px">Nog geen bestanden geüpload.</div>'
+      : '<div style="font-size:12px;color:var(--danger);padding:4px">Fout bij laden: ' + (error?.message||'') + '</div>';
+    return;
+  }
+  el.innerHTML = data.filter(f => f.name && f.name !== '.emptyFolderPlaceholder').map(f => {
+    const displayName = f.name.replace(/^\d+_/, ''); // strip timestamp prefix
+    const kb = f.metadata?.size ? Math.round(f.metadata.size / 1024) + ' KB' : '';
+    return `<div class="link-file-item" onclick="selectUploadedFile('${DOCS_FOLDER}/${f.name}','${displayName.replace(/'/g,"\\'")}')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span class="fname" title="${displayName}">${displayName}</span>
+      <span class="fdate">${kb}</span>
+      <button class="link-file-del" onclick="event.stopPropagation();deleteLinkFile('${DOCS_FOLDER}/${f.name}',this)" title="Verwijder">×</button>
+    </div>`;
+  }).join('') || '<div style="font-size:12px;color:var(--light);padding:4px">Nog geen bestanden geüpload.</div>';
+}
+
+function selectUploadedFile(path, displayName) {
+  const { data: urlData } = sb.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+  document.getElementById('rich-link-url').value  = urlData?.publicUrl || '';
+  document.getElementById('rich-link-text').value = displayName;
+  switchLinkTab('url');
+}
+
+async function deleteLinkFile(path, btn) {
+  if (!confirm('Bestand verwijderen?')) return;
+  btn.closest('.link-file-item').style.opacity = '0.4';
+  const { error } = await sb.storage.from(STORAGE_BUCKET).remove([path]);
+  if (error) { alert('Verwijderen mislukt: ' + error.message); btn.closest('.link-file-item').style.opacity = ''; return; }
+  btn.closest('.link-file-item').remove();
+}
+
 function setItemLang(si, ii, field, lang, val) {
   const item = sections[si].items[ii];
   // Convert string to object if needed
@@ -1444,20 +1551,49 @@ checkAuth();
 <!-- Link insert dialog -->
 <div class="rich-link-backdrop" id="rich-link-backdrop" onclick="richCancelLink()"></div>
 <div class="rich-link-dialog" id="rich-link-dialog">
-  <h4>Link invoegen</h4>
-  <div class="rich-link-field">
-    <label>URL</label>
-    <input id="rich-link-url" type="url" placeholder="https://…"
-      onkeydown="if(event.key==='Enter')richConfirmLink();if(event.key==='Escape')richCancelLink()">
+  <div class="rich-link-header">
+    <h4>Link invoegen</h4>
+    <button onclick="richCancelLink()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1;padding:0">×</button>
   </div>
-  <div class="rich-link-field" id="rich-link-text-row">
-    <label>Weergavetekst <span style="color:var(--light);font-weight:400">(optioneel)</span></label>
-    <input id="rich-link-text" placeholder="Laat leeg om de URL te tonen"
-      onkeydown="if(event.key==='Enter')richConfirmLink();if(event.key==='Escape')richCancelLink()">
+  <div class="rich-link-tabs">
+    <button class="rich-link-tab active" id="rlt-url"  onclick="switchLinkTab('url')">URL invoeren</button>
+    <button class="rich-link-tab"        id="rlt-upload" onclick="switchLinkTab('upload')">Bestand uploaden</button>
   </div>
+
+  <!-- URL tab -->
+  <div class="rich-link-body" id="rlb-url">
+    <div class="rich-link-field">
+      <label>URL</label>
+      <input id="rich-link-url" type="url" placeholder="https://…"
+        onkeydown="if(event.key==='Enter')richConfirmLink();if(event.key==='Escape')richCancelLink()">
+    </div>
+    <div class="rich-link-field" id="rich-link-text-row">
+      <label>Weergavetekst <span style="color:var(--light);font-weight:400">(optioneel)</span></label>
+      <input id="rich-link-text" placeholder="Laat leeg om de URL te tonen"
+        onkeydown="if(event.key==='Enter')richConfirmLink();if(event.key==='Escape')richCancelLink()">
+    </div>
+  </div>
+
+  <!-- Upload tab -->
+  <div class="rich-link-body" id="rlb-upload" style="display:none">
+    <div class="link-upload-zone" id="link-drop-zone"
+      onclick="document.getElementById('link-file-input').click()"
+      ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+      ondragleave="this.style.borderColor=''"
+      ondrop="event.preventDefault();this.style.borderColor='';handleLinkFileDrop(event)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <p>Klik of sleep een bestand hierheen</p>
+      <p class="sub">PDF, Word, Excel · max 20 MB</p>
+    </div>
+    <input type="file" id="link-file-input" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" style="display:none"
+      onchange="uploadLinkFile(this.files[0])">
+    <div class="link-upload-status" id="link-upload-status"></div>
+    <div class="link-file-list" id="link-file-list"></div>
+  </div>
+
   <div class="rich-link-actions">
     <button class="btn" style="font-size:13px" onclick="richCancelLink()">Annuleer</button>
-    <button class="btn btn-primary" style="font-size:13px" onclick="richConfirmLink()">Invoegen</button>
+    <button class="btn btn-primary" style="font-size:13px" id="rich-link-confirm-btn" onclick="richConfirmLink()">Invoegen</button>
   </div>
 </div>
 </body>
