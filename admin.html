@@ -540,6 +540,8 @@ async function logout() {
 }
 
 // ── TEMPLATE LIST ──
+const _tplCache = {};  // id → full template object, avoids JSON-in-onclick
+
 async function loadTemplates() {
   const { data } = await sb.from('templates').select('*').order('category').order('name');
   const el = document.getElementById('tpl-list');
@@ -547,6 +549,7 @@ async function loadTemplates() {
     el.innerHTML = '<p style="color:var(--muted);font-size:14px">Nog geen templates. Maak er een aan via de knop hierboven.</p>';
     return;
   }
+  data.forEach(t => { _tplCache[t.id] = t; });
   el.innerHTML = data.map(t => {
     const n = (t.schema?.sections||[]).reduce((a,s)=>a+(s.items?.length||0),0);
     const isActive = t.active !== false;
@@ -573,7 +576,7 @@ async function loadTemplates() {
             : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="9 11 12 14 22 4"/></svg>Activeer`
           }
         </button>
-        <button class="btn" onclick="editTemplate(${JSON.stringify(t).replace(/"/g,'&quot;')})">
+        <button class="btn" onclick="editTemplate(_tplCache['${t.id}'])">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Bewerken
         </button>
         <button class="btn btn-danger" onclick="deleteTemplateById('${t.id}','${esc(t.name)}')" title="Verwijder template">
