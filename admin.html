@@ -106,6 +106,18 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
 .rich-content li { margin:1px 0; }
 .rich-content b,.rich-content strong { font-weight:600; }
 .rich-content i,.rich-content em { font-style:italic; }
+.rich-content a { color:var(--accent); text-decoration:underline; }
+/* Link dialog */
+.rich-link-backdrop { display:none; position:fixed; inset:0; z-index:490; }
+.rich-link-backdrop.open { display:block; }
+.rich-link-dialog { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:500; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:1.25rem 1.5rem; width:320px; box-shadow:0 8px 32px rgba(0,0,0,0.18); }
+.rich-link-dialog.open { display:block; }
+.rich-link-dialog h4 { font-family:'DM Serif Display',serif; font-size:16px; margin-bottom:1rem; }
+.rich-link-field { margin-bottom:0.75rem; }
+.rich-link-field label { display:block; font-size:11px; color:var(--muted); font-weight:500; margin-bottom:3px; }
+.rich-link-field input { width:100%; font-family:'DM Sans',sans-serif; font-size:13px; padding:7px 10px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); color:var(--text); outline:none; }
+.rich-link-field input:focus { border-color:var(--accent); background:var(--surface); }
+.rich-link-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:1rem; }
 .item-card-actions { display:flex; gap:4px; flex-shrink:0; align-items:center; padding-top:3px; }
 .item-card-meta { display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding-left:26px; }
 .item-type-select { font-family:'DM Sans',sans-serif; font-size:13px; padding:6px 10px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text); outline:none; cursor:pointer; flex:1; min-width:160px; }
@@ -1006,6 +1018,10 @@ function renderItem(si, ii, item) {
             <button class="rich-btn" type="button" onmousedown="event.preventDefault()" onclick="execRich('rich-${si}-${ii}-${l}','insertOrderedList')" title="Genummerde lijst">1≡</button>
             <span class="rich-btn sep"></span>
             <button class="rich-btn" type="button" onmousedown="event.preventDefault()" onclick="execRich('rich-${si}-${ii}-${l}','removeFormat')" title="Opmaak verwijderen" style="font-size:10px">✕</button>
+            <span class="rich-btn sep"></span>
+            <button class="rich-btn" type="button" onmousedown="event.preventDefault()" onclick="richInsertLink('rich-${si}-${ii}-${l}')" title="Link invoegen">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            </button>
           </div>
           <div class="rich-content" contenteditable="true" id="rich-${si}-${ii}-${l}"
             oninput="setItemLang(${si},${ii},'label','${l}',this.innerHTML)"
@@ -1101,6 +1117,66 @@ function execRich(editorId, cmd) {
   // Sync the innerHTML back to the data model
   const m = editorId.match(/^rich-(\d+)-(\d+)-(\w+)$/);
   if (m) setItemLang(+m[1], +m[2], 'label', m[3], el.innerHTML);
+}
+
+// ── Link insert dialog ──
+let _richLinkState = null;
+
+function richInsertLink(editorId) {
+  const editor = document.getElementById(editorId);
+  if (!editor) return;
+  // Save current selection before focus leaves the editor
+  const sel = window.getSelection();
+  const selectedText = sel.rangeCount > 0 ? sel.toString() : '';
+  const range = sel.rangeCount > 0 ? sel.getRangeAt(0).cloneRange() : null;
+  _richLinkState = { editorId, range, selectedText };
+  // Populate fields
+  document.getElementById('rich-link-url').value = '';
+  document.getElementById('rich-link-text').value = selectedText;
+  // Hide display-text field when text is already selected (selection becomes the link text)
+  document.getElementById('rich-link-text-row').style.display = selectedText ? 'none' : '';
+  // Show dialog
+  document.getElementById('rich-link-backdrop').classList.add('open');
+  document.getElementById('rich-link-dialog').classList.add('open');
+  setTimeout(() => document.getElementById('rich-link-url').focus(), 30);
+}
+
+function richConfirmLink() {
+  let url = document.getElementById('rich-link-url').value.trim();
+  if (!url) { richCancelLink(); return; }
+  // Auto-prepend https:// if missing
+  if (!/^[a-z][a-z0-9+\-.]*:/i.test(url)) url = 'https://' + url;
+  const linkText = document.getElementById('rich-link-text').value.trim();
+  const { editorId, range, selectedText } = _richLinkState || {};
+  const editor = document.getElementById(editorId);
+  richCancelLink();
+  if (!editor) return;
+  editor.focus();
+  // Restore saved selection
+  if (range) {
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+  if (selectedText) {
+    // Wrap selected text in <a>
+    document.execCommand('createLink', false, url);
+    editor.querySelectorAll('a[href]').forEach(a => { a.target = '_blank'; a.rel = 'noopener'; });
+  } else {
+    // Insert new link node at cursor
+    const display = linkText || url;
+    document.execCommand('insertHTML', false,
+      `<a href="${url.replace(/"/g,'&quot;')}" target="_blank" rel="noopener">${display}</a>`);
+  }
+  // Sync back to data model
+  const m = editorId.match(/^rich-(\d+)-(\d+)-(\w+)$/);
+  if (m) setItemLang(+m[1], +m[2], 'label', m[3], editor.innerHTML);
+}
+
+function richCancelLink() {
+  document.getElementById('rich-link-dialog').classList.remove('open');
+  document.getElementById('rich-link-backdrop').classList.remove('open');
+  _richLinkState = null;
 }
 
 function setItemLang(si, ii, field, lang, val) {
@@ -1364,5 +1440,25 @@ function downloadQR() {
 
 checkAuth();
 </script>
+
+<!-- Link insert dialog -->
+<div class="rich-link-backdrop" id="rich-link-backdrop" onclick="richCancelLink()"></div>
+<div class="rich-link-dialog" id="rich-link-dialog">
+  <h4>Link invoegen</h4>
+  <div class="rich-link-field">
+    <label>URL</label>
+    <input id="rich-link-url" type="url" placeholder="https://…"
+      onkeydown="if(event.key==='Enter')richConfirmLink();if(event.key==='Escape')richCancelLink()">
+  </div>
+  <div class="rich-link-field" id="rich-link-text-row">
+    <label>Weergavetekst <span style="color:var(--light);font-weight:400">(optioneel)</span></label>
+    <input id="rich-link-text" placeholder="Laat leeg om de URL te tonen"
+      onkeydown="if(event.key==='Enter')richConfirmLink();if(event.key==='Escape')richCancelLink()">
+  </div>
+  <div class="rich-link-actions">
+    <button class="btn" style="font-size:13px" onclick="richCancelLink()">Annuleer</button>
+    <button class="btn btn-primary" style="font-size:13px" onclick="richConfirmLink()">Invoegen</button>
+  </div>
+</div>
 </body>
 </html>

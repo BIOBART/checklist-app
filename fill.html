@@ -1183,6 +1183,11 @@ function resizeImageForPdf(dataUrl, maxW=800, maxH=600) {
 function stripHtml(html) {
   if (!html) return '';
   return html
+    .replace(/<a\s[^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/gi, (_, href, text) => {
+      // Show as "text (url)" if text differs from url, else just url
+      const t = text.trim(), h = href.trim();
+      return t && t !== h ? `${t} (${h})` : h;
+    })
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/li>/gi, '\n')
     .replace(/<li[^>]*>/gi, '• ')
