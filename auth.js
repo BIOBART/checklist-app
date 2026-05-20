@@ -41,9 +41,10 @@ const AUTH = (() => {
     _user = session.user;
 
     // IMPORTANT: read role from user_profiles — never from user_metadata
+    // Join roles table to get label and is_admin flag
     const { data: prof, error } = await window.sb
       .from('user_profiles')
-      .select('*')
+      .select('*, roles(label, is_admin)')
       .eq('id', _user.id)
       .single();
 
@@ -60,7 +61,7 @@ const AUTH = (() => {
       return null;
     }
 
-    if (opts.requireAdmin && _profile.role !== 'admin') {
+    if (opts.requireAdmin && !_profile.roles?.is_admin) {
       location.href = 'index.html';
       return null;
     }
@@ -176,7 +177,7 @@ const AUTH = (() => {
     const initials = (_profile.full_name || _profile.email || '?')
       .split(/\s+/).map(w => w[0] || '').join('').toUpperCase().slice(0, 2);
 
-    const roleLabel = { admin: 'Admin', technician: 'Technieker', viewer: 'Viewer' }[_profile.role] || _profile.role;
+    const roleLabel = _profile.roles?.label || _profile.role || '?';
 
     el.innerHTML = `
       <div class="user-pill">
@@ -198,7 +199,7 @@ const AUTH = (() => {
   // Hide nav links that require admin for non-admin users
   function _applyNavVisibility() {
     if (!_profile) return;
-    if (_profile.role !== 'admin') {
+    if (!isAdmin()) {
       document.querySelectorAll('[data-admin-only]').forEach(el => {
         el.style.display = 'none';
       });
@@ -210,7 +211,7 @@ const AUTH = (() => {
     location.href = 'login.html';
   }
 
-  function isAdmin()   { return _profile?.role === 'admin'; }
+  function isAdmin()   { return _profile?.roles?.is_admin === true; }
   function getUserId() { return _user?.id || null; }
   function getEmail()  { return _user?.email || ''; }
 
