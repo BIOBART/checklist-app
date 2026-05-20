@@ -27,22 +27,7 @@ ALTER TABLE user_profiles ALTER COLUMN role SET DEFAULT 'technician';
 -- 4. Add must_change_password column (safe to run even if it already exists)
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS must_change_password boolean NOT NULL DEFAULT false;
 
--- 5. Enable RLS on roles and add policies
-ALTER TABLE public.roles ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "authenticated_can_read_roles" ON public.roles;
-CREATE POLICY "authenticated_can_read_roles"
-  ON public.roles FOR SELECT
-  USING (auth.role() = 'authenticated');
-
--- Write policy uses get_my_role() (no join on roles → no recursion risk)
-DROP POLICY IF EXISTS "admins_can_write_roles" ON public.roles;
-CREATE POLICY "admins_can_write_roles"
-  ON public.roles FOR ALL
-  USING (get_my_role() = 'admin' OR get_is_admin())
-  WITH CHECK (get_my_role() = 'admin' OR get_is_admin());
-
--- 6. get_is_admin() — checks the is_admin flag of the user's role
+-- 5. get_is_admin() FIRST — policies below depend on it
 --    SECURITY DEFINER bypasses RLS when joining roles, preventing recursion.
 CREATE OR REPLACE FUNCTION public.get_is_admin()
 RETURNS boolean LANGUAGE sql SECURITY DEFINER STABLE
@@ -58,6 +43,20 @@ AS $$
 $$;
 
 GRANT EXECUTE ON FUNCTION public.get_is_admin() TO authenticated, anon, supabase_auth_admin;
+
+-- 6. Enable RLS on roles and add policies (get_is_admin now exists)
+ALTER TABLE public.roles ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "authenticated_can_read_roles" ON public.roles;
+CREATE POLICY "authenticated_can_read_roles"
+  ON public.roles FOR SELECT
+  USING (auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "admins_can_write_roles" ON public.roles;
+CREATE POLICY "admins_can_write_roles"
+  ON public.roles FOR ALL
+  USING (get_my_role() = 'admin' OR get_is_admin())
+  WITH CHECK (get_my_role() = 'admin' OR get_is_admin());
 
 -- 7. Update all existing RLS policies to use get_is_admin()
 --    so that any role with is_admin = true has full access.
