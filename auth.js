@@ -39,6 +39,7 @@ const AUTH = (() => {
     }
 
     _user = session.user;
+    console.log('AUTH: session ok for', _user.email);
 
     // IMPORTANT: read role from user_profiles — never from user_metadata
     const { data: prof, error } = await window.sb
@@ -47,23 +48,33 @@ const AUTH = (() => {
       .eq('id', _user.id)
       .single();
 
+    console.log('AUTH: profile query →', prof ? 'ok' : 'null', error?.message || '');
+
     if (error || !prof) {
-      console.warn('AUTH: profile not found for', _user.email, error?.message || '');
+      console.error('AUTH: profile not found, signing out.', error?.message || '');
       await signOut();
       return null;
     }
 
     _profile = prof;
 
-    // Fetch role details separately (graceful fallback if roles table not yet migrated)
-    const { data: roleRow } = await window.sb
-      .from('roles')
-      .select('label, is_admin')
-      .eq('id', prof.role)
-      .maybeSingle();
+    // Fetch role details separately — graceful fallback if roles table not yet migrated
+    let roleRow = null;
+    try {
+      const { data, error: roleErr } = await window.sb
+        .from('roles')
+        .select('label, is_admin')
+        .eq('id', prof.role)
+        .maybeSingle();
+      if (roleErr) console.warn('AUTH: roles lookup failed (fallback active):', roleErr.message);
+      else roleRow = data;
+    } catch (e) {
+      console.warn('AUTH: roles fetch threw (fallback active):', e.message);
+    }
 
-    // If roles table missing or role not found, fall back to checking role === 'admin'
+    // Fall back to role === 'admin' if roles table not ready yet
     _profile.roles = roleRow || { label: prof.role, is_admin: prof.role === 'admin' };
+    console.log('AUTH: role =', prof.role, '| is_admin =', _profile.roles.is_admin);
 
     if (!_profile.is_active) {
       await signOut();
