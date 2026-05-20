@@ -39,7 +39,16 @@ body {
   justify-content:center;
   margin-bottom:2rem;
 }
-.logo-block img { height:40px; }
+.logo-block img { height:40px; max-width:200px; object-fit:contain; }
+.logo-block .logo-text {
+  font-family:'DM Serif Display',serif;
+  font-size:22px;
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.logo-dot { width:9px; height:9px; border-radius:50%; background:var(--accent); display:inline-block; }
 
 .card {
   background:var(--surface);
@@ -150,8 +159,8 @@ body {
 <body>
 
 <div class="login-wrap">
-  <div class="logo-block">
-    <img src="assets/logo.png" alt="Biolectric">
+  <div class="logo-block" id="login-logo-block">
+    <!-- filled by branding.js -->
   </div>
 
   <div class="card">
@@ -264,6 +273,24 @@ function showLogin() {
   document.getElementById('login-panel').classList.remove('hide');
 }
 function showError(el, msg) { el.textContent = msg; el.classList.add('show'); }
+
+// Render logo block from branding (no hardcoded image path)
+(function () {
+  var b = getBranding();
+  var block = document.getElementById('login-logo-block');
+  if (!block) return;
+  if (b.logo) {
+    var img = document.createElement('img');
+    img.src = b.logo;
+    img.alt = b.companyName || 'Logo';
+    block.appendChild(img);
+  } else {
+    var div = document.createElement('div');
+    div.className = 'logo-text';
+    div.innerHTML = '<span class="logo-dot"></span>' + (b.companyName || 'Checklist App');
+    block.appendChild(div);
+  }
+})();
 </script>
 </body>
 </html>
