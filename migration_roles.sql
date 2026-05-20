@@ -27,6 +27,14 @@ ALTER TABLE user_profiles ALTER COLUMN role SET DEFAULT 'technician';
 -- 4. Add must_change_password column (safe to run even if it already exists)
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS must_change_password boolean NOT NULL DEFAULT false;
 
+-- 4b. Add foreign key from user_profiles.role → roles.id
+--     (allows PostgREST relationship queries; safe if FK already exists)
+DO $$ BEGIN
+  ALTER TABLE user_profiles
+    ADD CONSTRAINT fk_user_profiles_role FOREIGN KEY (role) REFERENCES public.roles(id) ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
 -- 5. get_is_admin() FIRST — policies below depend on it
 --    SECURITY DEFINER bypasses RLS when joining roles, preventing recursion.
 CREATE OR REPLACE FUNCTION public.get_is_admin()

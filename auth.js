@@ -41,10 +41,9 @@ const AUTH = (() => {
     _user = session.user;
 
     // IMPORTANT: read role from user_profiles — never from user_metadata
-    // Join roles table to get label and is_admin flag
     const { data: prof, error } = await window.sb
       .from('user_profiles')
-      .select('*, roles(label, is_admin)')
+      .select('*')
       .eq('id', _user.id)
       .single();
 
@@ -55,6 +54,16 @@ const AUTH = (() => {
     }
 
     _profile = prof;
+
+    // Fetch role details separately (graceful fallback if roles table not yet migrated)
+    const { data: roleRow } = await window.sb
+      .from('roles')
+      .select('label, is_admin')
+      .eq('id', prof.role)
+      .maybeSingle();
+
+    // If roles table missing or role not found, fall back to checking role === 'admin'
+    _profile.roles = roleRow || { label: prof.role, is_admin: prof.role === 'admin' };
 
     if (!_profile.is_active) {
       await signOut();
