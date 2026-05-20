@@ -17,13 +17,12 @@ const AUTH = (() => {
 
   let _user    = null;
   let _profile = null;
+  let _pwResolve = null;
 
   /**
    * Call on every protected page, awaiting the result.
-   *
    * opts.requireAuth  = true  (default) → redirect to login.html if no session
    * opts.requireAdmin = false (default) → redirect to index.html if not admin
-   *
    * Returns the profile object on success, null when redirecting away.
    */
   async function init(opts) {
@@ -42,7 +41,6 @@ const AUTH = (() => {
     _user = session.user;
 
     // IMPORTANT: read role from user_profiles — never from user_metadata
-    // user_metadata is writable by the user; user_profiles is protected by RLS
     const { data: prof, error } = await window.sb
       .from('user_profiles')
       .select('*')
@@ -50,7 +48,6 @@ const AUTH = (() => {
       .single();
 
     if (error || !prof) {
-      // No profile row → account not fully set up or deleted
       console.warn('AUTH: profile not found for', _user.email, error?.message || '');
       await signOut();
       return null;
@@ -59,7 +56,6 @@ const AUTH = (() => {
     _profile = prof;
 
     if (!_profile.is_active) {
-      // Account deactivated by admin
       await signOut();
       return null;
     }
@@ -69,21 +65,116 @@ const AUTH = (() => {
       return null;
     }
 
+    // Force password change on first login
+    if (_profile.must_change_password) {
+      await _showPasswordChangeOverlay();
+    }
+
     _renderPill();
+    _applyNavVisibility();
     return _profile;
   }
 
-  /** Render the user-pill widget into #user-pill (if it exists on the page) */
+  // ── Forced password change overlay ────────────────────────────────
+  function _showPasswordChangeOverlay() {
+    return new Promise(resolve => {
+      _pwResolve = resolve;
+
+      // Inject scoped CSS once
+      if (!document.getElementById('auth-pw-style')) {
+        const s = document.createElement('style');
+        s.id = 'auth-pw-style';
+        s.textContent = `
+          #auth-pw-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:10000;display:flex;align-items:center;justify-content:center;padding:1rem}
+          #auth-pw-card{background:#fff;border-radius:16px;padding:2rem;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+          #auth-pw-card h2{font-family:'DM Serif Display',serif;font-size:22px;margin-bottom:6px}
+          #auth-pw-card .sub{font-size:13px;color:#7A7168;margin-bottom:1.5rem;line-height:1.6}
+          .auth-pw-field{margin-bottom:1rem}
+          .auth-pw-field label{display:block;font-size:12px;font-weight:500;color:#7A7168;margin-bottom:4px}
+          .auth-pw-field input{width:100%;padding:10px 12px;border:1.5px solid #E0DDD5;border-radius:10px;font-family:inherit;font-size:14px;outline:none;background:#F6F4EF;color:#1A1714;box-sizing:border-box;transition:border-color 0.15s}
+          .auth-pw-field input:focus{border-color:var(--accent,#2D5A3D);background:#fff}
+          #auth-pw-error{font-size:13px;color:#C0392B;margin-bottom:12px;padding:8px 12px;background:#FDECEA;border-radius:8px;display:none}
+          #auth-pw-strength{font-size:12px;margin-top:4px;height:14px}
+          #auth-pw-btn{width:100%;padding:11px;background:var(--accent,#2D5A3D);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:15px;font-weight:500;cursor:pointer;margin-top:4px;transition:opacity 0.15s}
+          #auth-pw-btn:hover{opacity:0.88}
+          #auth-pw-btn:disabled{opacity:0.55;cursor:not-allowed}
+        `;
+        document.head.appendChild(s);
+      }
+
+      const overlay = document.createElement('div');
+      overlay.id = 'auth-pw-overlay';
+      overlay.innerHTML = `
+        <div id="auth-pw-card">
+          <h2>Wachtwoord instellen</h2>
+          <p class="sub">Je logt voor het eerst in. Stel een persoonlijk wachtwoord in om verder te gaan.</p>
+          <div id="auth-pw-error"></div>
+          <div class="auth-pw-field">
+            <label>Nieuw wachtwoord</label>
+            <input type="password" id="auth-pw-new" placeholder="Minimum 8 tekens" autocomplete="new-password">
+            <div id="auth-pw-strength"></div>
+          </div>
+          <div class="auth-pw-field">
+            <label>Wachtwoord bevestigen</label>
+            <input type="password" id="auth-pw-confirm" placeholder="Herhaal wachtwoord" autocomplete="new-password">
+          </div>
+          <button id="auth-pw-btn">Wachtwoord opslaan</button>
+        </div>`;
+      document.body.appendChild(overlay);
+
+      // Password strength indicator
+      document.getElementById('auth-pw-new').addEventListener('input', function () {
+        const v = this.value;
+        const el = document.getElementById('auth-pw-strength');
+        if (!v) { el.textContent = ''; return; }
+        if (v.length < 8) { el.style.color = '#C0392B'; el.textContent = 'Te kort (min. 8 tekens)'; }
+        else if (v.length < 12) { el.style.color = '#D4860A'; el.textContent = 'Matig wachtwoord'; }
+        else { el.style.color = '#2D5A3D'; el.textContent = 'Sterk wachtwoord ✓'; }
+      });
+
+      async function doSave() {
+        const newPw    = document.getElementById('auth-pw-new').value;
+        const confirm  = document.getElementById('auth-pw-confirm').value;
+        const errEl    = document.getElementById('auth-pw-error');
+        const btn      = document.getElementById('auth-pw-btn');
+
+        errEl.style.display = 'none';
+        if (newPw.length < 8)    { errEl.textContent = 'Minimum 8 tekens vereist.'; errEl.style.display = 'block'; return; }
+        if (newPw !== confirm)    { errEl.textContent = 'Wachtwoorden komen niet overeen.'; errEl.style.display = 'block'; return; }
+
+        btn.disabled = true; btn.textContent = 'Opslaan…';
+
+        const { error } = await window.sb.auth.updateUser({ password: newPw });
+        if (error) {
+          btn.disabled = false; btn.textContent = 'Wachtwoord opslaan';
+          errEl.textContent = error.message; errEl.style.display = 'block';
+          return;
+        }
+
+        // Clear the flag in the profile
+        await window.sb.from('user_profiles')
+          .update({ must_change_password: false })
+          .eq('id', _user.id);
+        _profile.must_change_password = false;
+
+        overlay.remove();
+        if (_pwResolve) { _pwResolve(); _pwResolve = null; }
+      }
+
+      document.getElementById('auth-pw-btn').addEventListener('click', doSave);
+      overlay.querySelectorAll('input').forEach(inp => {
+        inp.addEventListener('keydown', e => { if (e.key === 'Enter') doSave(); });
+      });
+    });
+  }
+
+  // ── User pill ────────────────────────────────────────────────────
   function _renderPill() {
     const el = document.getElementById('user-pill');
     if (!el || !_profile) return;
 
     const initials = (_profile.full_name || _profile.email || '?')
-      .split(/\s+/)
-      .map(w => w[0] || '')
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+      .split(/\s+/).map(w => w[0] || '').join('').toUpperCase().slice(0, 2);
 
     const roleLabel = { admin: 'Admin', technician: 'Technieker', viewer: 'Viewer' }[_profile.role] || _profile.role;
 
@@ -104,6 +195,16 @@ const AUTH = (() => {
       </div>`;
   }
 
+  // Hide nav links that require admin for non-admin users
+  function _applyNavVisibility() {
+    if (!_profile) return;
+    if (_profile.role !== 'admin') {
+      document.querySelectorAll('[data-admin-only]').forEach(el => {
+        el.style.display = 'none';
+      });
+    }
+  }
+
   async function signOut() {
     await window.sb.auth.signOut();
     location.href = 'login.html';
@@ -113,22 +214,15 @@ const AUTH = (() => {
   function getUserId() { return _user?.id || null; }
   function getEmail()  { return _user?.email || ''; }
 
-  // Tiny HTML escaper for user-supplied strings in the pill
   function _esc(s) {
     return String(s || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   return {
-    init,
-    signOut,
-    isAdmin,
-    getUserId,
-    getEmail,
-    _renderPill,
+    init, signOut, isAdmin, getUserId, getEmail,
+    _renderPill, _applyNavVisibility,
     get profile() { return _profile; },
     get user()    { return _user; },
   };

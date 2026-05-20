@@ -17,6 +17,7 @@
   --border:#E0DDD5; --border-strong:#C5C0B5;
   --text:#1A1714; --muted:#7A7168; --light:#B0A898;
   --accent:#2D5A3D; --accent-bg:#E8F0EB; --accent-mid:#4A8A5E;
+  --danger:#C0392B; --danger-bg:#FDECEA;
   --radius:10px; --radius-lg:16px;
   --shadow:0 1px 3px rgba(0,0,0,0.05),0 4px 14px rgba(0,0,0,0.04);
 }
@@ -40,6 +41,10 @@ nav { display:flex; gap:6px; align-items:center; }
 .settings-card-title { font-weight:600; font-size:15px; margin-bottom:4px; display:flex; align-items:center; gap:8px; }
 .settings-card-title svg { width:16px; height:16px; color:var(--accent); }
 .settings-card-desc { font-size:13px; color:var(--muted); margin-bottom:1.25rem; line-height:1.6; }
+
+/* Admin section label */
+.admin-section-label { font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); padding:0.25rem 0; margin-top:0.5rem; margin-bottom:-0.25rem; display:flex; align-items:center; gap:6px; }
+.admin-section-label svg { width:12px; height:12px; }
 
 /* Language picker */
 .lang-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
@@ -66,6 +71,8 @@ nav { display:flex; gap:6px; align-items:center; }
 
 .toast { position:fixed; bottom:2rem; left:50%; transform:translateX(-50%) translateY(10px); background:var(--text); color:white; padding:10px 18px; border-radius:var(--radius); font-size:13px; opacity:0; transition:all 0.25s; pointer-events:none; white-space:nowrap; z-index:9999; }
 .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+.toast.success { background:var(--accent); }
+.toast.error { background:var(--danger); }
 
 /* USER PILL */
 .user-pill { display:flex; align-items:center; gap:8px; }
@@ -74,6 +81,41 @@ nav { display:flex; gap:6px; align-items:center; }
 .user-role-badge { font-size:10px; background:var(--accent-bg); color:var(--accent); padding:2px 7px; border-radius:99px; font-weight:600; white-space:nowrap; }
 .user-logout { background:none; border:none; cursor:pointer; color:var(--muted); display:flex; align-items:center; padding:4px; border-radius:6px; transition:color 0.15s; }
 .user-logout:hover { color:var(--danger); }
+
+/* Role legend table */
+.role-table { width:100%; border-collapse:collapse; font-size:13px; }
+.role-table th { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; padding:6px 10px; text-align:left; border-bottom:1px solid var(--border); }
+.role-table td { padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:middle; }
+.role-table tr:last-child td { border-bottom:none; }
+.role-check { color:var(--accent); font-size:15px; }
+.role-cross { color:var(--light); font-size:15px; }
+.role-badge { display:inline-block; padding:2px 9px; border-radius:99px; font-size:11px; font-weight:600; }
+.role-badge.admin { background:var(--accent-bg); color:var(--accent); }
+.role-badge.tech { background:var(--surface2); color:var(--muted); }
+
+/* Buttons */
+.btn { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:var(--radius); font-size:13px; font-family:'DM Sans',sans-serif; font-weight:500; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--text); transition:all 0.15s; white-space:nowrap; }
+.btn:hover { background:var(--surface2); }
+.btn-primary { background:var(--accent); color:white; border-color:var(--accent); }
+.btn-primary:hover { opacity:.88; }
+.btn-danger { color:var(--danger); border-color:var(--danger); }
+.btn-danger:hover { background:var(--danger-bg); }
+.btn svg { width:14px; height:14px; }
+.btn:disabled { opacity:.5; cursor:not-allowed; }
+
+/* Users list */
+.user-row { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:1rem 1.25rem; display:flex; align-items:center; gap:14px; margin-bottom:8px; box-shadow:var(--shadow); }
+
+/* Modal */
+.overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:200; align-items:center; justify-content:center; padding:1rem; }
+.overlay.open { display:flex; }
+.modal { background:var(--surface); border-radius:var(--radius-lg); padding:1.5rem; width:100%; max-width:440px; box-shadow:0 20px 60px rgba(0,0,0,0.2); }
+.modal h2 { font-family:'DM Serif Display',serif; font-size:20px; margin-bottom:1rem; }
+.modal-field { margin-bottom:1rem; }
+.modal-label { font-size:12px; color:var(--muted); margin-bottom:4px; font-weight:500; display:block; }
+.modal-input { width:100%; font-family:'DM Sans',sans-serif; font-size:14px; padding:9px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); color:var(--text); outline:none; }
+.modal-input:focus { border-color:var(--accent); background:var(--surface); }
+.modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:1.25rem; }
 </style>
 </head>
 <body>
@@ -88,7 +130,7 @@ nav { display:flex; gap:6px; align-items:center; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       Home
     </a>
-    <a href="admin.html" class="nav-link">
+    <a href="admin.html" class="nav-link" data-admin-only>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
       Admin
     </a>
@@ -108,7 +150,7 @@ nav { display:flex; gap:6px; align-items:center; }
 
   <div class="settings-group">
 
-    <!-- TAAL / LANGUAGE -->
+    <!-- TAAL / LANGUAGE — visible to all -->
     <div class="settings-card">
       <div class="settings-card-title">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
@@ -145,109 +187,257 @@ nav { display:flex; gap:6px; align-items:center; }
       </div>
     </div>
 
-    <!-- HUISSTIJL & BRANDING -->
-    <div class="settings-card">
-      <div class="settings-card-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/>
-          <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/>
-          <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
-        </svg>
-        <span id="card-brand-title">Huisstijl &amp; Branding</span>
-      </div>
-      <div class="settings-card-desc" id="card-brand-desc">
-        Pas het logo, browsericoon en primaire kleur aan. Van toepassing op het platform, PDF's, Word-exports en QR-codes.
-      </div>
+  </div><!-- /settings-group general -->
 
-      <div style="display:flex;flex-direction:column;gap:1.25rem">
+  <!-- ADMIN-ONLY SECTION — hidden until AUTH confirms admin role -->
+  <div id="admin-settings" style="display:none">
 
-        <!-- Company name -->
-        <div>
-          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px" id="lbl-company">Bedrijfsnaam</label>
-          <input type="text" id="brand-name"
-            style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:14px;font-family:inherit;background:var(--bg);color:var(--text);outline:none;transition:border-color 0.15s"
-            placeholder="bv. Biolectric"
-            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+    <div class="admin-section-label">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Beheerdersinstellingen
+    </div>
+
+    <div class="settings-group" style="margin-top:.75rem">
+
+      <!-- GEBRUIKERSBEHEER -->
+      <div class="settings-card">
+        <div class="settings-card-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Gebruikersbeheer
+        </div>
+        <div class="settings-card-desc">
+          Beheer wie toegang heeft tot de app. Voeg nieuwe gebruikers toe, wijzig hun rol of deactiveer accounts.
         </div>
 
-        <!-- Accent color -->
-        <div>
-          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px" id="lbl-color">Primaire kleur</label>
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <input type="color" id="brand-color" value="#2D5A3D"
-              style="width:52px;height:38px;border:1.5px solid var(--border);border-radius:var(--radius);cursor:pointer;padding:3px;background:var(--bg)"
-              oninput="previewBrandColor()">
-            <span id="brand-color-hex" style="font-size:13px;color:var(--muted);font-family:monospace;min-width:64px">#2D5A3D</span>
-            <div style="display:flex;gap:5px;align-items:center">
-              <div id="bcp-main" style="width:32px;height:22px;border-radius:5px;background:#2D5A3D;border:1px solid rgba(0,0,0,0.1)"></div>
-              <div id="bcp-mid"  style="width:32px;height:22px;border-radius:5px;background:#4A8A5E;border:1px solid rgba(0,0,0,0.1)"></div>
-              <div id="bcp-bg"   style="width:32px;height:22px;border-radius:5px;background:#E8F0EB;border:1px solid rgba(0,0,0,0.1)"></div>
+        <!-- Search + invite button -->
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:1rem">
+          <input id="users-search" type="search" placeholder="Zoeken op naam of e-mail…"
+            style="flex:1;min-width:180px;font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);outline:none"
+            oninput="filterUsers(this.value)">
+          <button class="btn btn-primary" onclick="openInviteModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Gebruiker uitnodigen
+          </button>
+        </div>
+
+        <div id="users-list">
+          <div style="color:var(--muted);font-size:14px;padding:1.5rem;text-align:center">Laden…</div>
+        </div>
+      </div>
+
+      <!-- ROL DEFINITIES -->
+      <div class="settings-card">
+        <div class="settings-card-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/><path d="M16 11l2 2 4-4"/></svg>
+          Roldefinities
+        </div>
+        <div class="settings-card-desc">
+          Overzicht van de beschikbare rollen en hun rechten binnen de applicatie.
+        </div>
+
+        <table class="role-table">
+          <thead>
+            <tr>
+              <th>Recht / Functie</th>
+              <th><span class="role-badge admin">Admin</span></th>
+              <th><span class="role-badge tech">Technieker</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Eigen checklists invullen</td>
+              <td><span class="role-check">✓</span></td>
+              <td><span class="role-check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Eigen ingevulde checklists bekijken</td>
+              <td><span class="role-check">✓</span></td>
+              <td><span class="role-check">✓</span></td>
+            </tr>
+            <tr>
+              <td>Alle ingevulde checklists bekijken</td>
+              <td><span class="role-check">✓</span></td>
+              <td><span class="role-cross">—</span></td>
+            </tr>
+            <tr>
+              <td>Templates aanmaken &amp; beheren</td>
+              <td><span class="role-check">✓</span></td>
+              <td><span class="role-cross">—</span></td>
+            </tr>
+            <tr>
+              <td>Gebruikers uitnodigen &amp; beheren</td>
+              <td><span class="role-check">✓</span></td>
+              <td><span class="role-cross">—</span></td>
+            </tr>
+            <tr>
+              <td>Huisstijl &amp; branding aanpassen</td>
+              <td><span class="role-check">✓</span></td>
+              <td><span class="role-cross">—</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- HUISSTIJL & BRANDING -->
+      <div class="settings-card">
+        <div class="settings-card-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/>
+            <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/>
+            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
+          </svg>
+          <span id="card-brand-title">Huisstijl &amp; Branding</span>
+        </div>
+        <div class="settings-card-desc" id="card-brand-desc">
+          Pas het logo, browsericoon en primaire kleur aan. Van toepassing op het platform, PDF's, Word-exports en QR-codes.
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:1.25rem">
+
+          <!-- Company name -->
+          <div>
+            <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px" id="lbl-company">Bedrijfsnaam</label>
+            <input type="text" id="brand-name"
+              style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:14px;font-family:inherit;background:var(--bg);color:var(--text);outline:none;transition:border-color 0.15s"
+              placeholder="bv. Biolectric"
+              onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+          </div>
+
+          <!-- Accent color -->
+          <div>
+            <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px" id="lbl-color">Primaire kleur</label>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <input type="color" id="brand-color" value="#2D5A3D"
+                style="width:52px;height:38px;border:1.5px solid var(--border);border-radius:var(--radius);cursor:pointer;padding:3px;background:var(--bg)"
+                oninput="previewBrandColor()">
+              <span id="brand-color-hex" style="font-size:13px;color:var(--muted);font-family:monospace;min-width:64px">#2D5A3D</span>
+              <div style="display:flex;gap:5px;align-items:center">
+                <div id="bcp-main" style="width:32px;height:22px;border-radius:5px;background:#2D5A3D;border:1px solid rgba(0,0,0,0.1)"></div>
+                <div id="bcp-mid"  style="width:32px;height:22px;border-radius:5px;background:#4A8A5E;border:1px solid rgba(0,0,0,0.1)"></div>
+                <div id="bcp-bg"   style="width:32px;height:22px;border-radius:5px;background:#E8F0EB;border:1px solid rgba(0,0,0,0.1)"></div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Logo upload -->
-        <div>
-          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px" id="lbl-logo">
-            Logo <span style="font-weight:400;color:var(--muted)">(paginaheader &amp; PDF)</span>
-          </label>
-          <div id="logo-preview-wrap" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px 14px;display:flex;align-items:center;gap:12px;min-height:58px">
-            <img id="logo-preview" src="" alt="Logo preview" style="max-height:40px;max-width:180px;object-fit:contain;display:none;border-radius:3px">
-            <span id="logo-placeholder" style="font-size:13px;color:var(--light)">Geen logo ingesteld</span>
+          <!-- Logo upload -->
+          <div>
+            <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px" id="lbl-logo">
+              Logo <span style="font-weight:400;color:var(--muted)">(paginaheader &amp; PDF)</span>
+            </label>
+            <div id="logo-preview-wrap" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px 14px;display:flex;align-items:center;gap:12px;min-height:58px">
+              <img id="logo-preview" src="" alt="Logo preview" style="max-height:40px;max-width:180px;object-fit:contain;display:none;border-radius:3px">
+              <span id="logo-placeholder" style="font-size:13px;color:var(--light)">Geen logo ingesteld</span>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+              <input type="file" id="logo-file-input" accept="image/*" style="display:none" onchange="handleLogoUpload(this)">
+              <button style="padding:7px 14px;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--surface);cursor:pointer;font-size:13px;font-family:inherit;transition:all 0.15s"
+                onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'"
+                onclick="document.getElementById('logo-file-input').click()" id="btn-logo-upload">Logo uploaden</button>
+              <button id="logo-clear-btn" onclick="clearLogo()" style="padding:7px 14px;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--surface);cursor:pointer;font-size:13px;font-family:inherit;color:var(--muted);display:none;transition:all 0.15s"
+                onmouseover="this.style.color='#C0392B';this.style.borderColor='#C0392B'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'"
+                id="btn-logo-remove">Verwijderen</button>
+            </div>
           </div>
-          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-            <input type="file" id="logo-file-input" accept="image/*" style="display:none" onchange="handleLogoUpload(this)">
-            <button style="padding:7px 14px;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--surface);cursor:pointer;font-size:13px;font-family:inherit;transition:all 0.15s"
-              onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'"
-              onclick="document.getElementById('logo-file-input').click()" id="btn-logo-upload">Logo uploaden</button>
-            <button id="logo-clear-btn" onclick="clearLogo()" style="padding:7px 14px;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--surface);cursor:pointer;font-size:13px;font-family:inherit;color:var(--muted);display:none;transition:all 0.15s"
-              onmouseover="this.style.color='#C0392B';this.style.borderColor='#C0392B'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'"
-              id="btn-logo-remove">Verwijderen</button>
-          </div>
-        </div>
 
-        <!-- Favicon upload -->
-        <div>
-          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px" id="lbl-favicon">
-            Favicon <span style="font-weight:400;color:var(--muted)">(browsericoon, PNG of ICO)</span>
-          </label>
-          <div id="favicon-preview-wrap" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px 14px;display:flex;align-items:center;gap:12px;min-height:58px">
-            <img id="favicon-preview" src="" alt="Favicon preview" style="width:32px;height:32px;object-fit:contain;display:none;border-radius:4px">
-            <span id="favicon-placeholder" style="font-size:13px;color:var(--light)">Standaard favicon</span>
+          <!-- Favicon upload -->
+          <div>
+            <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px" id="lbl-favicon">
+              Favicon <span style="font-weight:400;color:var(--muted)">(browsericoon, PNG of ICO)</span>
+            </label>
+            <div id="favicon-preview-wrap" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px 14px;display:flex;align-items:center;gap:12px;min-height:58px">
+              <img id="favicon-preview" src="" alt="Favicon preview" style="width:32px;height:32px;object-fit:contain;display:none;border-radius:4px">
+              <span id="favicon-placeholder" style="font-size:13px;color:var(--light)">Standaard favicon</span>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+              <input type="file" id="favicon-file-input" accept="image/png,image/x-icon,image/vnd.microsoft.icon,image/svg+xml" style="display:none" onchange="handleFaviconUpload(this)">
+              <button style="padding:7px 14px;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--surface);cursor:pointer;font-size:13px;font-family:inherit;transition:all 0.15s"
+                onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'"
+                onclick="document.getElementById('favicon-file-input').click()" id="btn-fav-upload">Favicon uploaden</button>
+              <button id="favicon-clear-btn" onclick="clearFavicon()" style="padding:7px 14px;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--surface);cursor:pointer;font-size:13px;font-family:inherit;color:var(--muted);display:none;transition:all 0.15s"
+                onmouseover="this.style.color='#C0392B';this.style.borderColor='#C0392B'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">Verwijderen</button>
+            </div>
           </div>
-          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-            <input type="file" id="favicon-file-input" accept="image/png,image/x-icon,image/vnd.microsoft.icon,image/svg+xml" style="display:none" onchange="handleFaviconUpload(this)">
-            <button style="padding:7px 14px;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--surface);cursor:pointer;font-size:13px;font-family:inherit;transition:all 0.15s"
-              onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'"
-              onclick="document.getElementById('favicon-file-input').click()" id="btn-fav-upload">Favicon uploaden</button>
-            <button id="favicon-clear-btn" onclick="clearFavicon()" style="padding:7px 14px;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--surface);cursor:pointer;font-size:13px;font-family:inherit;color:var(--muted);display:none;transition:all 0.15s"
-              onmouseover="this.style.color='#C0392B';this.style.borderColor='#C0392B'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">Verwijderen</button>
+
+          <!-- Save / Reset -->
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-top:4px">
+            <button onclick="saveBrandingSettings()"
+              style="padding:9px 20px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:opacity 0.15s"
+              onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'" id="btn-brand-save">Opslaan</button>
+            <button onclick="resetBrandingSettings()"
+              style="padding:9px 16px;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:13px;font-family:inherit;cursor:pointer;color:var(--muted);transition:all 0.15s"
+              onmouseover="this.style.borderColor='var(--border-strong)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'" id="btn-brand-reset">Standaard herstellen</button>
           </div>
-        </div>
+          <div class="save-indicator" id="brand-save-indicator">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            <span id="brand-save-text">Opgeslagen</span>
+          </div>
 
-        <!-- Save / Reset -->
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-top:4px">
-          <button onclick="saveBrandingSettings()"
-            style="padding:9px 20px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:opacity 0.15s"
-            onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'" id="btn-brand-save">Opslaan</button>
-          <button onclick="resetBrandingSettings()"
-            style="padding:9px 16px;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:13px;font-family:inherit;cursor:pointer;color:var(--muted);transition:all 0.15s"
-            onmouseover="this.style.borderColor='var(--border-strong)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'" id="btn-brand-reset">Standaard herstellen</button>
         </div>
-        <div class="save-indicator" id="brand-save-indicator">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-          <span id="brand-save-text">Opgeslagen</span>
-        </div>
+      </div>
 
+    </div><!-- /settings-group admin -->
+  </div><!-- /admin-settings -->
+
+</div><!-- /container -->
+
+<!-- Invite modal -->
+<div class="overlay" id="invite-overlay">
+  <div class="modal" style="max-width:480px">
+    <h2>Gebruiker toevoegen</h2>
+
+    <!-- Step 1: form -->
+    <div id="invite-form-wrap">
+      <div class="modal-field">
+        <label class="modal-label">E-mailadres *</label>
+        <input class="modal-input" id="invite-email" type="email" placeholder="naam@bedrijf.com">
+      </div>
+      <div class="modal-field">
+        <label class="modal-label">Volledige naam</label>
+        <input class="modal-input" id="invite-name" type="text" placeholder="Voornaam Achternaam">
+      </div>
+      <div class="modal-field">
+        <label class="modal-label">Rol</label>
+        <select class="modal-input" id="invite-role">
+          <option value="technician">Technieker — enkel eigen checklists</option>
+          <option value="admin">Admin — alle checklists + gebruikersbeheer</option>
+        </select>
+      </div>
+      <div id="invite-error" style="font-size:13px;color:var(--danger);margin-bottom:8px;display:none"></div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeInviteModal()">Annuleer</button>
+        <button class="btn btn-primary" id="invite-send-btn" onclick="sendInvite()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Account aanmaken
+        </button>
       </div>
     </div>
 
+    <!-- Step 2: temp password display -->
+    <div id="invite-result-wrap" style="display:none">
+      <div style="background:var(--accent-bg);border:1px solid var(--accent-mid);border-radius:var(--radius);padding:1rem;margin-bottom:1rem">
+        <div style="font-size:13px;font-weight:600;color:var(--accent);margin-bottom:6px">✓ Account aangemaakt</div>
+        <div style="font-size:13px;color:var(--text);margin-bottom:8px">
+          Deel het tijdelijke wachtwoord met de gebruiker. Bij de eerste inlog wordt gevraagd om een nieuw wachtwoord in te stellen.
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:500">Tijdelijk wachtwoord</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <code id="invite-temp-pw" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:14px;letter-spacing:0.08em;font-family:monospace;word-break:break-all"></code>
+          <button class="btn" onclick="copyTempPw()" style="flex-shrink:0" title="Kopieer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="modal-actions" style="justify-content:flex-end">
+        <button class="btn btn-primary" onclick="closeInviteModal()">Sluiten</button>
+      </div>
+    </div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
+const sb = window.sb;
 const PLATFORM_LANG_KEY = 'platformLang';
 
 const SETTINGS_TR = {
@@ -353,7 +543,6 @@ function setLang(lang) {
   localStorage.setItem(PLATFORM_LANG_KEY, lang);
   highlightActive();
   applyTranslations();
-  // Show saved indicator
   const ind = document.getElementById('save-indicator');
   ind.classList.add('show');
   setTimeout(() => ind.classList.remove('show'), 2000);
@@ -372,14 +561,12 @@ function loadBrandingForm() {
   document.getElementById('bcp-mid').style.background  = lightenHex(hex, 0.25);
   document.getElementById('bcp-bg').style.background   = lightenHex(hex, 0.85);
 
-  // Logo
   const hasLogo = !!_brandData.logo;
   document.getElementById('logo-preview').src          = _brandData.logo || '';
   document.getElementById('logo-preview').style.display     = hasLogo ? '' : 'none';
   document.getElementById('logo-placeholder').style.display = hasLogo ? 'none' : '';
   document.getElementById('logo-clear-btn').style.display   = hasLogo ? '' : 'none';
 
-  // Favicon
   const hasFav = !!_brandData.favicon;
   document.getElementById('favicon-preview').src          = _brandData.favicon || '';
   document.getElementById('favicon-preview').style.display     = hasFav ? '' : 'none';
@@ -393,7 +580,6 @@ function previewBrandColor() {
   document.getElementById('bcp-main').style.background = hex;
   document.getElementById('bcp-mid').style.background  = lightenHex(hex, 0.25);
   document.getElementById('bcp-bg').style.background   = lightenHex(hex, 0.85);
-  // Live preview CSS vars
   document.documentElement.style.setProperty('--accent', hex);
   document.documentElement.style.setProperty('--accent-mid', lightenHex(hex, 0.25));
   document.documentElement.style.setProperty('--accent-bg', lightenHex(hex, 0.85));
@@ -401,8 +587,7 @@ function previewBrandColor() {
 }
 
 function handleLogoUpload(input) {
-  const file = input.files[0];
-  if (!file) return;
+  const file = input.files[0]; if (!file) return;
   const reader = new FileReader();
   reader.onload = e => {
     _brandData.logo = e.target.result;
@@ -424,8 +609,7 @@ function clearLogo() {
 }
 
 function handleFaviconUpload(input) {
-  const file = input.files[0];
-  if (!file) return;
+  const file = input.files[0]; if (!file) return;
   const reader = new FileReader();
   reader.onload = e => {
     _brandData.favicon = e.target.result;
@@ -463,11 +647,198 @@ function resetBrandingSettings() {
   applyBranding();
 }
 
+// ── User management ────────────────────────────────────────────────
+let _allUsers = [];
+
+async function loadUsers() {
+  const el = document.getElementById('users-list');
+  el.innerHTML = '<div style="color:var(--muted);font-size:14px;padding:1.5rem;text-align:center">Laden…</div>';
+  const { data, error } = await sb.from('user_profiles').select('*').order('created_at');
+  if (error) {
+    el.innerHTML = `<div style="color:var(--danger);font-size:14px;padding:1.5rem;text-align:center">Fout: ${esc(error.message)}</div>`;
+    return;
+  }
+  _allUsers = data || [];
+  renderUsers(_allUsers);
+}
+
+function filterUsers(query) {
+  const q = (query || '').toLowerCase();
+  if (!q) { renderUsers(_allUsers); return; }
+  renderUsers(_allUsers.filter(u =>
+    (u.full_name || '').toLowerCase().includes(q) ||
+    (u.email || '').toLowerCase().includes(q)
+  ));
+}
+
+function renderUsers(users) {
+  const el = document.getElementById('users-list');
+  const currentUserId = AUTH.getUserId();
+  if (!users.length) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:14px;padding:1.5rem;text-align:center">Geen gebruikers gevonden.</div>`;
+    return;
+  }
+  el.innerHTML = users.map(u => {
+    const initials = (u.full_name || u.email || '?').split(/\s+/).map(w=>w[0]||'').join('').toUpperCase().slice(0,2);
+    const isSelf   = u.id === currentUserId;
+    const isActive = u.is_active !== false;
+    return `
+    <div class="user-row" style="opacity:${isActive?1:0.65}">
+      <div style="width:36px;height:36px;border-radius:50%;background:${isActive?'var(--accent-bg)':'var(--surface2)'};color:${isActive?'var(--accent)':'var(--muted)'};display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0">
+        ${esc(initials)}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:500;font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          ${esc(u.full_name || '—')}
+          ${isSelf ? '<span style="font-size:10px;background:var(--surface2);color:var(--muted);padding:1px 7px;border-radius:99px;font-weight:500">jij</span>' : ''}
+          ${!isActive ? '<span style="font-size:10px;background:#FEF3C7;color:#92400E;padding:1px 7px;border-radius:99px;font-weight:500">inactief</span>' : ''}
+        </div>
+        <div style="font-size:12px;color:var(--muted)">${esc(u.email)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0">
+        <select onchange="changeRole('${u.id}', this.value)" ${isSelf ? 'disabled title="Je kan je eigen rol niet wijzigen"' : ''}
+          style="font-family:'DM Sans',sans-serif;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);outline:none;cursor:pointer">
+          <option value="technician" ${u.role==='technician'?'selected':''}>Technieker</option>
+          <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+        </select>
+        <button class="btn" onclick="toggleUserActive('${u.id}', ${isActive})" ${isSelf?'disabled title="Je kan je eigen account niet deactiveren"':''}
+          style="font-size:12px;padding:5px 10px;${isActive?'':'background:var(--accent);color:white;border-color:var(--accent)'}">
+          ${isActive ? 'Deactiveer' : 'Activeer'}
+        </button>
+        <button class="btn btn-danger" onclick="deleteUser('${u.id}','${esc(u.full_name||u.email)}')" ${isSelf?'disabled title="Je kan je eigen account niet verwijderen"':''}
+          style="font-size:12px;padding:5px 10px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function changeRole(userId, newRole) {
+  const { error } = await sb.from('user_profiles').update({ role: newRole }).eq('id', userId);
+  if (error) { showToast('Fout: ' + error.message, 'error'); loadUsers(); return; }
+  const u = _allUsers.find(u => u.id === userId);
+  if (u) u.role = newRole;
+  showToast('Rol bijgewerkt', 'success');
+}
+
+async function toggleUserActive(userId, currentlyActive) {
+  const { error } = await sb.from('user_profiles').update({ is_active: !currentlyActive }).eq('id', userId);
+  if (error) { showToast('Fout: ' + error.message, 'error'); return; }
+  showToast(currentlyActive ? 'Gebruiker gedeactiveerd' : 'Gebruiker geactiveerd', 'success');
+  loadUsers();
+}
+
+async function deleteUser(userId, displayName) {
+  if (!confirm(`Profiel van "${displayName}" verwijderen?\n\nDit verwijdert het profiel en de toegang. Ingevulde checklists blijven bewaard.\n\nVerwijder ook het auth-account via het Supabase Dashboard als je volledige verwijdering wil.`)) return;
+  const { error } = await sb.from('user_profiles').delete().eq('id', userId);
+  if (error) { showToast('Fout: ' + error.message, 'error'); return; }
+  showToast('Gebruiker verwijderd', 'success');
+  loadUsers();
+}
+
+function _generatePassword() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
+  const arr = new Uint8Array(12);
+  crypto.getRandomValues(arr);
+  return Array.from(arr).map(b => chars[b % chars.length]).join('');
+}
+
+function openInviteModal() {
+  document.getElementById('invite-form-wrap').style.display   = '';
+  document.getElementById('invite-result-wrap').style.display = 'none';
+  document.getElementById('invite-email').value = '';
+  document.getElementById('invite-name').value  = '';
+  document.getElementById('invite-role').value  = 'technician';
+  document.getElementById('invite-error').style.display = 'none';
+  document.getElementById('invite-overlay').classList.add('open');
+}
+
+function closeInviteModal() {
+  document.getElementById('invite-overlay').classList.remove('open');
+  loadUsers();
+}
+
+async function sendInvite() {
+  const email = document.getElementById('invite-email').value.trim();
+  const name  = document.getElementById('invite-name').value.trim();
+  const role  = document.getElementById('invite-role').value;
+  const errEl = document.getElementById('invite-error');
+  const btn   = document.getElementById('invite-send-btn');
+
+  errEl.style.display = 'none';
+  if (!email) { errEl.textContent = 'Vul een e-mailadres in.'; errEl.style.display = 'block'; return; }
+
+  btn.disabled = true; btn.textContent = 'Bezig…';
+
+  const tempPw = _generatePassword();
+
+  const { data, error } = await sb.auth.signUp({
+    email,
+    password: tempPw,
+    options: {
+      data: { full_name: name, role },
+      emailRedirectTo: location.origin + location.pathname.replace(/[^/]*$/, '') + 'login.html'
+    }
+  });
+
+  btn.disabled = false;
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Account aanmaken';
+
+  if (error) {
+    errEl.textContent = error.message.includes('already registered')
+      ? 'Dit e-mailadres is al geregistreerd.' : 'Fout: ' + error.message;
+    errEl.style.display = 'block';
+    return;
+  }
+
+  // Upsert profile with correct role + must_change_password flag
+  if (data?.user?.id) {
+    await sb.from('user_profiles').upsert({
+      id: data.user.id,
+      email,
+      full_name: name || email.split('@')[0],
+      role,
+      is_active: true,
+      must_change_password: true
+    }, { onConflict: 'id' });
+  }
+
+  document.getElementById('invite-temp-pw').textContent = tempPw;
+  document.getElementById('invite-form-wrap').style.display   = 'none';
+  document.getElementById('invite-result-wrap').style.display = '';
+}
+
+function copyTempPw() {
+  const pw = document.getElementById('invite-temp-pw').textContent;
+  navigator.clipboard.writeText(pw).then(() => showToast('Wachtwoord gekopieerd', 'success'));
+}
+
+// ── Toast ──────────────────────────────────────────────────────────
+function showToast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast' + (type ? ' ' + type : '');
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 // ── Init ────────────────────────────────────────────────────────────
 highlightActive();
 applyTranslations();
 loadBrandingForm();
-AUTH.init({ requireAuth: true });
+
+AUTH.init({ requireAuth: true }).then(profile => {
+  if (!profile) return;
+  if (profile.role === 'admin') {
+    document.getElementById('admin-settings').style.display = '';
+    loadUsers();
+  }
+});
 </script>
 </body>
 </html>

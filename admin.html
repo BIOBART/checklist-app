@@ -251,10 +251,6 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
           Templates
         </button>
-        <button class="btn" id="tab-users" onclick="switchTab('users')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Gebruikers
-        </button>
         <button class="btn btn-primary" id="new-template-btn" onclick="newTemplate()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Nieuwe template
@@ -325,78 +321,8 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
     </div>
     </div><!-- /tab-panel-templates -->
 
-    <!-- Users tab -->
-    <div id="tab-panel-users" style="display:none">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:10px">
-        <div>
-          <div style="font-size:14px;color:var(--muted)">Beheer wie toegang heeft tot de app.</div>
-          <div style="margin-top:6px">
-            <input id="users-search" type="search" placeholder="Zoeken op naam of e-mail…"
-              style="font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);outline:none;width:260px"
-              oninput="filterUsers(this.value)">
-          </div>
-        </div>
-        <button class="btn btn-primary" onclick="openInviteModal()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Gebruiker uitnodigen
-        </button>
-      </div>
-      <div id="users-list">
-        <div style="color:var(--muted);font-size:14px;padding:2rem;text-align:center">Laden…</div>
-      </div>
-    </div>
-
   </div>
 </div>
-
-<!-- Invite modal -->
-<div class="overlay" id="invite-overlay">
-  <div class="modal" style="max-width:480px">
-    <h2>Gebruiker toevoegen</h2>
-
-    <!-- Step 1: form -->
-    <div id="invite-form-wrap">
-      <div class="modal-field">
-        <label class="modal-label">E-mailadres *</label>
-        <input class="modal-input" id="invite-email" type="email" placeholder="naam@bedrijf.com">
-      </div>
-      <div class="modal-field">
-        <label class="modal-label">Volledige naam</label>
-        <input class="modal-input" id="invite-name" type="text" placeholder="Voornaam Achternaam">
-      </div>
-      <div class="modal-field">
-        <label class="modal-label">Rol</label>
-        <select class="modal-input" id="invite-role">
-          <option value="technician">Technieker — enkel eigen checklists</option>
-          <option value="admin">Admin — alle checklists + gebruikersbeheer</option>
-        </select>
-      </div>
-      <div id="invite-error" style="font-size:13px;color:var(--danger);margin-bottom:8px;display:none"></div>
-      <div class="modal-actions">
-        <button class="btn" onclick="closeInviteModal()">Annuleer</button>
-        <button class="btn btn-primary" id="invite-send-btn" onclick="sendInvite()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Account aanmaken
-        </button>
-      </div>
-    </div>
-
-    <!-- Step 2: temp password display -->
-    <div id="invite-result-wrap" style="display:none">
-      <div style="background:var(--accent-bg);border:1px solid var(--accent-mid);border-radius:var(--radius);padding:1rem;margin-bottom:1rem">
-        <div style="font-size:13px;font-weight:600;color:var(--accent);margin-bottom:6px">✓ Account aangemaakt</div>
-        <div style="font-size:13px;color:var(--text);margin-bottom:8px">Deel het tijdelijke wachtwoord met de gebruiker. Ze kunnen dit na het inloggen wijzigen via <em>Wachtwoord vergeten</em>.</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:500">Tijdelijk wachtwoord</div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <code id="invite-temp-pw" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:14px;letter-spacing:0.08em;font-family:monospace;word-break:break-all"></code>
-          <button class="btn" onclick="copyTempPw()" style="flex-shrink:0" title="Kopieer">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          </button>
-        </div>
-      </div>
-      <div class="modal-actions" style="justify-content:flex-end">
-        <button class="btn btn-primary" onclick="closeInviteModal()">Sluiten</button>
-      </div>
     </div>
   </div>
 </div>
@@ -426,187 +352,12 @@ let currentId = null;
 let sections = [];
 let idN = 100;
 
-// ── TABS ──
+// ── TABS (templates only) ──
 function switchTab(tab) {
-  ['templates','users'].forEach(t => {
-    document.getElementById('tab-panel-'+t).style.display = t===tab ? 'block' : 'none';
-    const btn = document.getElementById('tab-'+t);
-    if (btn) { btn.style.fontWeight = t===tab ? '600' : '400'; btn.style.color = t===tab ? 'var(--accent)' : ''; }
-  });
-  document.getElementById('new-template-btn').style.display = tab==='templates' ? 'flex' : 'none';
-  if (tab==='users') loadUsers();
-}
-
-// ── USER MANAGEMENT ──
-let _allUsers = [];  // cache for client-side search
-
-async function loadUsers() {
-  const el = document.getElementById('users-list');
-  el.innerHTML = '<div style="color:var(--muted);font-size:14px;padding:2rem;text-align:center">Laden…</div>';
-
-  const { data, error } = await sb.from('user_profiles').select('*').order('created_at');
-  if (error) {
-    el.innerHTML = `<div style="color:var(--danger);font-size:14px;padding:2rem;text-align:center">Fout: ${esc(error.message)}</div>`;
-    return;
-  }
-  _allUsers = data || [];
-  renderUsers(_allUsers);
-}
-
-function filterUsers(query) {
-  const q = (query || '').toLowerCase();
-  if (!q) { renderUsers(_allUsers); return; }
-  renderUsers(_allUsers.filter(u =>
-    (u.full_name || '').toLowerCase().includes(q) ||
-    (u.email || '').toLowerCase().includes(q)
-  ));
-}
-
-function renderUsers(users) {
-  const el = document.getElementById('users-list');
-  const currentUserId = AUTH.getUserId();
-
-  if (!users.length) {
-    el.innerHTML = `<div style="color:var(--muted);font-size:14px;padding:2rem;text-align:center">
-      Geen gebruikers gevonden.</div>`;
-    return;
-  }
-
-  const ROLE_LABELS = { admin: 'Admin', technician: 'Technieker', viewer: 'Viewer' };
-
-  el.innerHTML = users.map(u => {
-    const initials = (u.full_name || u.email || '?').split(/\s+/).map(w=>w[0]||'').join('').toUpperCase().slice(0,2);
-    const isSelf = u.id === currentUserId;
-    const isActive = u.is_active !== false;
-
-    return `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;display:flex;align-items:center;gap:14px;margin-bottom:8px;box-shadow:var(--shadow);opacity:${isActive?1:0.65}">
-      <div style="width:36px;height:36px;border-radius:50%;background:${isActive?'var(--accent-bg)':'var(--surface2)'};color:${isActive?'var(--accent)':'var(--muted)'};display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0">
-        ${esc(initials)}
-      </div>
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:500;font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          ${esc(u.full_name || '—')}
-          ${isSelf ? '<span style="font-size:10px;background:var(--surface2);color:var(--muted);padding:1px 7px;border-radius:99px;font-weight:500">jij</span>' : ''}
-          ${!isActive ? '<span style="font-size:10px;background:#FEF3C7;color:#92400E;padding:1px 7px;border-radius:99px;font-weight:500">inactief</span>' : ''}
-        </div>
-        <div style="font-size:12px;color:var(--muted)">${esc(u.email)}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0">
-        <select onchange="changeRole('${u.id}', this.value)" ${isSelf ? 'disabled title="Je kan je eigen rol niet wijzigen"' : ''}
-          style="font-family:'DM Sans',sans-serif;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);outline:none;cursor:pointer">
-          <option value="technician" ${u.role==='technician'?'selected':''}>Technieker</option>
-          <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
-        </select>
-        <button class="btn" onclick="toggleUserActive('${u.id}', ${isActive})" ${isSelf?'disabled title="Je kan je eigen account niet deactiveren"':''}
-          style="font-size:12px;padding:5px 10px;${isActive?'':'background:var(--accent);color:white;border-color:var(--accent)'}">
-          ${isActive ? 'Deactiveer' : 'Activeer'}
-        </button>
-        <button class="btn btn-danger" onclick="deleteUser('${u.id}','${esc(u.full_name||u.email)}')" ${isSelf?'disabled title="Je kan je eigen account niet verwijderen"':''}
-          style="font-size:12px;padding:5px 10px">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-        </button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-async function changeRole(userId, newRole) {
-  const { error } = await sb.from('user_profiles').update({ role: newRole }).eq('id', userId);
-  if (error) { toast('Fout: ' + error.message, 'error'); loadUsers(); return; }
-  const u = _allUsers.find(u => u.id === userId);
-  if (u) u.role = newRole;
-  toast('Rol bijgewerkt', 'success');
-}
-
-async function toggleUserActive(userId, currentlyActive) {
-  const { error } = await sb.from('user_profiles').update({ is_active: !currentlyActive }).eq('id', userId);
-  if (error) { toast('Fout: ' + error.message, 'error'); return; }
-  toast(currentlyActive ? 'Gebruiker gedeactiveerd' : 'Gebruiker geactiveerd', 'success');
-  loadUsers();
-}
-
-async function deleteUser(userId, displayName) {
-  if (!confirm(`Profiel van "${displayName}" verwijderen?\n\nDit verwijdert het profiel en de toegang. Ingevulde checklists blijven bewaard.\n\nVerwijder ook het auth-account via het Supabase Dashboard als je volledige verwijdering wil.`)) return;
-  const { error } = await sb.from('user_profiles').delete().eq('id', userId);
-  if (error) { toast('Fout: ' + error.message, 'error'); return; }
-  toast('Gebruiker verwijderd', 'success');
-  loadUsers();
-}
-
-function _generatePassword() {
-  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
-  const arr = new Uint8Array(12);
-  crypto.getRandomValues(arr);
-  return Array.from(arr).map(b => chars[b % chars.length]).join('');
-}
-
-function openInviteModal() {
-  document.getElementById('invite-form-wrap').style.display = '';
-  document.getElementById('invite-result-wrap').style.display = 'none';
-  document.getElementById('invite-email').value = '';
-  document.getElementById('invite-name').value = '';
-  document.getElementById('invite-role').value = 'technician';
-  document.getElementById('invite-error').style.display = 'none';
-  document.getElementById('invite-overlay').classList.add('open');
-}
-
-function closeInviteModal() {
-  document.getElementById('invite-overlay').classList.remove('open');
-  loadUsers();
-}
-
-async function sendInvite() {
-  const email = document.getElementById('invite-email').value.trim();
-  const name  = document.getElementById('invite-name').value.trim();
-  const role  = document.getElementById('invite-role').value;
-  const errEl = document.getElementById('invite-error');
-  const btn   = document.getElementById('invite-send-btn');
-
-  errEl.style.display = 'none';
-  if (!email) { errEl.textContent = 'Vul een e-mailadres in.'; errEl.style.display = 'block'; return; }
-
-  btn.disabled = true; btn.textContent = 'Bezig…';
-
-  const tempPw = _generatePassword();
-
-  const { data, error } = await sb.auth.signUp({
-    email,
-    password: tempPw,
-    options: {
-      data: { full_name: name, role },
-      emailRedirectTo: location.origin + location.pathname.replace(/[^/]*$/, '') + 'login.html'
-    }
-  });
-
-  btn.disabled = false; btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Account aanmaken';
-
-  if (error) {
-    errEl.textContent = error.message.includes('already registered')
-      ? 'Dit e-mailadres is al geregistreerd.' : 'Fout: ' + error.message;
-    errEl.style.display = 'block';
-    return;
-  }
-
-  // Update profile role in case trigger used default
-  if (data?.user?.id) {
-    await sb.from('user_profiles').upsert({
-      id: data.user.id,
-      email,
-      full_name: name || email.split('@')[0],
-      role,
-      is_active: true
-    }, { onConflict: 'id' });
-  }
-
-  document.getElementById('invite-temp-pw').textContent = tempPw;
-  document.getElementById('invite-form-wrap').style.display = 'none';
-  document.getElementById('invite-result-wrap').style.display = '';
-}
-
-function copyTempPw() {
-  const pw = document.getElementById('invite-temp-pw').textContent;
-  navigator.clipboard.writeText(pw).then(() => toast('Wachtwoord gekopieerd', 'success'));
+  document.getElementById('tab-panel-templates').style.display = 'block';
+  const btn = document.getElementById('tab-templates');
+  if (btn) { btn.style.fontWeight = '600'; btn.style.color = 'var(--accent)'; }
+  document.getElementById('new-template-btn').style.display = 'flex';
 }
 const uid = () => 's' + (++idN) + Date.now().toString(36);
 
