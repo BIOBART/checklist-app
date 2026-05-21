@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" href="favicon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rapporten – Checklist App</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="branding.js"></script>
+<script src="auth.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #F6F4EF; --surface: #FFFFFF; --surface2: #EFECE5;
+  --border: #E0DDD5; --border-strong: #C5C0B5;
+  --text: #1A1714; --muted: #7A7168; --light: #B0A898;
+  --accent: #2D5A3D; --accent-bg: #E8F0EB; --accent-mid: #4A8A5E;
+  --danger: #DC2626; --danger-bg: #FEF2F2;
+  --info: #1D4ED8; --info-bg: #EFF6FF;
+  --warn: #D97706; --warn-bg: #FFFBEB;
+  --radius: 10px; --radius-lg: 16px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 14px rgba(0,0,0,0.04);
+}
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* HEADER */
+header { background: var(--surface); border-bottom: 1px solid var(--border); height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; position: sticky; top: 0; z-index: 50; }
+.logo { font-family: 'DM Serif Display', serif; font-size: 20px; display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
+.logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.nav { display: flex; gap: 6px; align-items: center; }
+.nav-link { font-size: 13px; color: var(--muted); text-decoration: none; padding: 6px 12px; border-radius: var(--radius); transition: all 0.15s; display: flex; align-items: center; gap: 5px; }
+.nav-link:hover { background: var(--surface2); color: var(--text); }
+.nav-link.active { color: var(--accent); font-weight: 500; }
+.nav-link svg { width: 14px; height: 14px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--radius); font-size: 13px; font-family: 'DM Sans', sans-serif; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text); text-decoration: none; transition: all 0.15s; white-space: nowrap; }
+.btn:hover { background: var(--surface2); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary { background: var(--accent); color: white; border-color: var(--accent); }
+.btn-primary:hover:not(:disabled) { background: #234830; }
+.btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+.user-pill { display:flex; align-items:center; gap:8px; }
+.user-avatar { width:28px; height:28px; border-radius:50%; background:var(--accent); color:white; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.user-name { font-size:13px; color:var(--text); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.user-role-badge { font-size:10px; background:var(--accent-bg); color:var(--accent); padding:2px 7px; border-radius:99px; font-weight:600; white-space:nowrap; }
+.user-logout { background:none; border:none; cursor:pointer; color:var(--muted); display:flex; align-items:center; padding:4px; border-radius:6px; transition:color 0.15s; }
+.user-logout:hover { color:var(--danger); }
+
+/* PAGE */
+.page-wrap { max-width: 860px; margin: 0 auto; padding: 2rem; }
+
+/* STEPPER */
+.stepper { display: flex; align-items: center; gap: 0; margin-bottom: 2.5rem; }
+.step-item { display: flex; align-items: center; gap: 8px; flex: 1; }
+.step-item:last-child { flex: 0; }
+.step-circle { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--muted); background: var(--surface); flex-shrink: 0; transition: all 0.2s; }
+.step-item.active .step-circle { border-color: var(--accent); background: var(--accent); color: white; }
+.step-item.done .step-circle { border-color: var(--accent-mid); background: var(--accent-bg); color: var(--accent); }
+.step-label { font-size: 12px; color: var(--muted); font-weight: 500; white-space: nowrap; transition: color 0.2s; }
+.step-item.active .step-label { color: var(--accent); font-weight: 600; }
+.step-item.done .step-label { color: var(--accent-mid); }
+.step-line { flex: 1; height: 1px; background: var(--border); margin: 0 8px; transition: background 0.2s; }
+.step-item.done + .step-line,
+.step-line.done { background: var(--accent-mid); }
+
+/* CARD */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; box-shadow: var(--shadow); margin-bottom: 1.25rem; }
+.card-title { font-family: 'DM Serif Display', serif; font-size: 19px; margin-bottom: 0.25rem; }
+.card-sub { font-size: 13px; color: var(--muted); margin-bottom: 1.25rem; line-height: 1.5; }
+
+/* FORM ELEMENTS */
+.field { margin-bottom: 1.1rem; }
+.field-label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.field-input { width: 100%; font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); outline: none; transition: border 0.15s; }
+.field-input:focus { border-color: var(--accent); }
+.field-input::placeholder { color: var(--light); }
+
+/* TEMPLATE LIST */
+.tpl-list { display: flex; flex-direction: column; gap: 6px; max-height: 280px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); padding: 6px; }
+.tpl-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 7px; cursor: pointer; transition: background 0.12s; user-select: none; }
+.tpl-item:hover { background: var(--surface2); }
+.tpl-item.selected { background: var(--accent-bg); }
+.tpl-check { width: 16px; height: 16px; border-radius: 4px; border: 2px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.12s; }
+.tpl-item.selected .tpl-check { background: var(--accent); border-color: var(--accent); }
+.tpl-check svg { width: 10px; height: 10px; color: white; display: none; }
+.tpl-item.selected .tpl-check svg { display: block; }
+.tpl-name { font-size: 14px; font-weight: 500; flex: 1; }
+.tpl-count { font-size: 11px; color: var(--light); }
+.all-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--accent); font-weight: 500; cursor: pointer; margin-bottom: 8px; padding: 4px 0; }
+.all-toggle:hover { text-decoration: underline; }
+
+/* PILLS */
+.pill-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill { padding: 6px 14px; border-radius: 99px; font-size: 13px; font-weight: 500; border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; transition: all 0.15s; }
+.pill:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+.pill.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+/* RADIO CARDS */
+.type-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+@media (max-width: 600px) { .type-grid { grid-template-columns: 1fr; } }
+.type-card { border: 2px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem; cursor: pointer; transition: all 0.15s; text-align: center; }
+.type-card:hover { border-color: var(--accent-mid); background: var(--accent-bg); }
+.type-card.selected { border-color: var(--accent); background: var(--accent-bg); }
+.type-card .type-icon { font-size: 28px; margin-bottom: 6px; }
+.type-card .type-name { font-weight: 600; font-size: 14px; }
+.type-card .type-desc { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+
+/* CHECKBOXES GRID */
+.check-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.check-pill { display: flex; align-items: center; gap: 6px; padding: 5px 11px; border: 1px solid var(--border); border-radius: 99px; font-size: 13px; cursor: pointer; transition: all 0.12s; user-select: none; }
+.check-pill:hover { border-color: var(--accent); }
+.check-pill.checked { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); font-weight: 500; }
+.check-pill input { display: none; }
+
+/* META CHECKBOXES */
+.meta-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 6px; }
+.meta-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: all 0.12s; font-size: 13px; user-select: none; }
+.meta-item:hover { border-color: var(--accent); }
+.meta-item.checked { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+.meta-item .meta-box { width: 15px; height: 15px; border-radius: 3px; border: 2px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.12s; }
+.meta-item.checked .meta-box { background: var(--accent); border-color: var(--accent); }
+.meta-item.checked .meta-box::after { content: ''; width: 8px; height: 5px; border-left: 2px solid white; border-bottom: 2px solid white; transform: rotate(-45deg) translateY(-1px); display: block; }
+
+/* STEP NAV */
+.step-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+
+/* PREVIEW */
+.preview-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); overflow: hidden; }
+.preview-toolbar { background: var(--surface2); border-bottom: 1px solid var(--border); padding: 10px 1rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.preview-toolbar span { font-size: 13px; color: var(--muted); flex: 1; }
+.report-body { padding: 1.5rem; max-height: 540px; overflow-y: auto; font-size: 13px; }
+
+/* REPORT STYLES */
+.report-title { font-family: 'DM Serif Display', serif; font-size: 22px; margin-bottom: 4px; color: var(--text); }
+.report-subtitle { font-size: 13px; color: var(--muted); margin-bottom: 1.5rem; }
+.report-meta-row { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-bottom: 1.5rem; font-size: 12px; color: var(--muted); }
+.report-meta-row strong { color: var(--text); }
+
+/* TABLE */
+.report-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 1.5rem; }
+.report-table th { background: var(--surface2); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); padding: 7px 10px; border: 1px solid var(--border); text-align: left; white-space: nowrap; }
+.report-table td { padding: 7px 10px; border: 1px solid var(--border); vertical-align: top; }
+.report-table tr:nth-child(even) td { background: #FAFAF8; }
+.status-chip { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.chip-ok    { background: #D1FAE5; color: #065F46; }
+.chip-warn  { background: #FEF3C7; color: #92400E; }
+.chip-bad   { background: #FEE2E2; color: #991B1B; }
+.chip-na    { background: var(--surface2); color: var(--muted); }
+
+/* REJECTION BLOCK */
+.rejection-block { border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 1rem; overflow: hidden; }
+.rejection-header { background: var(--surface2); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; }
+.rejection-title { font-weight: 600; font-size: 14px; }
+.rejection-meta { font-size: 12px; color: var(--muted); }
+.rejection-items { padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+.rejection-item { display: flex; gap: 10px; align-items: flex-start; }
+.rej-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); flex-shrink: 0; margin-top: 4px; }
+.rej-label { font-weight: 500; font-size: 13px; }
+.rej-val { font-size: 12px; color: var(--muted); }
+.rej-note { font-size: 12px; color: var(--info); font-style: italic; margin-top: 2px; }
+
+/* FULL REPORT */
+.full-submission { margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.full-sub-header { background: var(--surface2); padding: 10px 14px; font-weight: 600; font-size: 14px; display: flex; justify-content: space-between; }
+.full-sub-header span { font-size: 12px; color: var(--muted); font-weight: 400; }
+.full-section { padding: 8px 14px 0; }
+.full-section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--light); font-weight: 600; margin: 8px 0 4px; }
+.full-item { display: flex; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+.full-item:last-child { border-bottom: none; }
+.full-item-label { flex: 1; color: var(--muted); }
+.full-item-val { font-weight: 500; color: var(--text); max-width: 220px; text-align: right; }
+
+/* EMPTY / LOADING */
+.empty-state { text-align: center; padding: 3rem 1rem; color: var(--muted); }
+.empty-state svg { width: 44px; height: 44px; color: var(--border-strong); margin: 0 auto 0.75rem; display: block; }
+.empty-state p { font-size: 14px; }
+.loading-spinner { display: flex; align-items: center; justify-content: center; padding: 3rem; gap: 10px; color: var(--muted); font-size: 14px; }
+.spin { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* TOAST */
+.toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--text); color: white; padding: 10px 16px; border-radius: var(--radius); font-size: 13px; z-index: 999; opacity: 0; transform: translateY(10px); transition: all 0.25s; pointer-events: none; max-width: 300px; }
+.toast.show { opacity: 1; transform: translateY(0); }
+
+/* SECTION DIVIDER */
+.section-div { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--light); font-weight: 600; margin: 1.2rem 0 0.6rem; }
+
+/* DATE ROW */
+.date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+
+/* STATUS FILTER ROW */
+.sub-status-row { display: flex; gap: 8px; }
+
+@media (max-width: 640px) {
+  header { padding: 0 1rem; }
+  .page-wrap { padding: 1rem; }
+  .nav-link span { display: none; }
+  .step-label { display: none; }
+  .date-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="index.html" class="logo" style="padding:0">
+    <span class="logo-dot"></span>
+    Checklist App
+  </a>
+  <nav class="nav">
+    <a href="index.html" class="nav-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      <span>Home</span>
+    </a>
+    <a href="history.html" class="nav-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span>Ingevuld</span>
+    </a>
+    <a href="reports.html" class="nav-link active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span>Rapporten</span>
+    </a>
+    <a href="admin.html" class="nav-link" data-admin-only>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+      <span>Admin</span>
+    </a>
+    <a href="settings.html" class="nav-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>Instellingen</span>
+    </a>
+  </nav>
+  <div id="user-pill"></div>
+</header>
+
+<div class="page-wrap">
+
+  <!-- STEPPER -->
+  <div class="stepper" id="stepper">
+    <div class="step-item active" id="si-1">
+      <div class="step-circle">1</div>
+      <div class="step-label">Selectie</div>
+    </div>
+    <div class="step-line" id="sl-1"></div>
+    <div class="step-item" id="si-2">
+      <div class="step-circle">2</div>
+      <div class="step-label">Periode</div>
+    </div>
+    <div class="step-line" id="sl-2"></div>
+    <div class="step-item" id="si-3">
+      <div class="step-circle">3</div>
+      <div class="step-label">Inhoud</div>
+    </div>
+    <div class="step-line" id="sl-3"></div>
+    <div class="step-item" id="si-4">
+      <div class="step-circle">4</div>
+      <div class="step-label">Rapport</div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 1: Selectie ===== -->
+  <div id="step-1">
+    <div class="card">
+      <div class="card-title">Rapport aanmaken</div>
+      <div class="card-sub">Geef een naam en selecteer de templates die je in het rapport wilt opnemen.</div>
+
+      <div class="field">
+        <label class="field-label">Rapportnaam</label>
+        <input class="field-input" type="text" id="rpt-name" placeholder="Bv. Maandoverzicht mei 2026" />
+      </div>
+
+      <div class="field">
+        <label class="field-label">Templates</label>
+        <div class="all-toggle" onclick="toggleAllTemplates()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          <span id="all-toggle-lbl">Alle templates selecteren</span>
+        </div>
+        <div class="tpl-list" id="tpl-list">
+          <div class="loading-spinner"><div class="spin"></div> Templates laden…</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Submissions weergeven</label>
+        <div class="sub-status-row">
+          <div class="pill active" data-sub-status="all"    onclick="setSubStatus(this)">Alle</div>
+          <div class="pill"        data-sub-status="open"   onclick="setSubStatus(this)">Open</div>
+          <div class="pill"        data-sub-status="completed" onclick="setSubStatus(this)">Voltooid</div>
+          <div class="pill"        data-sub-status="archived"  onclick="setSubStatus(this)">Gearchiveerd</div>
+        </div>
+      </div>
+
+      <div class="step-nav">
+        <span></span>
+        <button class="btn btn-primary" onclick="goStep(2)">
+          Volgende
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 2: Periode ===== -->
+  <div id="step-2" style="display:none">
+    <div class="card">
+      <div class="card-title">Datum &amp; periode</div>
+      <div class="card-sub">Kies een tijdsperiode voor de submissions in het rapport.</div>
+
+      <div class="field">
+        <label class="field-label">Snelkeuze</label>
+        <div class="pill-row" id="date-presets">
+          <div class="pill" data-preset="today"     onclick="setPreset(this)">Vandaag</div>
+          <div class="pill" data-preset="week"      onclick="setPreset(this)">Deze week</div>
+          <div class="pill" data-preset="month"     onclick="setPreset(this)">Deze maand</div>
+          <div class="pill" data-preset="prevmonth" onclick="setPreset(this)">Vorige maand</div>
+          <div class="pill" data-preset="quarter"   onclick="setPreset(this)">Dit kwartaal</div>
+          <div class="pill" data-preset="year"      onclick="setPreset(this)">Dit jaar</div>
+          <div class="pill active" data-preset="all" onclick="setPreset(this)">Alles</div>
+          <div class="pill" data-preset="custom"    onclick="setPreset(this)">Aangepast</div>
+        </div>
+      </div>
+
+      <div id="custom-dates" class="date-row" style="display:none">
+        <div class="field" style="margin:0">
+          <label class="field-label">Van</label>
+          <input class="field-input" type="date" id="date-from" />
+        </div>
+        <div class="field" style="margin:0">
+          <label class="field-label">Tot en met</label>
+          <input class="field-input" type="date" id="date-to" />
+        </div>
+      </div>
+
+      <div class="step-nav">
+        <button class="btn" onclick="goStep(1)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Terug
+        </button>
+        <button class="btn btn-primary" onclick="goStep(3)">
+          Volgende
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 3: Inhoud ===== -->
+  <div id="step-3" style="display:none">
+    <div class="card">
+      <div class="card-title">Rapportinhoud</div>
+      <div class="card-sub">Kies welk type rapport je wilt en welke informatie er in moet.</div>
+
+      <div class="field">
+        <label class="field-label">Rapporttype</label>
+        <div class="type-grid">
+          <div class="type-card selected" data-type="overview" onclick="setReportType(this)">
+            <div class="type-icon">📊</div>
+            <div class="type-name">Overzichtstabel</div>
+            <div class="type-desc">Één rij per submission met status-antwoorden als kolommen</div>
+          </div>
+          <div class="type-card" data-type="rejections" onclick="setReportType(this)">
+            <div class="type-icon">⚠️</div>
+            <div class="type-name">Afkeuringen</div>
+            <div class="type-desc">Enkel vragen met een specifieke status, gebundeld per submission</div>
+          </div>
+          <div class="type-card" data-type="full" onclick="setReportType(this)">
+            <div class="type-icon">📄</div>
+            <div class="type-name">Volledig</div>
+            <div class="type-desc">Alle vragen en antwoorden per submission, inclusief notities</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rejection filter (only shown for "rejections" type) -->
+      <div id="rejection-filter" style="display:none">
+        <div class="section-div">Welke statuswaarden als afkeuring beschouwen?</div>
+        <div class="check-grid" id="rejection-vals">
+          <div class="loading-spinner" style="padding:0.5rem"><div class="spin"></div></div>
+        </div>
+      </div>
+
+      <div class="section-div">Metadata in rapport opnemen</div>
+      <div class="meta-grid" id="meta-grid">
+        <div class="meta-item checked" data-meta="date"      onclick="toggleMeta(this)"><div class="meta-box"></div>Datum</div>
+        <div class="meta-item checked" data-meta="filledBy"  onclick="toggleMeta(this)"><div class="meta-box"></div>Ingevuld door</div>
+        <div class="meta-item checked" data-meta="customer"  onclick="toggleMeta(this)"><div class="meta-box"></div>Klant</div>
+        <div class="meta-item"         data-meta="location"  onclick="toggleMeta(this)"><div class="meta-box"></div>Locatie</div>
+        <div class="meta-item"         data-meta="reference" onclick="toggleMeta(this)"><div class="meta-box"></div>Referentie</div>
+        <div class="meta-item"         data-meta="notes"     onclick="toggleMeta(this)"><div class="meta-box"></div>Opmerkingen</div>
+        <div class="meta-item checked" data-meta="template"  onclick="toggleMeta(this)"><div class="meta-box"></div>Template</div>
+        <div class="meta-item"         data-meta="status"    onclick="toggleMeta(this)"><div class="meta-box"></div>Status</div>
+      </div>
+
+      <div class="step-nav">
+        <button class="btn" onclick="goStep(2)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Terug
+        </button>
+        <button class="btn btn-primary" onclick="buildReport()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Genereer rapport
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STEP 4: Rapport ===== -->
+  <div id="step-4" style="display:none">
+    <div class="preview-wrap">
+      <div class="preview-toolbar">
+        <span id="preview-label">Rapport gereed</span>
+        <button class="btn" onclick="goStep(3)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Aanpassen
+        </button>
+        <button class="btn" onclick="exportCSV()" title="Exporteer als CSV">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          CSV
+        </button>
+        <button class="btn" onclick="exportWord()" title="Exporteer als Word document">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Word
+        </button>
+        <button class="btn btn-primary" onclick="exportPDF()" title="Exporteer als PDF">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          PDF
+        </button>
+      </div>
+      <div class="report-body" id="report-body">
+        <div class="loading-spinner"><div class="spin"></div> Rapport wordt opgebouwd…</div>
+      </div>
+    </div>
+
+    <div style="margin-top:1rem; display:flex; justify-content:flex-start;">
+      <button class="btn" onclick="resetWizard()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+        Nieuw rapport
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ─── State ────────────────────────────────────────────────────────────────────
+var cfg = {
+  name: '',
+  templateIds: [],
+  subStatus: 'all',
+  preset: 'all',
+  dateFrom: null,
+  dateTo: null,
+  reportType: 'overview',
+  rejectionVals: [],
+  meta: { date: true, filledBy: true, customer: true, location: false, reference: false, notes: false, template: true, status: false }
+};
+
+var _templates = []; // [{id, name, schema}]
+var _reportData = null; // built submissions array
+var _currentStep = 1;
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async function() {
+  await AUTH.init();
+  loadTemplates();
+});
+
+async function loadTemplates() {
+  try {
+    var { data, error } = await sb.from('templates').select('id,name,schema').order('name');
+    if (error) throw error;
+    _templates = data || [];
+    renderTemplateList();
+  } catch(e) {
+    document.getElementById('tpl-list').innerHTML = '<div class="empty-state"><p>Fout bij laden templates: ' + esc(e.message) + '</p></div>';
+  }
+}
+
+function renderTemplateList() {
+  var list = document.getElementById('tpl-list');
+  if (!_templates.length) {
+    list.innerHTML = '<div class="empty-state"><p>Geen templates gevonden.</p></div>';
+    return;
+  }
+  list.innerHTML = _templates.map(function(t) {
+    var sel = cfg.templateIds.includes(t.id);
+    return '<div class="tpl-item' + (sel ? ' selected' : '') + '" data-id="' + esc(t.id) + '" onclick="toggleTemplate(this)">' +
+      '<div class="tpl-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>' +
+      '<div class="tpl-name">' + esc(t.name) + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+function toggleTemplate(el) {
+  var id = el.dataset.id;
+  var idx = cfg.templateIds.indexOf(id);
+  if (idx >= 0) { cfg.templateIds.splice(idx, 1); el.classList.remove('selected'); }
+  else { cfg.templateIds.push(id); el.classList.add('selected'); }
+  updateAllToggleLabel();
+}
+
+function toggleAllTemplates() {
+  if (cfg.templateIds.length === _templates.length) {
+    cfg.templateIds = [];
+  } else {
+    cfg.templateIds = _templates.map(function(t) { return t.id; });
+  }
+  renderTemplateList();
+  updateAllToggleLabel();
+}
+
+function updateAllToggleLabel() {
+  var lbl = document.getElementById('all-toggle-lbl');
+  lbl.textContent = cfg.templateIds.length === _templates.length
+    ? 'Alle templates deselecteren'
+    : 'Alle templates selecteren';
+}
+
+function setSubStatus(el) {
+  cfg.subStatus = el.dataset.subStatus;
+  document.querySelectorAll('[data-sub-status]').forEach(function(p) { p.classList.remove('active'); });
+  el.classList.add('active');
+}
+
+// ─── Step 2: Date ─────────────────────────────────────────────────────────────
+function setPreset(el) {
+  var preset = el.dataset.preset;
+  cfg.preset = preset;
+  document.querySelectorAll('[data-preset]').forEach(function(p) { p.classList.remove('active'); });
+  el.classList.add('active');
+  var customDiv = document.getElementById('custom-dates');
+  if (preset === 'custom') {
+    customDiv.style.display = 'grid';
+  } else {
+    customDiv.style.display = 'none';
+    var range = computeDateRange(preset);
+    cfg.dateFrom = range[0];
+    cfg.dateTo   = range[1];
+  }
+}
+
+function computeDateRange(preset) {
+  var now = new Date();
+  var y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
+  switch (preset) {
+    case 'today':
+      var s = isoDate(now); return [s, s];
+    case 'week': {
+      var day = now.getDay() || 7; // Mon=1
+      var mon = new Date(y, m, d - day + 1);
+      var sun = new Date(y, m, d - day + 7);
+      return [isoDate(mon), isoDate(sun)];
+    }
+    case 'month':
+      return [isoDate(new Date(y, m, 1)), isoDate(new Date(y, m+1, 0))];
+    case 'prevmonth':
+      return [isoDate(new Date(y, m-1, 1)), isoDate(new Date(y, m, 0))];
+    case 'quarter': {
+      var q = Math.floor(m/3);
+      return [isoDate(new Date(y, q*3, 1)), isoDate(new Date(y, q*3+3, 0))];
+    }
+    case 'year':
+      return [isoDate(new Date(y, 0, 1)), isoDate(new Date(y, 11, 31))];
+    default: // all
+      return [null, null];
+  }
+}
+
+function isoDate(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+// ─── Step 3: Report type ──────────────────────────────────────────────────────
+function setReportType(el) {
+  cfg.reportType = el.dataset.type;
+  document.querySelectorAll('.type-card').forEach(function(c) { c.classList.remove('selected'); });
+  el.classList.add('selected');
+  var rejFilter = document.getElementById('rejection-filter');
+  if (cfg.reportType === 'rejections') {
+    rejFilter.style.display = '';
+    buildRejectionValPicker();
+  } else {
+    rejFilter.style.display = 'none';
+  }
+}
+
+function buildRejectionValPicker() {
+  var container = document.getElementById('rejection-vals');
+  // Collect all unique statusLabels from selected templates' schema
+  var vals = {};
+  var selectedTpls = _templates.filter(function(t) { return cfg.templateIds.includes(t.id); });
+  if (!selectedTpls.length) selectedTpls = _templates;
+  selectedTpls.forEach(function(t) {
+    var schema = t.schema || {};
+    (schema.sections || []).forEach(function(s) {
+      (s.items || []).forEach(function(item) {
+        if (item.type === 'statuscheck') {
+          var labels = item.statusLabels || ['OK','Aandacht','Niet OK','N.v.t.'];
+          labels.forEach(function(lbl) { vals[lbl] = true; });
+        }
+      });
+    });
+  });
+  var allVals = Object.keys(vals);
+  if (!allVals.length) {
+    container.innerHTML = '<div style="font-size:13px;color:var(--muted)">Geen statusvragen gevonden in de geselecteerde templates.</div>';
+    return;
+  }
+  container.innerHTML = allVals.map(function(v) {
+    var isChecked = cfg.rejectionVals.includes(v);
+    return '<label class="check-pill' + (isChecked ? ' checked' : '') + '" onclick="toggleRejVal(this)">' +
+      '<input type="checkbox"' + (isChecked ? ' checked' : '') + '>' + esc(v) + '</label>';
+  }).join('');
+}
+
+function toggleRejVal(el) {
+  var val = el.textContent.trim();
+  el.classList.toggle('checked');
+  var idx = cfg.rejectionVals.indexOf(val);
+  if (idx >= 0) cfg.rejectionVals.splice(idx, 1);
+  else cfg.rejectionVals.push(val);
+}
+
+function toggleMeta(el) {
+  el.classList.toggle('checked');
+  cfg.meta[el.dataset.meta] = el.classList.contains('checked');
+}
+
+// ─── Stepper navigation ───────────────────────────────────────────────────────
+function goStep(n) {
+  // Validate before advancing
+  if (n > _currentStep) {
+    if (_currentStep === 1) {
+      cfg.name = document.getElementById('rpt-name').value.trim();
+      if (!cfg.name) { toast('Geef een naam op voor het rapport.'); return; }
+      if (!cfg.templateIds.length) { toast('Selecteer minstens één template.'); return; }
+    }
+    if (_currentStep === 2 && cfg.preset === 'custom') {
+      cfg.dateFrom = document.getElementById('date-from').value || null;
+      cfg.dateTo   = document.getElementById('date-to').value   || null;
+    }
+  }
+  document.getElementById('step-' + _currentStep).style.display = 'none';
+  document.getElementById('step-' + n).style.display = '';
+  updateStepper(n);
+  _currentStep = n;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function updateStepper(active) {
+  for (var i = 1; i <= 4; i++) {
+    var el = document.getElementById('si-' + i);
+    el.className = 'step-item' + (i === active ? ' active' : (i < active ? ' done' : ''));
+    var line = document.getElementById('sl-' + i);
+    if (line) line.className = 'step-line' + (i < active ? ' done' : '');
+  }
+}
+
+// ─── Build report ─────────────────────────────────────────────────────────────
+async function buildReport() {
+  goStep(4);
+  var body = document.getElementById('report-body');
+  body.innerHTML = '<div class="loading-spinner"><div class="spin"></div> Data ophalen…</div>';
+
+  try {
+    var submissions = await fetchSubmissions();
+    _reportData = submissions;
+
+    var label = submissions.length + ' submission' + (submissions.length === 1 ? '' : 's');
+    document.getElementById('preview-label').textContent = cfg.name + ' — ' + label;
+
+    if (!submissions.length) {
+      body.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>Geen submissions gevonden voor de geselecteerde filters.</p></div>';
+      return;
+    }
+
+    var html = '';
+    if (cfg.reportType === 'overview')    html = buildOverviewHTML(submissions);
+    if (cfg.reportType === 'rejections')  html = buildRejectionsHTML(submissions);
+    if (cfg.reportType === 'full')        html = buildFullHTML(submissions);
+    body.innerHTML = html;
+  } catch(e) {
+    body.innerHTML = '<div class="empty-state"><p>Fout: ' + esc(e.message) + '</p></div>';
+  }
+}
+
+async function fetchSubmissions() {
+  var isAdmin = AUTH.isAdmin();
+  var userId  = AUTH.getUserId();
+
+  var query = sb.from('submissions')
+    .select('id,template_id,status,created_at,answers,metadata')
+    .in('template_id', cfg.templateIds)
+    .order('created_at', { ascending: false });
+
+  if (!isAdmin) query = query.eq('user_id', userId);
+  if (cfg.subStatus !== 'all') query = query.eq('status', cfg.subStatus);
+  if (cfg.dateFrom) query = query.gte('created_at', cfg.dateFrom + 'T00:00:00');
+  if (cfg.dateTo)   query = query.lte('created_at', cfg.dateTo + 'T23:59:59');
+
+  var { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+}
+
+// ─── Overview (table) ─────────────────────────────────────────────────────────
+function buildOverviewHTML(submissions) {
+  // Collect all statuscheck items across selected templates
+  var statusItems = collectStatusItems();
+
+  var html = '<div class="report-title">' + esc(cfg.name) + '</div>';
+  html += '<div class="report-subtitle">Overzichtstabel &bull; ' + fmtNow() + '</div>';
+  html += buildReportParamsRow();
+
+  html += '<table class="report-table"><thead><tr>';
+  if (cfg.meta.date)     html += '<th>Datum</th>';
+  if (cfg.meta.template) html += '<th>Template</th>';
+  if (cfg.meta.filledBy) html += '<th>Ingevuld door</th>';
+  if (cfg.meta.customer) html += '<th>Klant</th>';
+  if (cfg.meta.location) html += '<th>Locatie</th>';
+  if (cfg.meta.reference)html += '<th>Referentie</th>';
+  if (cfg.meta.status)   html += '<th>Status</th>';
+  statusItems.forEach(function(si) { html += '<th>' + esc(si.label) + '</th>'; });
+  if (cfg.meta.notes)    html += '<th>Opmerkingen</th>';
+  html += '</tr></thead><tbody>';
+
+  submissions.forEach(function(sub) {
+    var meta = sub.metadata || {};
+    var answers = sub.answers || {};
+    var tpl = _templates.find(function(t) { return t.id === sub.template_id; });
+    html += '<tr>';
+    if (cfg.meta.date)     html += '<td>' + fmtDate(sub.created_at) + '</td>';
+    if (cfg.meta.template) html += '<td>' + esc(tpl ? tpl.name : sub.template_id) + '</td>';
+    if (cfg.meta.filledBy) html += '<td>' + esc(meta.filledBy || '') + '</td>';
+    if (cfg.meta.customer) html += '<td>' + esc(meta.customer  || '') + '</td>';
+    if (cfg.meta.location) html += '<td>' + esc(meta.location  || '') + '</td>';
+    if (cfg.meta.reference)html += '<td>' + esc(meta.reference || '') + '</td>';
+    if (cfg.meta.status)   html += '<td>' + statusChip(sub.status) + '</td>';
+    statusItems.forEach(function(si) {
+      var ans = answers[si.id];
+      var val = ans ? (ans.value || '') : '';
+      html += '<td>' + (val ? statusChip(val) : '<span style="color:var(--light)">—</span>') + '</td>';
+    });
+    if (cfg.meta.notes)    html += '<td>' + esc(meta.notes || '') + '</td>';
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  return html;
+}
+
+// ─── Rejections ───────────────────────────────────────────────────────────────
+function buildRejectionsHTML(submissions) {
+  var targetVals = cfg.rejectionVals;
+  if (!targetVals.length) {
+    // If no specific values chosen, show all non-ok-ish values
+    targetVals = ['Niet OK', 'Aandacht', 'Nee'];
+  }
+
+  var html = '<div class="report-title">' + esc(cfg.name) + '</div>';
+  html += '<div class="report-subtitle">Afkeuringen &bull; ' + fmtNow() + '</div>';
+  html += buildReportParamsRow();
+
+  var anyFound = false;
+  submissions.forEach(function(sub) {
+    var meta = sub.metadata || {};
+    var answers = sub.answers || {};
+    var tpl = _templates.find(function(t) { return t.id === sub.template_id; });
+    var schema = tpl ? (tpl.schema || {}) : {};
+
+    // Find all items with rejection values
+    var hits = [];
+    (schema.sections || []).forEach(function(sec) {
+      (sec.items || []).forEach(function(item) {
+        if (!['statuscheck','radio','yesno'].includes(item.type)) return;
+        var ans = answers[item.id];
+        if (!ans || !ans.value) return;
+        if (targetVals.includes(ans.value)) {
+          hits.push({ label: item.label || item.id, value: ans.value, note: ans.followNote || ans.note || '' });
+        }
+      });
+    });
+
+    if (!hits.length) return;
+    anyFound = true;
+
+    html += '<div class="rejection-block">';
+    html += '<div class="rejection-header">';
+    html += '<div class="rejection-title">' + esc(tpl ? tpl.name : sub.template_id);
+    if (meta.customer) html += ' &bull; ' + esc(meta.customer);
+    html += '</div>';
+    html += '<div class="rejection-meta">' + fmtDate(sub.created_at);
+    if (meta.filledBy) html += ' &bull; ' + esc(meta.filledBy);
+    html += '</div>';
+    html += '</div>';
+    html += '<div class="rejection-items">';
+    hits.forEach(function(h) {
+      html += '<div class="rejection-item">';
+      html += '<div class="rej-dot"></div>';
+      html += '<div>';
+      html += '<div class="rej-label">' + esc(h.label) + '</div>';
+      html += '<div class="rej-val">' + statusChip(h.value) + '</div>';
+      if (h.note) html += '<div class="rej-note">Notitie: ' + esc(h.note) + '</div>';
+      html += '</div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+  });
+
+  if (!anyFound) {
+    html += '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><p>Geen afkeuringen gevonden in de geselecteerde periode.</p></div>';
+  }
+  return html;
+}
+
+// ─── Full ─────────────────────────────────────────────────────────────────────
+function buildFullHTML(submissions) {
+  var html = '<div class="report-title">' + esc(cfg.name) + '</div>';
+  html += '<div class="report-subtitle">Volledig rapport &bull; ' + fmtNow() + '</div>';
+  html += buildReportParamsRow();
+
+  submissions.forEach(function(sub) {
+    var meta = sub.metadata || {};
+    var answers = sub.answers || {};
+    var tpl = _templates.find(function(t) { return t.id === sub.template_id; });
+    var schema = tpl ? (tpl.schema || {}) : {};
+
+    html += '<div class="full-submission">';
+    html += '<div class="full-sub-header">' + esc(tpl ? tpl.name : sub.template_id);
+    if (meta.customer) html += ' &bull; ' + esc(meta.customer);
+    html += '<span>' + fmtDate(sub.created_at);
+    if (meta.filledBy) html += ' &bull; ' + esc(meta.filledBy);
+    if (cfg.meta.status) html += ' &bull; ' + sub.status;
+    html += '</span></div>';
+
+    // Metadata summary
+    var metaRows = [];
+    if (cfg.meta.location  && meta.location)  metaRows.push('<strong>Locatie:</strong> ' + esc(meta.location));
+    if (cfg.meta.reference && meta.reference) metaRows.push('<strong>Ref:</strong> ' + esc(meta.reference));
+    if (cfg.meta.notes     && meta.notes)     metaRows.push('<strong>Opmerkingen:</strong> ' + esc(meta.notes));
+    if (metaRows.length) html += '<div class="report-meta-row" style="padding:6px 14px 0">' + metaRows.join(' &bull; ') + '</div>';
+
+    (schema.sections || []).forEach(function(sec) {
+      var items = sec.items || [];
+      if (!items.length) return;
+      html += '<div class="full-section">';
+      html += '<div class="full-section-title">' + esc(sec.title || '') + '</div>';
+      items.forEach(function(item) {
+        var ans = answers[item.id];
+        var valStr = '';
+        if (ans) {
+          if (ans.value) valStr = ans.value;
+          else if (ans.text) valStr = ans.text;
+          else if (ans.checked !== undefined) valStr = ans.checked ? 'Ja' : 'Nee';
+        }
+        if (!valStr && item.type === 'checkgroup') {
+          // Show sub-items
+          var subs = (item.subItems || []).map(function(si) {
+            var sa = ans && ans[si.id];
+            return esc(si.label) + ': ' + (sa && sa.checked ? '✓' : '—');
+          });
+          valStr = subs.join(', ');
+        }
+        var noteStr = '';
+        if (ans && ans.followNote) noteStr = ' <span style="color:var(--info);font-size:11px;">[' + esc(ans.followNote) + ']</span>';
+        html += '<div class="full-item"><div class="full-item-label">' + esc(item.label || item.id) + '</div>';
+        html += '<div class="full-item-val">' + (valStr ? statusChip(valStr) : '<span style="color:var(--light)">—</span>') + noteStr + '</div></div>';
+      });
+      html += '</div>';
+    });
+    html += '</div>';
+  });
+  return html;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function collectStatusItems() {
+  var seen = {};
+  var items = [];
+  var selectedTpls = _templates.filter(function(t) { return cfg.templateIds.includes(t.id); });
+  selectedTpls.forEach(function(t) {
+    var schema = t.schema || {};
+    (schema.sections || []).forEach(function(s) {
+      (s.items || []).forEach(function(item) {
+        if (item.type === 'statuscheck' && !seen[item.id]) {
+          seen[item.id] = true;
+          items.push({ id: item.id, label: item.label || item.id });
+        }
+      });
+    });
+  });
+  return items;
+}
+
+function buildReportParamsRow() {
+  var parts = [];
+  var selectedTpls = _templates.filter(function(t) { return cfg.templateIds.includes(t.id); });
+  parts.push('<strong>Templates:</strong> ' + esc(selectedTpls.map(function(t){return t.name;}).join(', ')));
+  if (cfg.dateFrom || cfg.dateTo) {
+    var range = (cfg.dateFrom || '…') + ' t/m ' + (cfg.dateTo || '…');
+    parts.push('<strong>Periode:</strong> ' + esc(range));
+  } else {
+    parts.push('<strong>Periode:</strong> Alle');
+  }
+  if (cfg.subStatus !== 'all') parts.push('<strong>Status:</strong> ' + esc(cfg.subStatus));
+  return '<div class="report-meta-row">' + parts.join(' &bull; ') + '</div>';
+}
+
+var STATUS_CHIP_MAP = {
+  'OK':       'chip-ok',
+  'Aandacht': 'chip-warn',
+  'Niet OK':  'chip-bad',
+  'N.v.t.':  'chip-na',
+  'Ja':       'chip-ok',
+  'Nee':      'chip-bad',
+  'completed':'chip-ok',
+  'open':     'chip-warn',
+  'archived': 'chip-na'
+};
+function statusChip(val) {
+  if (!val) return '';
+  var cls = STATUS_CHIP_MAP[val] || 'chip-na';
+  return '<span class="status-chip ' + cls + '">' + esc(val) + '</span>';
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  return d.toLocaleDateString('nl-BE', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+function fmtNow() {
+  return new Date().toLocaleDateString('nl-BE', { day:'2-digit', month:'long', year:'numeric' });
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── Export CSV ───────────────────────────────────────────────────────────────
+function exportCSV() {
+  if (!_reportData || !_reportData.length) { toast('Geen data om te exporteren.'); return; }
+  var rows = [];
+  var statusItems = collectStatusItems();
+
+  // Header
+  var header = [];
+  if (cfg.meta.date)     header.push('Datum');
+  if (cfg.meta.template) header.push('Template');
+  if (cfg.meta.filledBy) header.push('Ingevuld door');
+  if (cfg.meta.customer) header.push('Klant');
+  if (cfg.meta.location) header.push('Locatie');
+  if (cfg.meta.reference)header.push('Referentie');
+  if (cfg.meta.status)   header.push('Status');
+  statusItems.forEach(function(si) { header.push(si.label); });
+  if (cfg.meta.notes)    header.push('Opmerkingen');
+  rows.push(header);
+
+  _reportData.forEach(function(sub) {
+    var meta = sub.metadata || {};
+    var answers = sub.answers || {};
+    var tpl = _templates.find(function(t) { return t.id === sub.template_id; });
+    var row = [];
+    if (cfg.meta.date)     row.push(fmtDate(sub.created_at));
+    if (cfg.meta.template) row.push(tpl ? tpl.name : sub.template_id);
+    if (cfg.meta.filledBy) row.push(meta.filledBy || '');
+    if (cfg.meta.customer) row.push(meta.customer  || '');
+    if (cfg.meta.location) row.push(meta.location  || '');
+    if (cfg.meta.reference)row.push(meta.reference || '');
+    if (cfg.meta.status)   row.push(sub.status || '');
+    statusItems.forEach(function(si) {
+      var ans = answers[si.id];
+      row.push(ans ? (ans.value || '') : '');
+    });
+    if (cfg.meta.notes)    row.push(meta.notes || '');
+    rows.push(row);
+  });
+
+  var bom = '﻿';
+  var csv = bom + rows.map(function(r) {
+    return r.map(function(v) {
+      var s = String(v);
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) s = '"' + s.replace(/"/g,'""') + '"';
+      return s;
+    }).join(',');
+  }).join('\r\n');
+
+  downloadBlob(cfg.name.replace(/[^a-z0-9]/gi,'_') + '.csv', 'text/csv;charset=utf-8', csv);
+  toast('CSV gedownload.');
+}
+
+// ─── Export PDF ───────────────────────────────────────────────────────────────
+function exportPDF() {
+  if (!_reportData) { toast('Genereer eerst een rapport.'); return; }
+  var reportHTML = document.getElementById('report-body').innerHTML;
+  if (!reportHTML || reportHTML.includes('loading-spinner')) { toast('Rapport nog niet klaar.'); return; }
+
+  // Use jsPDF with html() method
+  var { jsPDF } = window.jspdf;
+  var doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  var container = document.createElement('div');
+  container.style.cssText = 'width:257mm;font-family:sans-serif;font-size:11px;padding:8mm;background:white;';
+  container.innerHTML = document.getElementById('report-body').innerHTML;
+  // Inline minimal styles for the PDF render
+  var style = document.createElement('style');
+  style.textContent = [
+    'table{width:100%;border-collapse:collapse;font-size:10px}',
+    'th{background:#EFECE5;font-weight:600;font-size:9px;padding:5px 7px;border:1px solid #E0DDD5;text-align:left}',
+    'td{padding:5px 7px;border:1px solid #E0DDD5;vertical-align:top}',
+    'tr:nth-child(even) td{background:#FAFAF8}',
+    '.status-chip{display:inline-block;padding:1px 6px;border-radius:99px;font-size:9px;font-weight:600}',
+    '.chip-ok{background:#D1FAE5;color:#065F46}',
+    '.chip-warn{background:#FEF3C7;color:#92400E}',
+    '.chip-bad{background:#FEE2E2;color:#991B1B}',
+    '.chip-na{background:#EFECE5;color:#7A7168}',
+    '.report-title{font-size:18px;font-weight:bold;margin-bottom:3px}',
+    '.report-subtitle{font-size:11px;color:#7A7168;margin-bottom:10px}',
+    '.report-meta-row{font-size:10px;color:#7A7168;margin-bottom:10px}',
+    '.rejection-block{border:1px solid #E0DDD5;border-radius:6px;margin-bottom:8px;overflow:hidden}',
+    '.rejection-header{background:#EFECE5;padding:6px 10px;display:flex;justify-content:space-between}',
+    '.rejection-title{font-weight:600;font-size:12px}',
+    '.rejection-meta{font-size:10px;color:#7A7168}',
+    '.rejection-items{padding:6px 10px}',
+    '.rejection-item{display:flex;gap:8px;margin-bottom:4px}',
+    '.rej-dot{width:6px;height:6px;border-radius:50%;background:#DC2626;flex-shrink:0;margin-top:3px}',
+    '.rej-label{font-weight:500;font-size:11px}',
+    '.rej-val{font-size:10px;color:#7A7168}',
+    '.rej-note{font-size:10px;color:#1D4ED8;font-style:italic}',
+    '.full-submission{margin-bottom:10px;border:1px solid #E0DDD5;border-radius:6px;overflow:hidden}',
+    '.full-sub-header{background:#EFECE5;padding:6px 10px;font-weight:600;font-size:12px;display:flex;justify-content:space-between}',
+    '.full-section-title{font-size:9px;text-transform:uppercase;color:#B0A898;font-weight:600;margin:5px 0 3px}',
+    '.full-item{display:flex;gap:8px;padding:3px 0;border-bottom:1px solid #E0DDD5;font-size:10px}',
+    '.full-item-label{flex:1;color:#7A7168}',
+    '.full-item-val{font-weight:500;text-align:right}'
+  ].join('');
+  container.insertBefore(style, container.firstChild);
+  document.body.appendChild(container);
+
+  doc.html(container, {
+    callback: function(d) {
+      document.body.removeChild(container);
+      d.save(cfg.name.replace(/[^a-z0-9]/gi,'_') + '.pdf');
+      toast('PDF gedownload.');
+    },
+    x: 0, y: 0,
+    html2canvas: { scale: 0.265, useCORS: true }
+  });
+}
+
+// ─── Export Word ──────────────────────────────────────────────────────────────
+function exportWord() {
+  if (!_reportData) { toast('Genereer eerst een rapport.'); return; }
+  var reportHTML = document.getElementById('report-body').innerHTML;
+  if (!reportHTML || reportHTML.includes('loading-spinner')) { toast('Rapport nog niet klaar.'); return; }
+
+  var docHTML = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' +
+    'body{font-family:Calibri,sans-serif;font-size:11pt}' +
+    'table{width:100%;border-collapse:collapse;font-size:9pt}' +
+    'th{background:#EFECE5;font-weight:bold;padding:4pt 6pt;border:1pt solid #C5C0B5}' +
+    'td{padding:4pt 6pt;border:1pt solid #E0DDD5;vertical-align:top}' +
+    '.report-title{font-size:16pt;font-weight:bold;margin-bottom:4pt}' +
+    '.report-subtitle{font-size:10pt;color:#7A7168;margin-bottom:8pt}' +
+    '.status-chip{padding:1pt 4pt;border-radius:3pt;font-size:8pt;font-weight:bold}' +
+    '.chip-ok{background:#D1FAE5;color:#065F46}' +
+    '.chip-warn{background:#FEF3C7;color:#92400E}' +
+    '.chip-bad{background:#FEE2E2;color:#991B1B}' +
+    '.chip-na{color:#7A7168}' +
+    '.rejection-block{border:1pt solid #E0DDD5;margin-bottom:8pt;padding:4pt}' +
+    '.rejection-title{font-weight:bold;font-size:11pt}' +
+    '.full-submission{border:1pt solid #E0DDD5;margin-bottom:8pt;padding:4pt}' +
+    '.full-section-title{font-size:8pt;text-transform:uppercase;color:#B0A898;font-weight:bold;margin:4pt 0 2pt}' +
+    '.full-item{display:flex;gap:8pt;padding:2pt 0;border-bottom:1pt solid #E0DDD5;font-size:9pt}' +
+    '.full-item-label{flex:1;color:#7A7168}' +
+    '</style></head><body>' + reportHTML + '</body></html>';
+
+  var blob = window.htmlDocx ? window.htmlDocx.asBlob(docHTML) : new Blob([docHTML], { type: 'application/msword' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = cfg.name.replace(/[^a-z0-9]/gi,'_') + '.docx';
+  a.click();
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+  toast('Word-document gedownload.');
+}
+
+// ─── Reset ────────────────────────────────────────────────────────────────────
+function resetWizard() {
+  cfg = {
+    name: '', templateIds: [], subStatus: 'all', preset: 'all',
+    dateFrom: null, dateTo: null, reportType: 'overview', rejectionVals: [],
+    meta: { date: true, filledBy: true, customer: true, location: false, reference: false, notes: false, template: true, status: false }
+  };
+  _reportData = null;
+  document.getElementById('rpt-name').value = '';
+  document.querySelectorAll('[data-sub-status]').forEach(function(p) { p.classList.toggle('active', p.dataset.subStatus === 'all'); });
+  document.querySelectorAll('[data-preset]').forEach(function(p) { p.classList.toggle('active', p.dataset.preset === 'all'); });
+  document.getElementById('custom-dates').style.display = 'none';
+  document.querySelectorAll('.type-card').forEach(function(c) { c.classList.toggle('selected', c.dataset.type === 'overview'); });
+  document.getElementById('rejection-filter').style.display = 'none';
+  document.querySelectorAll('.meta-item').forEach(function(m) {
+    var def = ['date','filledBy','customer','template'];
+    m.classList.toggle('checked', def.includes(m.dataset.meta));
+    cfg.meta[m.dataset.meta] = def.includes(m.dataset.meta);
+  });
+  renderTemplateList();
+  goStep(1);
+}
+
+// ─── Blob download ────────────────────────────────────────────────────────────
+function downloadBlob(filename, mimeType, content) {
+  var blob = new Blob([content], { type: mimeType });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function toast(msg) {
+  var el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(function() { el.classList.remove('show'); }, 3000);
+}
+</script>
+</body>
+</html>
