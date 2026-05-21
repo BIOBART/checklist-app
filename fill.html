@@ -696,7 +696,10 @@ function renderItem(secId, item) {
   // ── STATUSCHECK type ──
   if (item.type === 'statuscheck') {
     const defaults = ['OK','Niet OK','Onderdelen nodig','Niet gecheckt'];
-    const labels = item.statusLabels || defaults;
+    const nlLabels  = item.statusLabels || defaults;                      // canonical NL values (stored)
+    const i18nLbls  = item.statusLabelsI18n;
+    const dispLabels = (i18nLbls && i18nLbls[lang] && i18nLbls[lang].length)
+      ? i18nLbls[lang] : nlLabels;                                        // display in current language
     const ICONS = [
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>',
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
@@ -704,19 +707,22 @@ function renderItem(secId, item) {
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>'
     ];
     const CLASSES = ['ok','notok','parts','skip'];
-    const STATUS = labels.map((lbl,i) => ({ val:lbl, cls:CLASSES[i], icon:ICONS[i] }));
+    // val = stored NL value; display = language-appropriate label
+    const STATUS = nlLabels.map((nlVal, i) => ({ val:nlVal, display:dispLabels[i]||nlVal, cls:CLASSES[i], icon:ICONS[i] }));
     const btns = STATUS.map(s =>
-      `<button class="status-btn${ans.value===s.val?' active-'+s.cls:''}" onclick="setStatus('${item.id}','${esc(s.val)}','${s.cls}')">${s.icon} ${esc(s.val)}</button>`
+      `<button class="status-btn${ans.value===s.val?' active-'+s.cls:''}" data-val="${esc(s.val)}" onclick="setStatus('${item.id}','${esc(s.val)}','${s.cls}')">${s.icon} ${esc(s.display)}</button>`
     ).join('');
+    // Resolve follow-up trigger labels to display language
+    const _statusNlToDisp = nlVal => { const si2=nlLabels.indexOf(nlVal); return si2>=0?(dispLabels[si2]||nlVal):nlVal; };
 
     // Follow-up: triggered by any label in statusFollowUp array (or default Niet OK/Onderdelen)
     const followUpLabels = item.statusFollowUp?.length
       ? item.statusFollowUp
-      : [labels[1], labels[2]]; // default: 2nd and 3rd options
+      : [nlLabels[1], nlLabels[2]]; // default: 2nd and 3rd options (NL canonical)
     const scFollowTriggered = followUpLabels.includes(ans.value);
     const scFollowHtml = `
       <div class="followup-wrap" id="fu-${item.id}" style="display:${scFollowTriggered?'block':'none'}">
-        <div class="followup-label">Verduidelijking bij "${esc(ans.value||'')}"</div>
+        <div class="followup-label">Verduidelijking bij "${esc(_statusNlToDisp(ans.value)||'')}"</div>
         <textarea class="ff" rows="2" placeholder="Beschrijf het probleem…" oninput="setFollowNote('${item.id}',this.value)">${esc(ans.followNote||'')}</textarea>
         ${photoUploadHtml(item.id+'_fu', (answers[item.id+'_fu']||{}).photos||[])}
       </div>`;
@@ -773,11 +779,14 @@ function renderItem(secId, item) {
 
   // ── radio and yesno: no checkbox, selection IS the answer ──
   if (item.type === 'radio' || item.type === 'yesno') {
-    const opts = item.type === 'yesno'
+    const nlOpts = item.type === 'yesno'
       ? ['Ja','Nee','N.v.t.']
       : (item.options||['Ja','Nee','N/A']);
-    const pills = opts.map(o =>
-      `<div class="radio-opt${ans.value===o?' active':''}" onclick="setRadio('${item.id}','${esc(o)}')">${esc(o)}</div>`
+    // Display in current language if i18n present; stored value is always NL canonical
+    const i18nOpts = item.type === 'yesno' ? null : item.optionsI18n;
+    const dispOpts = (i18nOpts && i18nOpts[lang] && i18nOpts[lang].length) ? i18nOpts[lang] : nlOpts;
+    const pills = nlOpts.map((nlVal, oi) =>
+      `<div class="radio-opt${ans.value===nlVal?' active':''}" onclick="setRadio('${item.id}','${esc(nlVal)}')">${esc(dispOpts[oi]||nlVal)}</div>`
     ).join('');
     el.innerHTML = `
       <div class="item-body" style="padding-left:0">
@@ -926,22 +935,29 @@ function setRadio(id, val) {
 function setStatus(id, val, cls) {
   const a = getAns(id); a.value = val; a.checked = true;
   scheduleSave(); updateProgress();
-  // Update button active states
+  // Update button active states — match by data-val (language-independent)
   document.querySelectorAll(`#item-${id} .status-btn`).forEach(btn => {
     btn.className = 'status-btn';
-    if (btn.textContent.trim().startsWith(val)) btn.classList.add('active-' + cls);
+    if (btn.dataset.val === val) btn.classList.add('active-' + cls);
   });
   // show/hide follow-up based on configured statusFollowUp
   const fu = document.getElementById('fu-' + id);
   if (fu) {
     const item = findItem(id);
+    const nlDefs = ['OK','Niet OK','Onderdelen nodig','Niet gecheckt'];
+    const nlLbls = item?.statusLabels || nlDefs;
     const followUpLabels = item?.statusFollowUp?.length
       ? item.statusFollowUp
-      : [(item?.statusLabels||['OK','Niet OK','Onderdelen nodig','Niet gecheckt'])[1],
-         (item?.statusLabels||['OK','Niet OK','Onderdelen nodig','Niet gecheckt'])[2]];
+      : [nlLbls[1], nlLbls[2]];
     const show = followUpLabels.includes(val);
     fu.style.display = show ? 'block' : 'none';
-    if (show) fu.querySelector('.followup-label').textContent = `Verduidelijking bij "${val}"`;
+    if (show) {
+      // Translate display label
+      const idx = nlLbls.indexOf(val);
+      const i18n = item?.statusLabelsI18n;
+      const dispVal = (i18n && i18n[lang] && i18n[lang][idx]) ? i18n[lang][idx] : val;
+      fu.querySelector('.followup-label').textContent = `Verduidelijking bij "${dispVal}"`;
+    }
   }
   evalConditionals();
 }
@@ -1510,9 +1526,12 @@ async function generatePDF(mode = 'download') {
       // statuscheck type
       if (item.type === 'statuscheck') {
         const statusDefaults = ['OK','Niet OK','Onderdelen nodig','Niet gecheckt'];
-        const statusLabels = item.statusLabels || statusDefaults;
-        const selIdx = statusLabels.indexOf(ans.value);
-        // Index 1 = second option = rejection (Niet OK / REJECT / NOT DONE / …)
+        const statusNlLabels  = item.statusLabels || statusDefaults;         // canonical NL (for lookup)
+        const statusI18n      = item.statusLabelsI18n;
+        const statusDispLabels = (statusI18n && statusI18n[exportLang] && statusI18n[exportLang].length)
+          ? statusI18n[exportLang] : statusNlLabels;
+        const selIdx = statusNlLabels.indexOf(ans.value);
+        // Index 1 = second option = rejection
         const isRejected = selIdx === 1;
         const R = [192,57,43]; // red
         doc.setTextColor(...(isRejected ? R : D));
@@ -1520,20 +1539,21 @@ async function generatePDF(mode = 'download') {
         doc.setFont('helvetica', isRejected ? 'bold' : 'normal');
         const ll = doc.splitTextToSize(pdfStr(stripHtml(gl(item.label)))+(item.required?' *':''), cw*0.55);
         doc.text(ll, mg, y);
-        const statuses = statusLabels.map((val,si2) => ({
-          val,
+        const statuses = statusNlLabels.map((nlVal, si2) => ({
+          val: nlVal,
+          display: statusDispLabels[si2] || nlVal,
           color:[[45,90,61],[192,57,43],[180,120,10],[120,113,104]][si2] || [120,113,104]
         }));
         doc.setFontSize(7.5); doc.setFont('helvetica','normal');
         const selStatus = statuses.find(s => s.val === ans.value);
         if (selStatus) {
-          const tw = doc.getTextWidth(selStatus.val);
+          const tw = doc.getTextWidth(selStatus.display);
           const pillW = tw + 4;
           const spx = pw - mg - pillW;
           doc.setFillColor(...selStatus.color); doc.setDrawColor(...selStatus.color);
           doc.roundedRect(spx, y-3.5, pillW, 5, 1.2, 1.2, 'FD');
           doc.setTextColor(...W);
-          doc.text(selStatus.val, spx+2, y);
+          doc.text(selStatus.display, spx+2, y);
         }
         y += Math.max(ll.length,1)*4.5+1;
         // follow-up note — red+bold when rejected
@@ -1707,23 +1727,27 @@ async function generatePDF(mode = 'download') {
 
       // ── radio: label + pills right, no checkbox ──
       if (item.type === 'radio') {
+        const rNlOpts  = item.options || ['Ja','Nee','N/A'];
+        const rI18n    = item.optionsI18n;
+        const rDispOpts = (rI18n && rI18n[exportLang] && rI18n[exportLang].length) ? rI18n[exportLang] : rNlOpts;
+        // Resolve display text for stored NL answer value
+        const rAnsDisp = ans.value ? (rDispOpts[rNlOpts.indexOf(ans.value)] || ans.value) : '';
         doc.setTextColor(...D); doc.setFontSize(10); doc.setFont('helvetica','normal');
         const ll = doc.splitTextToSize(pdfStr(gl(item.label))+(item.required?' *':''), cw*0.6);
         doc.text(ll, mg, y);
-        if (ans.value) {
+        if (rAnsDisp) {
           doc.setFontSize(9); doc.setTextColor(...M);
-          doc.text(ans.value, mg+4, y + ll.length*4.5);
+          doc.text(rAnsDisp, mg+4, y + ll.length*4.5);
         }
-        // draw option pills right-aligned
-        const ropts = item.options||['Ja','Nee','N/A'];
+        // draw option pills right-aligned (display language)
         let rpx = pw - mg;
         doc.setFontSize(8);
-        for (let ri = ropts.length-1; ri >= 0; ri--) {
-          const lbl = ropts[ri];
+        for (let ri = rNlOpts.length-1; ri >= 0; ri--) {
+          const lbl = rDispOpts[ri] || rNlOpts[ri];
           const tw = doc.getTextWidth(lbl);
           const pillW = tw + 6;
           rpx -= pillW;
-          if (ans.value === lbl) {
+          if (ans.value === rNlOpts[ri]) { // compare by NL canonical
             doc.setFillColor(...G); doc.setDrawColor(...G);
             doc.roundedRect(rpx, y-3.5, pillW, 5, 1.5, 1.5, 'FD');
             doc.setTextColor(...W);
@@ -1735,7 +1759,7 @@ async function generatePDF(mode = 'download') {
           doc.text(lbl, rpx+3, y);
           rpx -= 3;
         }
-        y += Math.max(ll.length,1)*4.5 + (ans.value ? 5 : 0) + 2;
+        y += Math.max(ll.length,1)*4.5 + (rAnsDisp ? 5 : 0) + 2;
         continue;
       }
 
@@ -1943,13 +1967,16 @@ async function generateWord() {
         continue;
       }
       if (item.type === 'statuscheck') {
-        const sLabels = item.statusLabels || ['OK','Niet OK','Onderdelen nodig','Niet gecheckt'];
+        const sNlLabels  = item.statusLabels || ['OK','Niet OK','Onderdelen nodig','Niet gecheckt'];
+        const sI18n      = item.statusLabelsI18n;
+        const sDispLabels = (sI18n && sI18n[exportLang] && sI18n[exportLang].length) ? sI18n[exportLang] : sNlLabels;
         const sel = ans.value||'';
-        const idx = sLabels.indexOf(sel);
+        const idx = sNlLabels.indexOf(sel);
+        const dispSel = (idx >= 0 ? sDispLabels[idx] : sel) || sel;
         // Index 1 = second option = rejection
         const isRejected = idx === 1;
         const col = statusColors[idx] || '#786E68';
-        const badge = sel ? `<span style="background:${col};color:#fff;padding:1pt 6pt;border-radius:3pt;font-weight:bold">${esc(sel)}</span>` : '—';
+        const badge = dispSel ? `<span style="background:${col};color:#fff;padding:1pt 6pt;border-radius:3pt;font-weight:bold">${esc(dispSel)}</span>` : '—';
         const labelStyle = isRejected ? 'color:#C0392B;font-weight:bold' : '';
         const rowBorder  = isRejected ? 'border-left:3px solid #C0392B;padding-left:6pt;' : '';
         body += `<table width="100%" style="margin:3pt 0;${rowBorder}"><tr>
@@ -1960,11 +1987,16 @@ async function generateWord() {
         continue;
       }
       if (item.type === 'radio') {
-        const opts = item.options||[];
+        const rNlOpts2   = item.options||[];
+        const rI18n2     = item.optionsI18n;
+        const rDisp2     = (rI18n2 && rI18n2[exportLang] && rI18n2[exportLang].length) ? rI18n2[exportLang] : rNlOpts2;
         const sel = ans.value||'';
-        const pills = opts.map(o => o===sel
-          ? `<span style="background:${_wAcc};color:#fff;padding:1pt 7pt;border-radius:4pt">${esc(o)}</span>`
-          : `<span style="color:#786E68;padding:1pt 7pt">${esc(o)}</span>`).join(' ');
+        const pills = rNlOpts2.map((nlO, oi) => {
+          const dO = rDisp2[oi] || nlO;
+          return nlO===sel
+            ? `<span style="background:${_wAcc};color:#fff;padding:1pt 7pt;border-radius:4pt">${esc(dO)}</span>`
+            : `<span style="color:#786E68;padding:1pt 7pt">${esc(dO)}</span>`;
+        }).join(' ');
         body += `<table width="100%" style="margin:3pt 0"><tr>
           <td style="font-size:11pt;width:55%">${lbl}${req}</td>
           <td style="text-align:right;width:45%">${pills}</td></tr></table>`;

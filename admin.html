@@ -251,6 +251,15 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
           Templates
         </button>
+        <button class="btn" onclick="exportTranslationCSV()" title="Exporteer alle labelteksten naar CSV voor vertaling">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          CSV exporteren
+        </button>
+        <button class="btn" onclick="document.getElementById('csv-import-input').click()" title="Importeer vertaalde CSV">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          CSV importeren
+        </button>
+        <input type="file" id="csv-import-input" accept=".csv,text/csv" style="display:none" onchange="importTranslationCSV(this.files[0]);this.value=''">
         <button class="btn btn-primary" id="new-template-btn" onclick="newTemplate()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Nieuwe template
@@ -1453,6 +1462,264 @@ function toast(msg, type='') {
   setTimeout(()=>el.className='toast',2800);
 }
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── TRANSLATION CSV EXPORT / IMPORT ──
+
+function _csvEsc(s) {
+  s = String(s == null ? '' : s);
+  // Quote if the value contains commas, quotes or newlines
+  if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+function _csvRow(...fields) { return fields.map(_csvEsc).join(','); }
+
+async function exportTranslationCSV() {
+  const { data: templates, error } = await sb.from('templates').select('id, name, schema').order('name');
+  if (error) { toast('Fout bij laden: ' + error.message, 'error'); return; }
+
+  const rows = [_csvRow('template_id','template_name','path','item_type','nl','en','fr','de')];
+
+  for (const tpl of (templates || [])) {
+    const sections = tpl.schema?.sections || [];
+    sections.forEach((sec, si) => {
+      // Section title
+      const title = (typeof sec.title === 'object' && sec.title) ? sec.title : { nl: sec.title||'', en:'', fr:'', de:'' };
+      rows.push(_csvRow(tpl.id, tpl.name, `s${si}.title`, 'section_title',
+        title.nl||'', title.en||'', title.fr||'', title.de||''));
+
+      (sec.items || []).forEach((item, ii) => {
+        const type = item.type || 'check';
+
+        // Item label — skip pure instruction/link types already rich-HTML (still export)
+        const label = (typeof item.label === 'object' && item.label) ? item.label : { nl: item.label||'', en:'', fr:'', de:'' };
+        rows.push(_csvRow(tpl.id, tpl.name, `s${si}.i${ii}.label`, type,
+          label.nl||'', label.en||'', label.fr||'', label.de||''));
+
+        // Hint (text / yesno / number / statuscheck)
+        if (['text','yesno','number','statuscheck'].includes(type) && item.hint) {
+          const hint = (typeof item.hint === 'object' && item.hint) ? item.hint : { nl: item.hint||'', en:'', fr:'', de:'' };
+          if (hint.nl || hint.en || hint.fr || hint.de) {
+            rows.push(_csvRow(tpl.id, tpl.name, `s${si}.i${ii}.hint`, type,
+              hint.nl||'', hint.en||'', hint.fr||'', hint.de||''));
+          }
+        }
+
+        // Radio options
+        if (type === 'radio') {
+          const opts = item.options || [];
+          const i18n = item.optionsI18n || {};
+          opts.forEach((opt, oi) => {
+            rows.push(_csvRow(tpl.id, tpl.name, `s${si}.i${ii}.option.${oi}`, 'radio_option',
+              opt||'', (i18n.en||[])[oi]||'', (i18n.fr||[])[oi]||'', (i18n.de||[])[oi]||''));
+          });
+        }
+
+        // Status labels
+        if (type === 'statuscheck') {
+          const defLabels = ['OK','Niet OK','Onderdelen nodig','Niet gecheckt'];
+          const labels = item.statusLabels || defLabels;
+          const i18n = item.statusLabelsI18n || {};
+          labels.forEach((lbl, li) => {
+            rows.push(_csvRow(tpl.id, tpl.name, `s${si}.i${ii}.status.${li}`, 'status_label',
+              lbl||'', (i18n.en||[])[li]||'', (i18n.fr||[])[li]||'', (i18n.de||[])[li]||''));
+          });
+        }
+
+        // Checkgroup sub-item labels
+        if (type === 'checkgroup') {
+          (item.subitems || []).forEach((sub, sbi) => {
+            const sl = (typeof sub.label === 'object' && sub.label) ? sub.label : { nl: sub.label||'', en:'', fr:'', de:'' };
+            rows.push(_csvRow(tpl.id, tpl.name, `s${si}.i${ii}.sub.${sbi}.label`, 'checkgroup_sub',
+              sl.nl||'', sl.en||'', sl.fr||'', sl.de||''));
+          });
+        }
+      });
+    });
+  }
+
+  const csv = '﻿' + rows.join('\r\n'); // UTF-8 BOM so Excel opens it correctly
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'vertalingen_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('CSV geëxporteerd (' + (rows.length - 1) + ' rijen)', 'success');
+}
+
+async function importTranslationCSV(file) {
+  if (!file) return;
+  let text;
+  try { text = await file.text(); } catch(e) { toast('Kan bestand niet lezen', 'error'); return; }
+
+  const parsed = _parseCSV(text);
+  if (!parsed.length) { toast('Geen data gevonden in CSV', 'error'); return; }
+
+  // Group rows by template_id
+  const byTemplate = {};
+  parsed.forEach(row => {
+    const id = row.template_id?.trim();
+    if (!id) return;
+    if (!byTemplate[id]) byTemplate[id] = [];
+    byTemplate[id].push(row);
+  });
+
+  const ids = Object.keys(byTemplate);
+  if (!ids.length) { toast('Geen geldige template-IDs gevonden', 'error'); return; }
+
+  toast('Vertalingen verwerken…', '');
+
+  // Fetch all relevant templates in one query
+  const { data: templates, error } = await sb.from('templates').select('id, schema').in('id', ids);
+  if (error) { toast('Fout bij laden: ' + error.message, 'error'); return; }
+
+  let saved = 0, errors = 0;
+
+  for (const tpl of (templates || [])) {
+    const rows = byTemplate[tpl.id] || [];
+    const sections = tpl.schema?.sections || [];
+
+    for (const row of rows) {
+      const path = (row.path || '').trim();
+      if (!path) continue;
+
+      const mLangObj = (obj, r) => {
+        if (r.nl != null && r.nl !== '') obj.nl = r.nl;
+        if (r.en != null && r.en !== '') obj.en = r.en;
+        if (r.fr != null && r.fr !== '') obj.fr = r.fr;
+        if (r.de != null && r.de !== '') obj.de = r.de;
+        return obj;
+      };
+
+      // s{si}.title
+      const m1 = path.match(/^s(\d+)\.title$/);
+      if (m1) {
+        const si = +m1[1]; if (!sections[si]) continue;
+        if (typeof sections[si].title !== 'object' || !sections[si].title)
+          sections[si].title = { nl: sections[si].title||'', en:'', fr:'', de:'' };
+        mLangObj(sections[si].title, row); continue;
+      }
+
+      // s{si}.i{ii}.label
+      const m2 = path.match(/^s(\d+)\.i(\d+)\.label$/);
+      if (m2) {
+        const si=+m2[1], ii=+m2[2];
+        const item = sections[si]?.items?.[ii]; if (!item) continue;
+        if (typeof item.label !== 'object' || !item.label) item.label = { nl: item.label||'', en:'', fr:'', de:'' };
+        mLangObj(item.label, row); continue;
+      }
+
+      // s{si}.i{ii}.hint
+      const m3 = path.match(/^s(\d+)\.i(\d+)\.hint$/);
+      if (m3) {
+        const si=+m3[1], ii=+m3[2];
+        const item = sections[si]?.items?.[ii]; if (!item) continue;
+        if (typeof item.hint !== 'object' || !item.hint) item.hint = { nl: item.hint||'', en:'', fr:'', de:'' };
+        mLangObj(item.hint, row); continue;
+      }
+
+      // s{si}.i{ii}.option.{oi}
+      const m4 = path.match(/^s(\d+)\.i(\d+)\.option\.(\d+)$/);
+      if (m4) {
+        const si=+m4[1], ii=+m4[2], oi=+m4[3];
+        const item = sections[si]?.items?.[ii]; if (!item || item.type !== 'radio') continue;
+        // Update NL option
+        if (row.nl && item.options && item.options[oi] !== undefined) item.options[oi] = row.nl;
+        // Update i18n for other languages
+        ['en','fr','de'].forEach(l => {
+          if (!row[l]) return;
+          if (!item.optionsI18n) item.optionsI18n = {};
+          if (!item.optionsI18n[l]) item.optionsI18n[l] = (item.options || []).slice();
+          item.optionsI18n[l][oi] = row[l];
+        });
+        continue;
+      }
+
+      // s{si}.i{ii}.status.{li}
+      const m5 = path.match(/^s(\d+)\.i(\d+)\.status\.(\d+)$/);
+      if (m5) {
+        const si=+m5[1], ii=+m5[2], li=+m5[3];
+        const item = sections[si]?.items?.[ii]; if (!item || item.type !== 'statuscheck') continue;
+        if (!item.statusLabels) item.statusLabels = ['OK','Niet OK','Onderdelen nodig','Niet gecheckt'];
+        // Update NL canonical label
+        if (row.nl) item.statusLabels[li] = row.nl;
+        // Update i18n
+        ['en','fr','de'].forEach(l => {
+          if (!row[l]) return;
+          if (!item.statusLabelsI18n) item.statusLabelsI18n = {};
+          if (!item.statusLabelsI18n[l]) item.statusLabelsI18n[l] = item.statusLabels.slice();
+          item.statusLabelsI18n[l][li] = row[l];
+        });
+        continue;
+      }
+
+      // s{si}.i{ii}.sub.{sbi}.label
+      const m6 = path.match(/^s(\d+)\.i(\d+)\.sub\.(\d+)\.label$/);
+      if (m6) {
+        const si=+m6[1], ii=+m6[2], sbi=+m6[3];
+        const sub = sections[si]?.items?.[ii]?.subitems?.[sbi]; if (!sub) continue;
+        if (typeof sub.label !== 'object' || !sub.label) sub.label = { nl: sub.label||'', en:'', fr:'', de:'' };
+        mLangObj(sub.label, row); continue;
+      }
+    }
+
+    const { error: saveErr } = await sb.from('templates')
+      .update({ schema: { sections }, updated_at: new Date().toISOString() })
+      .eq('id', tpl.id);
+    if (saveErr) { console.error('Import save error:', tpl.id, saveErr.message); errors++; }
+    else saved++;
+  }
+
+  if (errors) toast(`${saved} bijgewerkt, ${errors} fout(en)`, 'error');
+  else toast(`${saved} template(s) bijgewerkt ✓`, 'success');
+  loadTemplates();
+}
+
+function _parseCSV(text) {
+  // Strip BOM
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+
+  const rows = [];
+  let row = [], field = '', inQuote = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i], next = text[i+1];
+    if (inQuote) {
+      if (c === '"' && next === '"') { field += '"'; i++; }
+      else if (c === '"')           { inQuote = false; }
+      else                          { field += c; }
+    } else {
+      if (c === '"') {
+        inQuote = true;
+      } else if (c === ',') {
+        row.push(field); field = '';
+      } else if (c === '\r' && next === '\n') {
+        row.push(field); field = '';
+        if (row.some(f => f !== '')) rows.push(row);
+        row = []; i++; // skip \n
+      } else if (c === '\n' || c === '\r') {
+        row.push(field); field = '';
+        if (row.some(f => f !== '')) rows.push(row);
+        row = [];
+      } else {
+        field += c;
+      }
+    }
+  }
+  // Last field/row
+  if (field || row.length) { row.push(field); if (row.some(f => f !== '')) rows.push(row); }
+
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(h => h.trim());
+  return rows.slice(1).map(r => {
+    const obj = {};
+    headers.forEach((h, j) => { obj[h] = (r[j] != null ? r[j] : ''); });
+    return obj;
+  });
+}
 
 // ── QR CODE ──
 function showQR(templateId, name) {
