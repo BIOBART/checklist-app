@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" href="favicon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Help – Checklist App</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="branding.js"></script>
+<script src="auth.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #F6F4EF; --surface: #FFFFFF; --surface2: #EFECE5;
+  --border: #E0DDD5; --border-strong: #C5C0B5;
+  --text: #1A1714; --muted: #7A7168; --light: #B0A898;
+  --accent: #2D5A3D; --accent-bg: #E8F0EB; --accent-mid: #4A8A5E;
+  --radius: 10px; --radius-lg: 16px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 14px rgba(0,0,0,0.04);
+}
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* HEADER */
+header { background: var(--surface); border-bottom: 1px solid var(--border); height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; position: sticky; top: 0; z-index: 50; }
+.logo { font-family: 'DM Serif Display', serif; font-size: 20px; display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
+.logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.nav { display: flex; gap: 6px; align-items: center; }
+.nav-link { font-size: 13px; color: var(--muted); text-decoration: none; padding: 6px 12px; border-radius: var(--radius); transition: all 0.15s; display: flex; align-items: center; gap: 5px; }
+.nav-link:hover { background: var(--surface2); color: var(--text); }
+.nav-link.active { color: var(--accent); font-weight: 500; }
+.nav-link svg { width: 14px; height: 14px; }
+.user-pill { display:flex; align-items:center; gap:8px; }
+.user-avatar { width:28px; height:28px; border-radius:50%; background:var(--accent); color:white; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.user-name { font-size:13px; color:var(--text); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.user-role-badge { font-size:10px; background:var(--accent-bg); color:var(--accent); padding:2px 7px; border-radius:99px; font-weight:600; white-space:nowrap; }
+.user-logout { background:none; border:none; cursor:pointer; color:var(--muted); display:flex; align-items:center; padding:4px; border-radius:6px; transition:color 0.15s; }
+.user-logout:hover { color:#DC2626; }
+
+/* LAYOUT */
+.layout { display: grid; grid-template-columns: 220px 1fr; gap: 0; max-width: 1080px; margin: 0 auto; padding: 2rem; gap: 2rem; }
+@media (max-width: 720px) {
+  .layout { grid-template-columns: 1fr; padding: 1rem; }
+  .sidebar { display: none; }
+  header { padding: 0 1rem; }
+  .nav-link span { display: none; }
+}
+
+/* SIDEBAR */
+.sidebar { position: sticky; top: 76px; height: fit-content; }
+.sidebar-section { margin-bottom: 1.5rem; }
+.sidebar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--light); margin-bottom: 6px; padding: 0 8px; }
+.sidebar-link { display: block; font-size: 13px; color: var(--muted); text-decoration: none; padding: 5px 8px; border-radius: 6px; transition: all 0.12s; line-height: 1.4; }
+.sidebar-link:hover { background: var(--surface2); color: var(--text); }
+.sidebar-link.active { background: var(--accent-bg); color: var(--accent); font-weight: 500; }
+
+/* CONTENT */
+.content { min-width: 0; }
+
+/* SECTIONS */
+.help-section { margin-bottom: 3rem; scroll-margin-top: 80px; }
+.help-section h2 { font-family: 'DM Serif Display', serif; font-size: 24px; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 10px; }
+.help-section h2 .section-icon { font-size: 22px; }
+.help-section .section-sub { font-size: 14px; color: var(--muted); margin-bottom: 1.5rem; line-height: 1.6; }
+.help-section h3 { font-size: 16px; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+.help-section p { font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 0.75rem; }
+.help-section ul, .help-section ol { padding-left: 1.25rem; margin-bottom: 0.75rem; }
+.help-section li { font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 3px; }
+.help-section li strong { color: var(--text); }
+.help-section a { color: var(--accent); text-decoration: none; }
+.help-section a:hover { text-decoration: underline; }
+
+/* DIVIDER */
+.section-divider { border: none; border-top: 1px solid var(--border); margin-bottom: 3rem; }
+
+/* CARDS */
+.card-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 1rem; }
+.info-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem; }
+.info-card .ic-icon { font-size: 24px; margin-bottom: 6px; }
+.info-card .ic-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+.info-card .ic-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+/* STEP LIST */
+.step-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 1rem; }
+.step-item { display: flex; gap: 12px; align-items: flex-start; }
+.step-num { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: white; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+.step-text { font-size: 14px; color: var(--muted); line-height: 1.6; flex: 1; }
+.step-text strong { color: var(--text); }
+
+/* TABLE */
+.help-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 1rem; }
+.help-table th { background: var(--surface2); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); padding: 7px 10px; border: 1px solid var(--border); text-align: left; }
+.help-table td { padding: 7px 10px; border: 1px solid var(--border); vertical-align: top; color: var(--muted); }
+.help-table td:first-child { font-weight: 600; color: var(--text); white-space: nowrap; }
+
+/* CALLOUT */
+.callout { display: flex; gap: 10px; padding: 12px 14px; border-radius: var(--radius); margin-bottom: 1rem; font-size: 13px; line-height: 1.6; }
+.callout-info  { background: #EFF6FF; border: 1px solid #BFDBFE; color: #1E40AF; }
+.callout-warn  { background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E; }
+.callout-tip   { background: var(--accent-bg); border: 1px solid #A7C4AF; color: #1A3D26; }
+.callout svg   { width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px; }
+
+/* BADGE */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 600; }
+.badge-admin { background: #FEE2E2; color: #991B1B; }
+.badge-all   { background: var(--surface2); color: var(--muted); }
+
+/* PILL DEMO */
+.demo-pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 1rem; }
+.demo-pill { padding: 4px 12px; border-radius: 99px; font-size: 12px; font-weight: 600; }
+.dp-ok   { background:#D1FAE5;color:#065F46; }
+.dp-warn { background:#FEF3C7;color:#92400E; }
+.dp-bad  { background:#FEE2E2;color:#991B1B; }
+.dp-na   { background:var(--surface2);color:var(--muted); }
+
+/* SEARCH */
+.search-bar { position: relative; margin-bottom: 2rem; }
+.search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--light); }
+.search-icon svg { width: 16px; height: 16px; }
+.search-input { width: 100%; font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 10px 12px 10px 38px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); outline: none; transition: border 0.15s; }
+.search-input:focus { border-color: var(--accent); }
+.search-input::placeholder { color: var(--light); }
+.no-results { display: none; text-align: center; padding: 2rem; color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="index.html" class="logo" style="padding:0">
+    <span class="logo-dot"></span>
+    Checklist App
+  </a>
+  <nav class="nav">
+    <a href="index.html" class="nav-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      <span>Home</span>
+    </a>
+    <a href="history.html" class="nav-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span>Ingevuld</span>
+    </a>
+    <a href="reports.html" class="nav-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span>Rapporten</span>
+    </a>
+    <a href="admin.html" class="nav-link" data-admin-only>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+      <span>Admin</span>
+    </a>
+    <a href="settings.html" class="nav-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>Instellingen</span>
+    </a>
+    <a href="help.html" class="nav-link active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span>Help</span>
+    </a>
+  </nav>
+  <div id="user-pill"></div>
+</header>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Aan de slag</div>
+      <a href="#intro"   class="sidebar-link">Overzicht</a>
+      <a href="#login"   class="sidebar-link">Inloggen</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Checklists</div>
+      <a href="#fill"    class="sidebar-link">Invullen</a>
+      <a href="#types"   class="sidebar-link">Vraagtypes</a>
+      <a href="#export"  class="sidebar-link">Exporteren</a>
+      <a href="#history" class="sidebar-link">Historiek</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Rapporten</div>
+      <a href="#reports" class="sidebar-link">Rapportwizard</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Admin <span class="badge badge-admin">Admin</span></div>
+      <a href="#templates"   class="sidebar-link">Templates bouwen</a>
+      <a href="#conditional" class="sidebar-link">Conditionele logica</a>
+      <a href="#statuscheck" class="sidebar-link">Statuscheck type</a>
+      <a href="#translations"class="sidebar-link">Vertalingen</a>
+      <a href="#users"       class="sidebar-link">Gebruikers</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Instellingen</div>
+      <a href="#branding"  class="sidebar-link">Branding</a>
+      <a href="#language"  class="sidebar-link">Taal</a>
+    </div>
+  </aside>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <!-- Search -->
+    <div class="search-bar">
+      <div class="search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+      <input class="search-input" type="text" placeholder="Zoek in de handleiding…" id="help-search" oninput="searchHelp(this.value)">
+    </div>
+    <div class="no-results" id="no-results">Geen resultaten gevonden voor je zoekopdracht.</div>
+
+    <!-- ═══ INTRO ═══════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="intro" data-searchable>
+      <h2><span class="section-icon">👋</span> Welkom in de Checklist App</h2>
+      <p class="section-sub">Deze app laat je op elk toestel checklists invullen, opslaan, exporteren en rapporteren. Hieronder vind je een beknopt overzicht van de belangrijkste functies.</p>
+
+      <div class="card-row">
+        <div class="info-card">
+          <div class="ic-icon">📋</div>
+          <div class="ic-title">Invullen</div>
+          <div class="ic-desc">Kies een template, vul de vragen in en sla automatisch op.</div>
+        </div>
+        <div class="info-card">
+          <div class="ic-icon">📁</div>
+          <div class="ic-title">Historiek</div>
+          <div class="ic-desc">Bekijk, zoek en filter alle ingevulde checklists.</div>
+        </div>
+        <div class="info-card">
+          <div class="ic-icon">📊</div>
+          <div class="ic-title">Rapporten</div>
+          <div class="ic-desc">Stel rapporten samen over meerdere submissions en exporteer ze.</div>
+        </div>
+        <div class="info-card">
+          <div class="ic-icon">⚙️</div>
+          <div class="ic-title">Admin</div>
+          <div class="ic-desc">Beheer templates, gebruikers en vertalingen. Alleen voor admins.</div>
+        </div>
+      </div>
+
+      <table class="help-table">
+        <thead><tr><th>Pagina</th><th>Beschrijving</th><th>Toegang</th></tr></thead>
+        <tbody>
+          <tr><td>Home</td><td>Overzicht van templates + recente submissions</td><td>Ingelogd</td></tr>
+          <tr><td>Ingevuld</td><td>Alle ingevulde checklists</td><td>Ingelogd</td></tr>
+          <tr><td>Rapporten</td><td>Rapportwizard</td><td>Ingelogd</td></tr>
+          <tr><td>Admin</td><td>Templates, gebruikers, vertalingen</td><td><span class="badge badge-admin">Admin</span></td></tr>
+          <tr><td>Instellingen</td><td>Taal, branding</td><td>Ingelogd</td></tr>
+          <tr><td>Help</td><td>Deze pagina</td><td>Ingelogd</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <hr class="section-divider">
+
+    <!-- ═══ LOGIN ══════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="login" data-searchable>
+      <h2><span class="section-icon">🔐</span> Inloggen</h2>
+      <p class="section-sub">De app vereist een account. Accounts worden aangemaakt door een admin.</p>
+
+      <h3>Eerste keer inloggen</h3>
+      <div class="step-list">
+        <div class="step-item"><div class="step-num">1</div><div class="step-text">Je ontvangt een uitnodigingsmail van de admin met een <strong>magic link</strong>.</div></div>
+        <div class="step-item"><div class="step-num">2</div><div class="step-text">Klik de link aan — je wordt naar de app gestuurd.</div></div>
+        <div class="step-item"><div class="step-num">3</div><div class="step-text">Stel je <strong>wachtwoord</strong> in op de loginpagina.</div></div>
+        <div class="step-item"><div class="step-num">4</div><div class="step-text">Vanaf nu log je in met je e-mail en wachtwoord.</div></div>
+      </div>
+
+      <h3>Wachtwoord vergeten</h3>
+      <p>Klik op <strong>"Wachtwoord vergeten"</strong> op de loginpagina en geef je e-mailadres in. Je ontvangt een resetlink.</p>
+
+      <div class="callout callout-info">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Heb je nog geen account? Neem contact op met een admin om uitgenodigd te worden.
+      </div>
+    </section>
+
+    <hr class="section-divider">
+
+    <!-- ═══ INVULLEN ═══════════════════════════════════════════════════════ -->
+    <section class="help-section" id="fill" data-searchable>
+      <h2><span class="section-icon">✏️</span> Een checklist invullen</h2>
+      <p class="section-sub">Kies een template op de homepage en vul de vragen in. De app slaat automatisch op.</p>
+
+      <h3>Stap voor stap</h3>
+      <div class="step-list">
+        <div class="step-item"><div class="step-num">1</div><div class="step-text">Ga naar <strong>Home</strong> en klik op een template.</div></div>
+        <div class="step-item"><div class="step-num">2</div><div class="step-text">Vul de <strong>headergegevens</strong> in: datum, ingevuld door, organisatie, klant, locatie, referentie.</div></div>
+        <div class="step-item"><div class="step-num">3</div><div class="step-text">Beantwoord de vragen per sectie. De antwoorden worden <strong>automatisch opgeslagen</strong>.</div></div>
+        <div class="step-item"><div class="step-num">4</div><div class="step-text">Klik <strong>"Markeer als voltooid"</strong> wanneer alles ingevuld is. Je kunt de checklist daarna nog steeds bekijken en exporteren.</div></div>
+      </div>
+
+      <h3>Pre-fill van vorige invulling</h3>
+      <p>Wanneer je een template voor de tweede keer invult, worden <strong>status-, radio- en ja/nee-antwoorden</strong> automatisch overgenomen van de vorige invulling. Een blauwe banner toont hoeveel antwoorden zijn overgenomen. Pas aan wat veranderd is en sla op.</p>
+
+      <div class="callout callout-tip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Antwoorden worden enkel overgenomen als de bijbehorende optie nog steeds bestaat in de template. Als een admin een statuswaarde heeft hernoemd, wordt het oude antwoord niet pre-filled.
+      </div>
+
+      <h3>Auto-opslaan</h3>
+      <p>De invulpagina slaat op:</p>
+      <ul>
+        <li>Na elke wijziging (1,5 seconden vertraging)</li>
+        <li>Elke 2 minuten automatisch</li>
+        <li>Bij klikken op "Markeer als voltooid"</li>
+      </ul>
+      <p>De <strong>"Opgeslagen"</strong> indicator rechtsboven bevestigt elke opslag.</p>
+
+      <h3>Taal wisselen</h3>
+      <p>Rechts bovenaan op de invulpagina staat een taalselector (🇧🇪 NL / 🇬🇧 EN / 🇫🇷 FR / 🇩🇪 DE). Wisselen past de weergave van vraaglabels en statusopties aan — de opgeslagen waarden blijven altijd in het Nederlands.</p>
+    </section>
+
+    <hr class="section-divider">
+
+    <!-- ═══ VRAAGTYPES ═════════════════════════════════════════════════════ -->
+    <section class="help-section" id="types" data-searchable>
+      <h2><span class="section-icon">🔲</span> Vraagtypes</h2>
+      <p class="section-sub">Een template kan de volgende soorten vragen bevatten.</p>
+
+      <table class="help-table">
+        <thead><tr><th>Type</th><th>Beschrijving</th><th>Opties</th></tr></thead>
+        <tbody>
+          <tr><td>Checkbox</td><td>Eenvoudig vakje aanvinken ter bevestiging</td><td>—</td></tr>
+          <tr><td>Ja / Nee</td><td>Drie keuzes: Ja, Nee, N.v.t.</td><td>—</td></tr>
+          <tr><td>Statuscheck</td><td>Statusbeoordeling met aanpasbare labels</td><td>Kleur per status, vervolg-veld activeerbaar</td></tr>
+          <tr><td>Radio</td><td>Meerkeuze met eigen opties</td><td>Opties zelf definiëren, vervolg-veld activeerbaar</td></tr>
+          <tr><td>Tekst</td><td>Vrij tekstveld</td><td>Optionele hint</td></tr>
+          <tr><td>Getal</td><td>Numerieke invoer</td><td>Optionele eenheid (kg, °C, mm…)</td></tr>
+          <tr><td>Datum</td><td>Datumkiezer</td><td>—</td></tr>
+          <tr><td>Foto</td><td>Foto uploaden (camera of galerij)</td><td>Meerdere foto's mogelijk</td></tr>
+          <tr><td>Handtekening</td><td>Ondertekenen op scherm (muis of vinger)</td><td>—</td></tr>
+          <tr><td>Checkgroep</td><td>Groep van subitems, elk afzonderlijk aan te vinken</td><td>Subitems zelf definiëren</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Statuscheck — statusindicators</h3>
+      <p>De standaard statussen en hun kleuren:</p>
+      <div class="demo-pills">
+        <span class="demo-pill dp-ok">OK</span>
+        <span class="demo-pill dp-warn">Aandacht</span>
+        <span class="demo-pill dp-bad">Niet OK</span>
+        <span class="demo-pill dp-na">N.v.t.</span>
+      </div>
+      <p>Admins kunnen de labels, kleuren en het aantal statussen aanpassen per vraag in de template editor.</p>
+    </section>
+
+    <hr class="section-divider">
+
+    <!-- ═══ EXPORT ═════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="export" data-searchable>
+      <h2><span class="section-icon">📤</span> Exporteren</h2>
+      <p class="section-sub">Een ingevulde checklist kan worden geëxporteerd als PDF of Word, en optioneel per mail worden verstuurd.</p>
+
+      <h3>PDF exporteren</h3>
+      <div class="step-list">
+        <div class="step-item"><div class="step-num">1</div><div class="step-text">Open een ingevulde checklist (via Home of Ingevuld).</div></div>
+        <div class="step-item"><div class="step-num">2</div><div class="step-text">Klik op de knop <strong>"Exporteer"</strong> rechts bovenaan.</div></div>
+        <div class="step-item"><div class="step-num">3</div><div class="step-text">Kies <strong>PDF</strong> of <strong>Word</strong>. Stel eventueel de exporttaal in.</div></div>
+        <div class="step-item"><div class="step-num">4</div><div class="step-text">Het bestand wordt automatisch gedownload. De bestandsnaam is gebaseerd op template, klant en referentie.</div></div>
+      </div>
+
+      <h3>Versturen per mail</h3>
+      <p>Klik op <strong>"Verstuur per mail"</strong> in het exportvenster. Vul het ontvangstadres in, voeg optioneel een bericht toe, en klik op verzenden. De PDF wordt als bijlage meegestuurd.</p>
+
+      <div class="callout callout-info">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        De mailverzending vereist een geconfigureerde EmailJS-integratie. Neem contact op met de admin als de knop niet beschikbaar is.
+      </div>
+
+      <h3>Wat staat er in de PDF?</h3>
+      <ul>
+        <li>Branded header met bedrijfslogo en documenttitel</li>
+        <li>Info-blok: datum, invuller, organisatie, klant, locatie, referentie</li>
+        <li>Alle secties en vragen met antwoorden</li>
+        <li>Foto's en handtekening inline</li>
+        <li>Verborgen (conditionele) vragen worden <strong>niet</strong> opgenomen</li>
+      </ul>
+    </section>
+
+    <hr class="section-divider">
+
+    <!-- ═══ HISTORIEK ══════════════════════════════════════════════════════ -->
+    <section class="help-section" id="history" data-searchable>
+      <h2><span class="section-icon">📁</span> Historiek</h2>
+      <p class="section-sub">De pagina "Ingevuld" toont alle checklists die je hebt ingevuld. Admins zien de submissions van alle gebruikers.</p>
+
+      <h3>Filteren en zoeken</h3>
+      <ul>
+        <li><strong>Statuspills</strong> bovenaan: filter op Alles / Open / Voltooid / Gearchiveerd</li>
+        <li><strong>Zoekveld</strong>: zoek op naam, invuller of organisatie</li>
+        <li><strong>Categorie-filter</strong>: filter op templatecategorie</li>
+        <li><strong>Sortering</strong>: laatste gewijzigd of oudste eerst</li>
+      </ul>
+
+      <h3>Acties per checklist</h3>
+      <table class="help-table">
+        <thead><tr><th>Actie</th><th>Beschrijving</th></tr></thead>
+        <tbody>
+          <tr><td>Openen</td><td>Klik op de rij om de checklist te bekijken of verder in te vullen</td></tr>
+          <tr><td>Archiveren</td><td>Verplaatst de checklist naar de "Gearchiveerd" status — niet verwijderd</td></tr>
+          <tr><td>Verwijderen</td><td>Definitief verwijderen (vraagt bevestiging)</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-warn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Verwijderen kan niet ongedaan worden gemaakt. Gebruik archiveren als je de data wilt bewaren.
+      </div>
+    </section>
+
+    <hr class="section-divider">
+
+    <!-- ═══ RAPPORTEN ══════════════════════════════════════════════════════ -->
+    <section class="help-section" id="reports" data-searchable>
+      <h2><span class="section-icon">📊</span> Rapporten</h2>
+      <p class="section-sub">De rapportwizard laat je in 4 stappen een rapport samenstellen over meerdere submissions, en exporteren als PDF, Word of CSV.</p>
+
+      <h3>Stap 1 — Selectie</h3>
+      <ul>
+        <li><strong>Rapportnaam</strong>: geef een naam aan het rapport (verschijnt in de export)</li>
+        <li><strong>Templates</strong>: selecteer één of meerdere templates; gebruik "Alle templates selecteren" voor een kruisoverzicht</li>
+        <li><strong>Submissions</strong>: filter op status — Alle / Open / Voltooid / Gearchiveerd</li>
+      </ul>
+
+      <h3>Stap 2 — Periode</h3>
+      <p>Kies een tijdsperiode via de snelkeuze-pills:</p>
+      <ul>
+        <li>Vandaag, Deze week, Deze maand, Vorige maand, Dit kwartaal, Dit jaar, Alles</li>
+        <li><strong>Aangepast</strong>: stel zelf een van- en tot-datum in</li>
+      </ul>
+
+      <h3>Stap 3 — Inhoud</h3>
+      <p>Kies het <strong>rapporttype</strong>:</p>
+      <table class="help-table">
+        <thead><tr><th>Type</th><th>Beschrijving</th></tr></thead>
+        <tbody>
+          <tr><td>📊 Overzichtstabel</td><td>Één rij per submission. Kolommen = geselecteerde metadata + alle statuscheckvragen. Ideaal voor een snel overzicht.</td></tr>
+          <tr><td>⚠️ Afkeuringen</td><td>Toont enkel vragen met een specifieke statuswaarde (bv. "Niet OK"). Gebundeld per submission. Ideaal voor opvolglijsten.</td></tr>
+          <tr><td>📄 Volledig</td><td>Alle vragen en antwoorden per submission, inclusief notities. Vergelijkbaar met een gebundelde PDF-export.</td></tr>
+        </tbody>
+      </table>
+      <p>Voor <strong>Afkeuringen</strong>: selecteer welke statuswaarden als "afkeuring" worden beschouwd (bv. vink "Niet OK" en "Aandacht" aan).</p>
+      <p>Kies ook welke <strong>metadata</strong> je in het rapport wilt opnemen: datum, ingevuld door, klant, locatie, referentie, opmerkingen, template, status.</p>
+
+      <h3>Stap 4 — Rapport &amp; export</h3>
+      <p>Het rapport wordt gegenereerd en getoond als preview. Van daaruit kun je exporteren:</p>
+      <ul>
+        <li><strong>PDF</strong> — opent een printvenster; kies "Opslaan als PDF" in je browser</li>
+        <li><strong>Word</strong> — download als .docx bestand</li>
+        <li><strong>CSV</strong> — download als spreadsheet, direct te openen in Excel</li>
+      </ul>
+
+      <div class="callout callout-info">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Admins zien alle submissions. Techniekers zien enkel hun eigen submissions in de rapporten.
+      </div>
+    </section>
+
+    <hr class="section-divider">
+
+    <!-- ═══ TEMPLATES ══════════════════════════════════════════════════════ -->
+    <section class="help-section" id="templates" data-searchable>
+      <h2>
+        <span class="section-icon">🛠️</span> Templates bouwen
+        <span class="badge badge-admin">Admin</span>
+      </h2>
+      <p class="section-sub">In de Admin-pagina maak en beheer je templates. Een template bestaat uit secties en vragen.</p>
+
+      <h3>Nieuwe template</h3>
+      <div class="step-list">
+        <div class="step-item"><div class="step-num">1</div><div class="step-text">Ga naar <strong>Admin</strong> en klik <strong>"+ Nieuwe template"</strong>.</div></div>
+        <div class="step-item"><div class="step-num">2</div><div class="step-text">Geef een <strong>naam</strong> en optionele <strong>beschrijving</strong> en <strong>categorie</strong> in.</div></div>
+        <div class="step-item"><div class="step-num">3</div><div class="step-text">Voeg <strong>secties</strong> toe via "+ Sectie toevoegen".</div></div>
+        <div class="step-item"><div class="step-num">4</div><div class="step-text">Voeg per sectie <strong>vragen</strong> toe via "+ Vraag toevoegen" en kies het vraagtype.</div></div>
+        <div class="step-item"><div class="step-num">5</div><div class="step-text">De template wordt <strong>automatisch opgeslagen</strong> na elke wijziging.</div></div>
+      </div>
+
+      <h3>Template activeren / deactiveren</h3>
+      <p>Gebruik de schakelaar naast de templatenaam. Inactieve templates zijn niet zichtbaar op de homepage voor techniekers, maar bestaande submissions blijven bewaard.</p>
+
+      <h3>Template dupliceren</h3>
+      <p>Klik op de <strong>kopieer-knop</strong> bij een template om een exacte kopie te maken. Handig voor varianten van een bestaande template.</p>
+
+      <h3>Vragen herordenen</h3>
+      <p>Klik de <strong>pijlknoppen</strong> (▲▼) naast een vraag om de volgorde te wijzigen binnen een sectie.</p>
+    </section>
+
+    <hr class="section-divider">
+
+    <!-- ═══ CONDITIONEEL ═══════════════════════════════════════════════════ -->
+    <section class="help-section" id="conditional" data-searchable>
+      <h2>
+        <span class="section-icon">🔀</span> Conditionele logica
+        <span class="badge badge-admin">Admin</span>
+      </h2>
+      <p class="section-sub">Vragen kunnen worden verborgen totdat aan een bepaalde voorwaarde is voldaan.</p>
+
+      <h3>"Toon alleen als"</h3>
+      <p>In de vraagopties kun je instellen: <em>"Toon alleen als [vraag X] de waarde [Y] heeft"</em>. De vraag blijft dan verborgen totdat die voorwaarde geldt.</p>
+      <p><strong>Voorbeeld:</strong> toon een tekstveld "Welke onderdelen?" alleen als bij de statuscheck "Onderdelen nodig" is geselecteerd.</p>
+
+      <h3>Vervolg-veld ("Follow-up")</h3>
+      <p>Bij statuscheck- en radiotypen kun je per optie een <strong>vervolg-veld</strong> activeren. Wanneer die optie gekozen wordt, verschijnt automatisch een notitieveld (en optioneel een fotoveld).</p>
+      <p><strong>Voorbeeld:</strong> bij "Niet OK" verschijnt een tekstveld "Toelichting" en een fotoknop.</p>
+
+      <div class="callout callout-tip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Verborgen vragen worden <strong>niet</strong> opgenomen in de PDF-export, zodat de export alleen relevante informatie toont.
+      </div>
+    </section>
+
+    <hr class="section-divider">
+
+    <!-- ═══ STATUSCHECK ════════════════════════════════════════════════════ -->
+    <section class="help-section" id="statuscheck" data-searchable>
+      <h2>
+        <span class="section-icon">🚦</span> Statuscheck aanpassen
+        <span class="badge badge-admin">Admin</span>
+      </h2>
+      <p class="section-sub">Het statuscheck-type heeft aanpasbare labels, kleuren en vervolg-veld instellingen.</p>
+
+      <h3>Standaard statussen</h3>
+      <div class="demo-pills">
+        <span class="demo-pill dp-ok">OK</span>
+        <span class="demo-pill dp-warn">Aandacht</span>
+        <span class="demo-pill dp-bad">Niet OK</span>
+        <span class="demo-pill dp-na">N.v.t.</span>
+      </div>
+
+      <h3>Labels aanpassen</h3>
+      <p>In de template editor kan je per statuscheck-vraag de labelteksten aanpassen (bv. "PASS" / "FAIL" / "N/A"). De kleuren zijn gekoppeld aan de positie (1e optie = groen, 2e = oranje, 3e = rood, 4e = grijs).</p>
+
+      <h3>Vervolg-veld per status</h3>
+      <p>Schakel per statusoptie een <strong>vervolg-veld</strong> in. Wanneer de invuller die status kiest, verschijnt een notitieveld. Optioneel ook een fotoveld toevoegen.</p>
+    </section>
+
+    <hr class="section-divider">
+
+    <!-- ═══ VERTALINGEN ════════════════════════════════════════════════════ -->
+    <section class="help-section" id="translations" data-searchable>
+      <h2>
+        <span class="section-icon">🌍</span> Vertalingen (CSV)
+        <span class="badge badge-admin">Admin</span>
+      </h2>
+      <p class="section-sub">Alle templateteksten (labels, hints, opties, statussen) kunnen worden vertaald via een CSV-workflow.</p>
+
+      <h3>Exporteren</h3>
+      <div class="step-list">
+        <div class="step-item"><div class="step-num">1</div><div class="step-text">Ga naar <strong>Admin</strong> en klik <strong>"CSV exporteren"</strong> in de header.</div></div>
+        <div class="step-item"><div class="step-num">2</div><div class="step-text">Er wordt een bestand <code>vertalingen_YYYY-MM-DD.csv</code> gedownload.</div></div>
+        <div class="step-item"><div class="step-num">3</div><div class="step-text">Open het bestand in Excel of Google Sheets.</div></div>
+      </div>
+
+      <p>Het CSV bevat kolommen: <strong>template_id, key, nl, en, fr, de</strong>. De NL-kolom bevat de huidige teksten. Vul de EN/FR/DE kolommen in.</p>
+
+      <h3>Importeren</h3>
+      <div class="step-list">
+        <div class="step-item"><div class="step-num">1</div><div class="step-text">Sla het vertaalde CSV op (UTF-8 codering bewaren).</div></div>
+        <div class="step-item"><div class="step-num">2</div><div class="step-num">2</div><div class="step-text">Klik <strong>"CSV importeren"</strong> in Admin en selecteer het bestand.</div></div>
+        <div class="step-item"><div class="step-num">3</div><div class="step-text">De vertalingen worden automatisch opgeslagen in de templates.</div></div>
+      </div>
+
+      <div class="callout callout-tip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        De NL-waarden worden gebruikt als canonical opgeslagen waarden. Vertalingen worden enkel voor weergave gebruikt — bestaande antwoorden in submissions blijven geldig.
+      </div>
+    </section>
+
+    <hr class="section-divider">
+
+    <!-- ═══ GEBRUIKERS ═════════════════════════════════════════════════════ -->
+    <section class="help-section" id="users" data-searchable>
+      <h2>
+        <span class="section-icon">👥</span> Gebruikersbeheer
+        <span class="badge badge-admin">Admin</span>
+      </h2>
+      <p class="section-sub">Admins kunnen gebruikers uitnodigen, rollen instellen en accounts beheren.</p>
+
+      <h3>Gebruiker uitnodigen</h3>
+      <div class="step-list">
+        <div class="step-item"><div class="step-num">1</div><div class="step-text">Ga naar <strong>Admin → Gebruikers</strong>.</div></div>
+        <div class="step-item"><div class="step-num">2</div><div class="step-text">Klik <strong>"Gebruiker uitnodigen"</strong> en vul het e-mailadres in.</div></div>
+        <div class="step-item"><div class="step-num">3</div><div class="step-text">De gebruiker ontvangt een magic link per mail en stelt zijn wachtwoord in bij de eerste login.</div></div>
+      </div>
+
+      <h3>Rollen</h3>
+      <table class="help-table">
+        <thead><tr><th>Rol</th><th>Rechten</th></tr></thead>
+        <tbody>
+          <tr><td>Admin</td><td>Alle submissions, templates bouwen, gebruikers beheren, vertalingen, branding</td></tr>
+          <tr><td>Technieker</td><td>Enkel eigen submissions invullen en exporteren</td></tr>
+        </tbody>
+      </table>
+      <p>Pas de rol aan via het rol-dropdown naast de gebruikersnaam in de gebruikerslijst.</p>
+    </section>
+
+    <hr class="section-divider">
+
+    <!-- ═══ BRANDING ═══════════════════════════════════════════════════════ -->
+    <section class="help-section" id="branding" data-searchable>
+      <h2><span class="section-icon">🎨</span> Branding</h2>
+      <p class="section-sub">Via Instellingen pas je de visuele stijl van de app aan. Wijzigingen worden direct zichtbaar op alle pagina's.</p>
+
+      <table class="help-table">
+        <thead><tr><th>Instelling</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td>Bedrijfsnaam</td><td>Tekst naast het logo in de header</td></tr>
+          <tr><td>Accentkleur</td><td>Kleur van knoppen, pills, highlights (hele app)</td></tr>
+          <tr><td>Logo</td><td>Overschrijft het standaardlogo in de header en PDF-export</td></tr>
+          <tr><td>Favicon</td><td>Pictogram in de browsertab</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-info">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Branding wordt lokaal opgeslagen in de browser (localStorage). Het is per toestel/browser ingesteld en geldt niet app-breed voor alle gebruikers.
+      </div>
+
+      <h3>Logo verwijderen</h3>
+      <p>Klik op de <strong>"Verwijder"</strong>-knop naast het geüploade logo. Het standaardlogo wordt dan weer getoond. De wijziging is direct van kracht — je hoeft niet apart op "Opslaan" te klikken.</p>
+    </section>
+
+    <hr class="section-divider">
+
+    <!-- ═══ TAAL ════════════════════════════════════════════════════════════ -->
+    <section class="help-section" id="language" data-searchable>
+      <h2><span class="section-icon">🌐</span> Taalinstellingen</h2>
+      <p class="section-sub">De app ondersteunt vier talen voor de interface en de PDF-export.</p>
+
+      <table class="help-table">
+        <thead><tr><th>Taal</th><th>Code</th></tr></thead>
+        <tbody>
+          <tr><td>🇧🇪 Nederlands</td><td>nl</td></tr>
+          <tr><td>🇬🇧 English</td><td>en</td></tr>
+          <tr><td>🇫🇷 Français</td><td>fr</td></tr>
+          <tr><td>🇩🇪 Deutsch</td><td>de</td></tr>
+        </tbody>
+      </table>
+
+      <p>Je taalvoorkeur stel je in via <strong>Instellingen → Taal</strong>. Op de invulpagina kun je de taal ook per sessie wisselen via de selector rechtsboven — dit bepaalt ook de taal van de PDF-export.</p>
+
+      <div class="callout callout-tip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Vertalingen van vraaglabels moeten door een admin zijn ingegeven via de CSV-import. Zonder vertaling valt de app terug op de Nederlandse tekst.
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  AUTH.init();
+  setupSidebarHighlight();
+});
+
+// ─── Sidebar active highlight on scroll ──────────────────────────────────────
+function setupSidebarHighlight() {
+  var sections = document.querySelectorAll('.help-section');
+  var links = document.querySelectorAll('.sidebar-link');
+  if (!sections.length || !links.length) return;
+
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        var id = entry.target.id;
+        links.forEach(function(l) {
+          l.classList.toggle('active', l.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { rootMargin: '-60px 0px -70% 0px' });
+
+  sections.forEach(function(s) { observer.observe(s); });
+}
+
+// ─── Search ───────────────────────────────────────────────────────────────────
+function searchHelp(query) {
+  var q = query.trim().toLowerCase();
+  var sections = document.querySelectorAll('.help-section[data-searchable]');
+  var anyVisible = false;
+
+  sections.forEach(function(sec) {
+    var text = sec.textContent.toLowerCase();
+    var match = !q || text.includes(q);
+    sec.style.display = match ? '' : 'none';
+    // Also hide/show the divider after it
+    var next = sec.nextElementSibling;
+    if (next && next.classList.contains('section-divider')) {
+      next.style.display = match ? '' : 'none';
+    }
+    if (match) anyVisible = true;
+  });
+
+  document.getElementById('no-results').style.display = anyVisible ? 'none' : 'block';
+}
+</script>
+</body>
+</html>
