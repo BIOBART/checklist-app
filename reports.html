@@ -614,13 +614,13 @@ function buildRejectionValPicker() {
   }
   container.innerHTML = allVals.map(function(v) {
     var isChecked = cfg.rejectionVals.includes(v);
-    return '<label class="check-pill' + (isChecked ? ' checked' : '') + '" onclick="toggleRejVal(this)">' +
-      '<input type="checkbox"' + (isChecked ? ' checked' : '') + '>' + esc(v) + '</label>';
+    return '<div class="check-pill' + (isChecked ? ' checked' : '') + '" data-val="' + esc(v) + '" onclick="toggleRejVal(this)">' +
+      esc(v) + '</div>';
   }).join('');
 }
 
 function toggleRejVal(el) {
-  var val = el.textContent.trim();
+  var val = el.dataset.val;
   el.classList.toggle('checked');
   var idx = cfg.rejectionVals.indexOf(val);
   if (idx >= 0) cfg.rejectionVals.splice(idx, 1);
