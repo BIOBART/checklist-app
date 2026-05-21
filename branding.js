@@ -78,6 +78,11 @@
 
       var dot = logoEl.querySelector('.logo-dot');
 
+      // Hide / show any hardcoded default <img> that isn't the brand logo
+      logoEl.querySelectorAll('img:not(.brand-logo-img)').forEach(function (existing) {
+        existing.style.display = b.logo ? 'none' : '';
+      });
+
       if (b.logo) {
         var img = document.createElement('img');
         img.className = 'brand-logo-img';

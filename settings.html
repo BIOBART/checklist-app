@@ -619,6 +619,8 @@ function handleLogoUpload(input) {
 
 function clearLogo() {
   _brandData.logo = null;
+  saveBranding(_brandData);   // persist immediately so header updates
+  applyBranding();            // remove brand logo from header right away
   document.getElementById('logo-preview').src = '';
   document.getElementById('logo-preview').style.display     = 'none';
   document.getElementById('logo-placeholder').style.display = '';
@@ -641,6 +643,8 @@ function handleFaviconUpload(input) {
 
 function clearFavicon() {
   _brandData.favicon = null;
+  saveBranding(_brandData);   // persist immediately
+  applyBranding();            // revert to favicon.png right away
   document.getElementById('favicon-preview').src = '';
   document.getElementById('favicon-preview').style.display     = 'none';
   document.getElementById('favicon-placeholder').style.display = '';
