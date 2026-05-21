@@ -396,7 +396,7 @@ async function init() {
     await loadSubmission();
   } else if (templateId) {
     await loadTemplate();
-    createNewSubmission();
+    await createNewSubmission();
   } else {
     showError('Geen template of checklist opgegeven.');
   }
@@ -494,10 +494,59 @@ async function loadPhotos() {
   }
 }
 
-function createNewSubmission() {
+async function createNewSubmission() {
   answers = {};
+
+  // Try to pre-fill from the most recent previous submission of this template
+  if (templateId) {
+    try {
+      const { data: prev } = await sb
+        .from('submissions')
+        .select('answers')
+        .eq('template_id', templateId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (prev?.answers) {
+        const allItems = (template.schema?.sections || []).flatMap(s => s.items || []);
+        let carried = 0;
+
+        for (const item of allItems) {
+          if (!['statuscheck', 'radio', 'yesno'].includes(item.type)) continue;
+          const prevAns = prev.answers[item.id];
+          if (!prevAns?.value) continue;
+
+          // Validate: the stored value must still exist in current labels/options
+          let valid = false;
+          if (item.type === 'statuscheck') {
+            const labels = item.statusLabels || ['OK','Niet OK','Onderdelen nodig','Niet gecheckt'];
+            valid = labels.includes(prevAns.value);
+          } else if (item.type === 'radio') {
+            valid = (item.options || []).includes(prevAns.value);
+          } else if (item.type === 'yesno') {
+            valid = ['Ja','Nee','N.v.t.'].includes(prevAns.value);
+          }
+
+          if (valid) {
+            answers[item.id] = { value: prevAns.value, checked: true };
+            // Carry follow-up note too if present, so context isn't lost
+            if (prevAns.followNote) answers[item.id].followNote = prevAns.followNote;
+            carried++;
+          }
+        }
+
+        if (carried > 0) _prefillBanner = carried;
+      }
+    } catch (e) {
+      console.warn('Kon vorige antwoorden niet laden:', e.message);
+    }
+  }
+
   renderPage();
 }
+
+let _prefillBanner = 0; // set before renderPage(), consumed inside renderPage()
 
 // ── RENDER ──
 function renderPage() {
@@ -549,8 +598,16 @@ function renderPage() {
     <div class="req-warning" id="req-warning">
       <strong>${t('required')}</strong> — ${t('missing')}
     </div>
+    ${_prefillBanner > 0 ? `
+    <div id="prefill-banner" style="display:flex;align-items:center;gap:10px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:var(--radius);padding:10px 14px;font-size:13px;color:#1E40AF;margin-bottom:4px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;flex-shrink:0;color:#3B82F6"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span><strong>${_prefillBanner}</strong> status-antwoord${_prefillBanner !== 1 ? 'en' : ''} overgenomen van de vorige invulling. Pas aan wat veranderd is.</span>
+      <button onclick="this.closest('#prefill-banner').remove()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#93C5FD;font-size:18px;line-height:1;padding:0 2px" title="Sluiten">×</button>
+    </div>` : ''}
     <div id="sections-render"></div>
   `;
+
+  _prefillBanner = 0; // reset after render
 
   const sr = document.getElementById('sections-render');
   sections.forEach(sec => sr.appendChild(renderSection(sec)));
