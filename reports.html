@@ -695,7 +695,7 @@ async function fetchSubmissions() {
   var userId  = AUTH.getUserId();
 
   var query = sb.from('submissions')
-    .select('id,template_id,status,created_at,answers,metadata')
+    .select('id,template_id,status,created_at,answers,filled_by,customer,location,reference,notes,organisation')
     .in('template_id', cfg.templateIds)
     .order('created_at', { ascending: false });
 
@@ -731,23 +731,22 @@ function buildOverviewHTML(submissions) {
   html += '</tr></thead><tbody>';
 
   submissions.forEach(function(sub) {
-    var meta = sub.metadata || {};
     var answers = sub.answers || {};
     var tpl = _templates.find(function(t) { return t.id === sub.template_id; });
     html += '<tr>';
     if (cfg.meta.date)     html += '<td>' + fmtDate(sub.created_at) + '</td>';
     if (cfg.meta.template) html += '<td>' + esc(tpl ? tpl.name : sub.template_id) + '</td>';
-    if (cfg.meta.filledBy) html += '<td>' + esc(meta.filledBy || '') + '</td>';
-    if (cfg.meta.customer) html += '<td>' + esc(meta.customer  || '') + '</td>';
-    if (cfg.meta.location) html += '<td>' + esc(meta.location  || '') + '</td>';
-    if (cfg.meta.reference)html += '<td>' + esc(meta.reference || '') + '</td>';
+    if (cfg.meta.filledBy) html += '<td>' + esc(sub.filled_by  || '') + '</td>';
+    if (cfg.meta.customer) html += '<td>' + esc(sub.customer   || '') + '</td>';
+    if (cfg.meta.location) html += '<td>' + esc(sub.location   || '') + '</td>';
+    if (cfg.meta.reference)html += '<td>' + esc(sub.reference  || '') + '</td>';
     if (cfg.meta.status)   html += '<td>' + statusChip(sub.status) + '</td>';
     statusItems.forEach(function(si) {
       var ans = answers[si.id];
       var val = ans ? (ans.value || '') : '';
       html += '<td>' + (val ? statusChip(val) : '<span style="color:var(--light)">—</span>') + '</td>';
     });
-    if (cfg.meta.notes)    html += '<td>' + esc(meta.notes || '') + '</td>';
+    if (cfg.meta.notes)    html += '<td>' + esc(sub.notes || '') + '</td>';
     html += '</tr>';
   });
 
@@ -769,7 +768,6 @@ function buildRejectionsHTML(submissions) {
 
   var anyFound = false;
   submissions.forEach(function(sub) {
-    var meta = sub.metadata || {};
     var answers = sub.answers || {};
     var tpl = _templates.find(function(t) { return t.id === sub.template_id; });
     var schema = tpl ? (tpl.schema || {}) : {};
@@ -793,10 +791,10 @@ function buildRejectionsHTML(submissions) {
     html += '<div class="rejection-block">';
     html += '<div class="rejection-header">';
     html += '<div class="rejection-title">' + esc(tpl ? tpl.name : sub.template_id);
-    if (meta.customer) html += ' &bull; ' + esc(meta.customer);
+    if (sub.customer) html += ' &bull; ' + esc(sub.customer);
     html += '</div>';
     html += '<div class="rejection-meta">' + fmtDate(sub.created_at);
-    if (meta.filledBy) html += ' &bull; ' + esc(meta.filledBy);
+    if (sub.filled_by) html += ' &bull; ' + esc(sub.filled_by);
     html += '</div>';
     html += '</div>';
     html += '<div class="rejection-items">';
@@ -826,24 +824,23 @@ function buildFullHTML(submissions) {
   html += buildReportParamsRow();
 
   submissions.forEach(function(sub) {
-    var meta = sub.metadata || {};
     var answers = sub.answers || {};
     var tpl = _templates.find(function(t) { return t.id === sub.template_id; });
     var schema = tpl ? (tpl.schema || {}) : {};
 
     html += '<div class="full-submission">';
     html += '<div class="full-sub-header">' + esc(tpl ? tpl.name : sub.template_id);
-    if (meta.customer) html += ' &bull; ' + esc(meta.customer);
+    if (sub.customer) html += ' &bull; ' + esc(sub.customer);
     html += '<span>' + fmtDate(sub.created_at);
-    if (meta.filledBy) html += ' &bull; ' + esc(meta.filledBy);
+    if (sub.filled_by) html += ' &bull; ' + esc(sub.filled_by);
     if (cfg.meta.status) html += ' &bull; ' + sub.status;
     html += '</span></div>';
 
     // Metadata summary
     var metaRows = [];
-    if (cfg.meta.location  && meta.location)  metaRows.push('<strong>Locatie:</strong> ' + esc(meta.location));
-    if (cfg.meta.reference && meta.reference) metaRows.push('<strong>Ref:</strong> ' + esc(meta.reference));
-    if (cfg.meta.notes     && meta.notes)     metaRows.push('<strong>Opmerkingen:</strong> ' + esc(meta.notes));
+    if (cfg.meta.location  && sub.location)  metaRows.push('<strong>Locatie:</strong> ' + esc(sub.location));
+    if (cfg.meta.reference && sub.reference) metaRows.push('<strong>Ref:</strong> ' + esc(sub.reference));
+    if (cfg.meta.notes     && sub.notes)     metaRows.push('<strong>Opmerkingen:</strong> ' + esc(sub.notes));
     if (metaRows.length) html += '<div class="report-meta-row" style="padding:6px 14px 0">' + metaRows.join(' &bull; ') + '</div>';
 
     (schema.sections || []).forEach(function(sec) {
@@ -963,22 +960,21 @@ function exportCSV() {
   rows.push(header);
 
   _reportData.forEach(function(sub) {
-    var meta = sub.metadata || {};
     var answers = sub.answers || {};
     var tpl = _templates.find(function(t) { return t.id === sub.template_id; });
     var row = [];
     if (cfg.meta.date)     row.push(fmtDate(sub.created_at));
     if (cfg.meta.template) row.push(tpl ? tpl.name : sub.template_id);
-    if (cfg.meta.filledBy) row.push(meta.filledBy || '');
-    if (cfg.meta.customer) row.push(meta.customer  || '');
-    if (cfg.meta.location) row.push(meta.location  || '');
-    if (cfg.meta.reference)row.push(meta.reference || '');
-    if (cfg.meta.status)   row.push(sub.status || '');
+    if (cfg.meta.filledBy) row.push(sub.filled_by  || '');
+    if (cfg.meta.customer) row.push(sub.customer   || '');
+    if (cfg.meta.location) row.push(sub.location   || '');
+    if (cfg.meta.reference)row.push(sub.reference  || '');
+    if (cfg.meta.status)   row.push(sub.status     || '');
     statusItems.forEach(function(si) {
       var ans = answers[si.id];
       row.push(ans ? (ans.value || '') : '');
     });
-    if (cfg.meta.notes)    row.push(meta.notes || '');
+    if (cfg.meta.notes)    row.push(sub.notes      || '');
     rows.push(row);
   });
 
