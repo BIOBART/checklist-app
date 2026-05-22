@@ -14,9 +14,7 @@ SET search_path = public
 AS $$
 BEGIN
   -- Controleer of de aanroeper een admin is
-  IF NOT EXISTS (
-    SELECT 1 FROM roles WHERE user_id = auth.uid() AND is_admin = true
-  ) THEN
+  IF NOT get_is_admin() THEN
     RAISE EXCEPTION 'Access denied: admin role required';
   END IF;
 
