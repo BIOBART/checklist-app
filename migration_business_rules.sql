@@ -1,6 +1,7 @@
 -- migration_business_rules.sql
 -- Voer dit eenmalig uit in Supabase → SQL Editor
 -- Maakt de "Bedrijfsregels" functie beschikbaar in de admin pagina.
+-- Veilig om opnieuw uit te voeren (IF NOT EXISTS + DROP POLICY IF EXISTS).
 
 -- ─── Tabel: business_rules ────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.business_rules (
@@ -20,7 +21,7 @@ CREATE TABLE IF NOT EXISTS public.business_rules (
   -- send_email:     { to, subject, message, include_report }
   -- homepage_alert: { message, color }  -- color: 'red'|'orange'|'blue'|'green'
   created_at      timestamptz DEFAULT now(),
-  created_by      uuid  -- auth.users FK niet nodig; Supabase beheert auth apart
+  created_by      uuid  -- plain uuid, geen FK naar auth.users (Supabase-conventie)
 );
 
 -- ─── Tabel: rule_notifications ────────────────────────────────────────────────
@@ -36,17 +37,20 @@ CREATE TABLE IF NOT EXISTS public.rule_notifications (
   alert_color     text DEFAULT 'orange',
   created_at      timestamptz DEFAULT now(),
   dismissed_at    timestamptz,
-  dismissed_by    uuid  -- auth.users FK niet nodig; Supabase beheert auth apart
+  dismissed_by    uuid  -- plain uuid, geen FK naar auth.users (Supabase-conventie)
 );
 
 -- ─── RLS: business_rules ─────────────────────────────────────────────────────
 ALTER TABLE public.business_rules ENABLE ROW LEVEL SECURITY;
 
--- Alleen admins mogen regels lezen en beheren
+DROP POLICY IF EXISTS "admins_all_rules" ON public.business_rules;
+DROP POLICY IF EXISTS "authenticated_read_active_rules" ON public.business_rules;
+
+-- Alleen admins mogen regels beheren (lezen + schrijven)
 CREATE POLICY "admins_all_rules" ON public.business_rules
   FOR ALL TO authenticated
-  USING   (EXISTS (SELECT 1 FROM public.roles WHERE user_id = auth.uid() AND is_admin = true))
-  WITH CHECK (EXISTS (SELECT 1 FROM public.roles WHERE user_id = auth.uid() AND is_admin = true));
+  USING   (get_is_admin())
+  WITH CHECK (get_is_admin());
 
 -- Alle ingelogde gebruikers mogen actieve regels lezen (nodig voor evaluatie in fill.html)
 CREATE POLICY "authenticated_read_active_rules" ON public.business_rules
@@ -56,6 +60,11 @@ CREATE POLICY "authenticated_read_active_rules" ON public.business_rules
 -- ─── RLS: rule_notifications ──────────────────────────────────────────────────
 ALTER TABLE public.rule_notifications ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "authenticated_insert_notifications" ON public.rule_notifications;
+DROP POLICY IF EXISTS "admins_read_notifications" ON public.rule_notifications;
+DROP POLICY IF EXISTS "admins_update_notifications" ON public.rule_notifications;
+DROP POLICY IF EXISTS "admins_delete_notifications" ON public.rule_notifications;
+
 -- Alle ingelogde gebruikers mogen notificaties aanmaken (rule-evaluatie in fill.html)
 CREATE POLICY "authenticated_insert_notifications" ON public.rule_notifications
   FOR INSERT TO authenticated
@@ -64,13 +73,13 @@ CREATE POLICY "authenticated_insert_notifications" ON public.rule_notifications
 -- Alleen admins mogen notificaties lezen en bijwerken (dismissal)
 CREATE POLICY "admins_read_notifications" ON public.rule_notifications
   FOR SELECT TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.roles WHERE user_id = auth.uid() AND is_admin = true));
+  USING (get_is_admin());
 
 CREATE POLICY "admins_update_notifications" ON public.rule_notifications
   FOR UPDATE TO authenticated
-  USING   (EXISTS (SELECT 1 FROM public.roles WHERE user_id = auth.uid() AND is_admin = true))
-  WITH CHECK (EXISTS (SELECT 1 FROM public.roles WHERE user_id = auth.uid() AND is_admin = true));
+  USING   (get_is_admin())
+  WITH CHECK (get_is_admin());
 
 CREATE POLICY "admins_delete_notifications" ON public.rule_notifications
   FOR DELETE TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.roles WHERE user_id = auth.uid() AND is_admin = true));
+  USING (get_is_admin());
