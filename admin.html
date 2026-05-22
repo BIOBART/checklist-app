@@ -342,6 +342,85 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
   </div>
 </div>
 
+<!-- ═══ GEVARENZONE ═══════════════════════════════════════════════════════ -->
+<div style="max-width:900px;margin:2rem auto 3rem;padding:0 1.5rem">
+  <div style="border:2px solid var(--danger);border-radius:var(--radius-lg);overflow:hidden">
+    <div style="background:var(--danger-bg);padding:1rem 1.25rem;display:flex;align-items:center;gap:10px;border-bottom:1px solid #f5c6c2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span style="font-weight:700;font-size:15px;color:var(--danger)">Gevarenzone</span>
+    </div>
+    <div style="padding:1.25rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+      <div>
+        <div style="font-weight:600;font-size:14px;margin-bottom:3px">Fabrieksreset</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.5">Verwijdert <strong>alle templates, submissions en foto's</strong> permanent uit de database.<br>Deze actie kan <strong>niet</strong> ongedaan worden gemaakt.</div>
+      </div>
+      <button class="btn btn-danger" onclick="openResetModal()" style="flex-shrink:0;font-weight:600">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+        Fabrieksreset…
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ RESET MODAL ══════════════════════════════════════════════════════ -->
+<div id="reset-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:400;align-items:center;justify-content:center;padding:1rem" onclick="if(event.target===this&&!_resetRunning)closeResetModal()">
+  <div style="background:var(--surface);border-radius:var(--radius-lg);width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,0.25);overflow:hidden" onclick="event.stopPropagation()">
+
+    <!-- Header -->
+    <div style="background:var(--danger);padding:1rem 1.25rem;display:flex;align-items:center;gap:10px">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span style="font-family:'DM Serif Display',serif;font-size:18px;color:white">Fabrieksreset</span>
+    </div>
+
+    <div style="padding:1.5rem">
+
+      <!-- Wat wordt verwijderd -->
+      <p style="font-size:13px;color:var(--muted);margin-bottom:1rem;line-height:1.6">De volgende data wordt <strong style="color:var(--danger)">permanent en onomkeerbaar</strong> verwijderd:</p>
+
+      <div id="reset-counts" style="display:flex;flex-direction:column;gap:6px;margin-bottom:1.25rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--danger-bg);border:1px solid #f5c6c2;border-radius:var(--radius);font-size:13px">
+          <span>🗂️ Templates</span><span id="cnt-templates" style="font-weight:700;color:var(--danger)">…</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--danger-bg);border:1px solid #f5c6c2;border-radius:var(--radius);font-size:13px">
+          <span>📋 Submissions</span><span id="cnt-submissions" style="font-weight:700;color:var(--danger)">…</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--danger-bg);border:1px solid #f5c6c2;border-radius:var(--radius);font-size:13px">
+          <span>📷 Foto's</span><span id="cnt-photos" style="font-weight:700;color:var(--danger)">…</span>
+        </div>
+      </div>
+
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:10px 12px;margin-bottom:1.25rem;font-size:12px;color:var(--muted);line-height:1.6">
+        ℹ️ Gebruikersaccounts en rollen worden <strong>niet</strong> verwijderd — je kunt daarna gewoon opnieuw inloggen.
+      </div>
+
+      <!-- Bevestiging -->
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--danger);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">
+        Typ <strong>VERWIJDER ALLES</strong> om te bevestigen
+      </label>
+      <input type="text" id="reset-confirm-input" placeholder="VERWIJDER ALLES"
+        style="width:100%;font-family:'DM Sans',sans-serif;font-size:14px;padding:9px 12px;border:2px solid var(--border);border-radius:var(--radius);outline:none;transition:border 0.15s;margin-bottom:1rem"
+        oninput="checkResetInput(this.value)">
+
+      <!-- Progress -->
+      <div id="reset-progress" style="display:none;margin-bottom:1rem">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:6px" id="reset-progress-label">Bezig…</div>
+        <div style="height:4px;background:var(--border);border-radius:99px;overflow:hidden">
+          <div id="reset-progress-bar" style="height:100%;background:var(--danger);width:0%;transition:width 0.3s"></div>
+        </div>
+      </div>
+
+      <!-- Knoppen -->
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn" id="reset-cancel-btn" onclick="closeResetModal()">Annuleren</button>
+        <button class="btn btn-danger" id="reset-confirm-btn" disabled onclick="runFactoryReset()" style="font-weight:600;opacity:0.4;cursor:not-allowed">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          Alles verwijderen
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- QR Modal -->
 <div class="qr-overlay" id="qr-overlay" onclick="closeQR()">
   <div class="qr-modal" onclick="event.stopPropagation()">
@@ -1748,6 +1827,124 @@ function downloadQR() {
   a.href = img.src;
   a.target = '_blank';
   a.click();
+}
+
+// ── FACTORY RESET ──────────────────────────────────────────────────────────
+var _resetRunning = false;
+
+async function openResetModal() {
+  // Reset modal state
+  document.getElementById('reset-confirm-input').value = '';
+  document.getElementById('reset-progress').style.display = 'none';
+  checkResetInput('');
+  document.getElementById('reset-cancel-btn').disabled = false;
+
+  // Show modal
+  const overlay = document.getElementById('reset-overlay');
+  overlay.style.display = 'flex';
+
+  // Load counts
+  document.getElementById('cnt-templates').textContent  = '…';
+  document.getElementById('cnt-submissions').textContent = '…';
+  document.getElementById('cnt-photos').textContent      = '…';
+
+  try {
+    const [tRes, sRes, pRes] = await Promise.all([
+      sb.from('templates').select('id', { count: 'exact', head: true }),
+      sb.from('submissions').select('id', { count: 'exact', head: true }),
+      sb.from('photos').select('id', { count: 'exact', head: true })
+    ]);
+    document.getElementById('cnt-templates').textContent  = (tRes.count ?? '?') + ' records';
+    document.getElementById('cnt-submissions').textContent = (sRes.count ?? '?') + ' records';
+    document.getElementById('cnt-photos').textContent      = (pRes.count ?? '?') + ' records';
+  } catch(e) {
+    ['cnt-templates','cnt-submissions','cnt-photos'].forEach(id => {
+      document.getElementById(id).textContent = 'fout';
+    });
+  }
+}
+
+function closeResetModal() {
+  if (_resetRunning) return;
+  document.getElementById('reset-overlay').style.display = 'none';
+}
+
+function checkResetInput(val) {
+  const btn = document.getElementById('reset-confirm-btn');
+  const match = val.trim() === 'VERWIJDER ALLES';
+  btn.disabled = !match;
+  btn.style.opacity = match ? '1' : '0.4';
+  btn.style.cursor  = match ? 'pointer' : 'not-allowed';
+  const input = document.getElementById('reset-confirm-input');
+  input.style.borderColor = val.length === 0 ? 'var(--border)' : match ? 'var(--danger)' : '#f5c6c2';
+}
+
+function setResetProgress(label, pct) {
+  document.getElementById('reset-progress').style.display = 'block';
+  document.getElementById('reset-progress-label').textContent = label;
+  document.getElementById('reset-progress-bar').style.width = pct + '%';
+}
+
+async function runFactoryReset() {
+  if (_resetRunning) return;
+  _resetRunning = true;
+
+  // Lock UI
+  document.getElementById('reset-confirm-btn').disabled = true;
+  document.getElementById('reset-cancel-btn').disabled  = true;
+  document.getElementById('reset-confirm-input').disabled = true;
+
+  try {
+    // 1. Verwijder foto-bestanden uit Storage
+    setResetProgress('Foto\'s ophalen uit opslag…', 10);
+    const { data: photoRows } = await sb.from('photos').select('storage_path');
+    if (photoRows && photoRows.length > 0) {
+      setResetProgress('Foto\'s verwijderen uit opslag…', 20);
+      const paths = photoRows.map(p => p.storage_path).filter(Boolean);
+      if (paths.length > 0) {
+        // Verwijder in batches van 100
+        for (let i = 0; i < paths.length; i += 100) {
+          await sb.storage.from(window.STORAGE_BUCKET || 'checklist-photos')
+            .remove(paths.slice(i, i + 100));
+        }
+      }
+    }
+
+    // 2. Verwijder foto-records
+    setResetProgress('Fotorecords verwijderen…', 40);
+    const { error: e2 } = await sb.from('photos').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (e2) throw e2;
+
+    // 3. Verwijder submissions
+    setResetProgress('Submissions verwijderen…', 60);
+    const { error: e3 } = await sb.from('submissions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (e3) throw e3;
+
+    // 4. Verwijder templates
+    setResetProgress('Templates verwijderen…', 80);
+    const { error: e4 } = await sb.from('templates').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (e4) throw e4;
+
+    // 5. Klaar
+    setResetProgress('✅ Reset voltooid.', 100);
+    document.getElementById('reset-progress-label').style.color = 'var(--accent)';
+
+    // Sluit modal na 1,5s en herlaad pagina
+    setTimeout(function() {
+      _resetRunning = false;
+      closeResetModal();
+      document.getElementById('reset-overlay').style.display = 'none';
+      toast('Fabrieksreset voltooid — alle data verwijderd.', 'success');
+      loadTemplates();
+    }, 1500);
+
+  } catch(err) {
+    setResetProgress('❌ Fout: ' + (err.message || err), 100);
+    document.getElementById('reset-progress-bar').style.background = 'var(--danger)';
+    document.getElementById('reset-progress-label').style.color = 'var(--danger)';
+    document.getElementById('reset-cancel-btn').disabled = false;
+    _resetRunning = false;
+  }
 }
 
 </script>
