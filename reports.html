@@ -1,53 +1,66 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/png" href="favicon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rapporten – Checklist App</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<title>Rapporten — FoldrIQ</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="branding.js"></script>
 <script src="auth.js"></script>
+<script src="sidebar.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --bg: #F6F4EF; --surface: #FFFFFF; --surface2: #EFECE5;
-  --border: #E0DDD5; --border-strong: #C5C0B5;
-  --text: #1A1714; --muted: #7A7168; --light: #B0A898;
-  --accent: #2D5A3D; --accent-bg: #E8F0EB; --accent-mid: #4A8A5E;
-  --danger: #DC2626; --danger-bg: #FEF2F2;
-  --info: #1D4ED8; --info-bg: #EFF6FF;
-  --warn: #D97706; --warn-bg: #FFFBEB;
-  --radius: 10px; --radius-lg: 16px;
-  --shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 14px rgba(0,0,0,0.04);
+  --bg:#F3F4F6; --surface:#FFFFFF; --surface2:#F9FAFB;
+  --border:#E5E7EB; --border-strong:#D1D5DB;
+  --text:#111827; --muted:#6B7280; --light:#9CA3AF;
+  --accent:#2563EB; --accent-bg:#EFF6FF; --accent-mid:#3B82F6;
+  --warn:#D97706; --warn-bg:#FFFBEB;
+  --danger:#EF4444; --danger-bg:#FEF2F2;
+  --info:#1D4ED8; --info-bg:#EFF6FF;
+  --success:#10B981; --success-bg:#ECFDF5;
+  --radius:8px; --radius-lg:12px;
+  --shadow:0 1px 2px rgba(0,0,0,0.05),0 4px 12px rgba(0,0,0,0.04);
 }
-body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
-/* HEADER */
-header { background: var(--surface); border-bottom: 1px solid var(--border); height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; position: sticky; top: 0; z-index: 50; }
-.logo { font-family: 'DM Serif Display', serif; font-size: 20px; display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
-.logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
-.nav { display: flex; gap: 6px; align-items: center; }
-.nav-link { font-size: 13px; color: var(--muted); text-decoration: none; padding: 6px 12px; border-radius: var(--radius); transition: all 0.15s; display: flex; align-items: center; gap: 5px; }
-.nav-link:hover { background: var(--surface2); color: var(--text); }
-.nav-link.active { color: var(--accent); font-weight: 500; }
-.nav-link svg { width: 14px; height: 14px; }
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--radius); font-size: 13px; font-family: 'DM Sans', sans-serif; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text); text-decoration: none; transition: all 0.15s; white-space: nowrap; }
-.btn:hover { background: var(--surface2); }
-.btn:disabled { opacity: 0.45; cursor: not-allowed; }
-.btn-primary { background: var(--accent); color: white; border-color: var(--accent); }
-.btn-primary:hover:not(:disabled) { background: #234830; }
-.btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+/* ── App layout ──────────────────────────────────────────── */
+#app-root { display:flex; min-height:100vh; }
+.sidebar { width:240px; background:#0D1B2A; display:flex; flex-direction:column; flex-shrink:0; position:fixed; top:0; left:0; bottom:0; z-index:40; overflow-y:auto; }
+.sb-logo { padding:18px 16px 14px; border-bottom:1px solid rgba(255,255,255,0.07); }
+.sb-logo a { display:block; }
+.sb-logo-img { height:28px; width:auto; object-fit:contain; max-width:180px; }
+.sb-nav { flex:1; padding:10px 8px; display:flex; flex-direction:column; gap:1px; }
+.sb-nav-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:7px; font-size:13.5px; font-weight:500; text-decoration:none; color:rgba(255,255,255,0.52); transition:all 0.15s; border-left:3px solid transparent; }
+.sb-nav-item:hover { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.9); }
+.sb-nav-item.active { background:rgba(37,99,235,0.18); color:#fff; border-left-color:#2563EB; }
+.sb-nav-icon { width:18px; height:18px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.sb-nav-icon svg { width:18px; height:18px; }
+.sb-footer { padding:12px; border-top:1px solid rgba(255,255,255,0.07); }
+#main-area { margin-left:240px; flex:1; display:flex; flex-direction:column; min-height:100vh; background:var(--bg); }
 .user-pill { display:flex; align-items:center; gap:8px; }
-.user-avatar { width:28px; height:28px; border-radius:50%; background:var(--accent); color:white; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.user-name { font-size:13px; color:var(--text); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.user-role-badge { font-size:10px; background:var(--accent-bg); color:var(--accent); padding:2px 7px; border-radius:99px; font-weight:600; white-space:nowrap; }
-.user-logout { background:none; border:none; cursor:pointer; color:var(--muted); display:flex; align-items:center; padding:4px; border-radius:6px; transition:color 0.15s; }
-.user-logout:hover { color:var(--danger); }
+.user-avatar { width:30px; height:30px; border-radius:50%; background:#2563EB; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.user-name { font-size:12px; color:rgba(255,255,255,0.75); max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; line-height:1.2; }
+.user-role-badge { font-size:10px; background:rgba(37,99,235,0.3); color:#93C5FD; padding:1px 6px; border-radius:99px; font-weight:600; white-space:nowrap; }
+.user-logout { background:none; border:none; cursor:pointer; color:rgba(255,255,255,0.3); display:flex; align-items:center; padding:4px; border-radius:6px; transition:color 0.15s; margin-left:auto; flex-shrink:0; }
+.user-logout:hover { color:#EF4444; }
+@media(max-width:768px){
+  .sidebar { transform:translateX(-100%); transition:transform 0.25s; }
+  #main-area { margin-left:0; }
+}
+
+/* ── Buttons ──────────────────────────────────────────── */
+.btn { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:var(--radius); font-size:13px; font-family:'Poppins',sans-serif; font-weight:500; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--text); text-decoration:none; transition:all 0.15s; white-space:nowrap; }
+.btn:hover { background:var(--surface2); }
+.btn:disabled { opacity:0.45; cursor:not-allowed; }
+.btn-primary { background:var(--accent); color:white; border-color:var(--accent); }
+.btn-primary:hover:not(:disabled) { background:#1D4ED8; }
+.btn svg { width:15px; height:15px; flex-shrink:0; }
 
 /* PAGE */
 .page-wrap { max-width: 860px; margin: 0 auto; padding: 2rem; }
@@ -68,13 +81,13 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); hei
 
 /* CARD */
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; box-shadow: var(--shadow); margin-bottom: 1.25rem; }
-.card-title { font-family: 'DM Serif Display', serif; font-size: 19px; margin-bottom: 0.25rem; }
+.card-title { font-size:18px; font-weight:700; margin-bottom:0.25rem; }
 .card-sub { font-size: 13px; color: var(--muted); margin-bottom: 1.25rem; line-height: 1.5; }
 
 /* FORM ELEMENTS */
 .field { margin-bottom: 1.1rem; }
 .field-label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
-.field-input { width: 100%; font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); outline: none; transition: border 0.15s; }
+.field-input { width: 100%; font-family: 'Poppins', sans-serif; font-size: 14px; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); outline: none; transition: border 0.15s; }
 .field-input:focus { border-color: var(--accent); }
 .field-input::placeholder { color: var(--light); }
 
@@ -134,7 +147,7 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); hei
 .report-body { padding: 1.5rem; max-height: 540px; overflow-y: auto; font-size: 13px; }
 
 /* REPORT STYLES */
-.report-title { font-family: 'DM Serif Display', serif; font-size: 22px; margin-bottom: 4px; color: var(--text); }
+.report-title { font-size:21px; font-weight:700; margin-bottom:4px; color:var(--text); }
 .report-subtitle { font-size: 13px; color: var(--muted); margin-bottom: 1.5rem; }
 .report-meta-row { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-bottom: 1.5rem; font-size: 12px; color: var(--muted); }
 .report-meta-row strong { color: var(--text); }
@@ -204,36 +217,9 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); hei
 </style>
 </head>
 <body>
-
-<header>
-  <a href="index.html" class="logo" style="padding:0">
-    <span class="logo-dot"></span>
-    Checklist App
-  </a>
-  <nav class="nav">
-    <a href="index.html" class="nav-link">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-      <span>Home</span>
-    </a>
-    <a href="history.html" class="nav-link">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      <span>Ingevuld</span>
-    </a>
-    <a href="reports.html" class="nav-link active">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-      <span>Rapporten</span>
-    </a>
-    <a href="admin.html" class="nav-link" data-admin-only>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
-      <span>Admin</span>
-    </a>
-    <a href="settings.html" class="nav-link">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      <span>Instellingen</span>
-    </a>
-  </nav>
-  <div id="user-pill"></div>
-</header>
+<div id="app-root">
+<div id="sidebar-container"></div>
+<div id="main-area">
 
 <div class="page-wrap">
 
@@ -441,6 +427,10 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); hei
     </div>
   </div>
 
+</div>
+
+</div>
+</div>
 </div>
 
 <div class="toast" id="toast"></div>
