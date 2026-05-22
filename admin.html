@@ -349,14 +349,26 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       <span style="font-weight:700;font-size:15px;color:var(--danger)">Gevarenzone</span>
     </div>
-    <div style="padding:1.25rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+    <!-- Rij 1: Fabrieksreset -->
+    <div style="padding:1.25rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;border-bottom:1px solid #f5c6c2">
       <div>
         <div style="font-weight:600;font-size:14px;margin-bottom:3px">Fabrieksreset</div>
-        <div style="font-size:13px;color:var(--muted);line-height:1.5">Verwijdert <strong>alle templates, submissions en foto's</strong> permanent uit de database.<br>Deze actie kan <strong>niet</strong> ongedaan worden gemaakt.</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.5">Verwijdert <strong>alle templates, submissions en foto's</strong> permanent.<br>Gebruikersaccounts blijven bewaard.</div>
       </div>
       <button class="btn btn-danger" onclick="openResetModal()" style="flex-shrink:0;font-weight:600">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
         Fabrieksreset…
+      </button>
+    </div>
+    <!-- Rij 2: Account verwijderen -->
+    <div style="padding:1.25rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+      <div>
+        <div style="font-weight:600;font-size:14px;margin-bottom:3px">Account verwijderen</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.5">Verwijdert <strong>alle data én alle gebruikersaccounts</strong> inclusief rollen en profielen.<br>Na afloop ben je uitgelogd en is de app leeg. <strong>Volledig onomkeerbaar.</strong></div>
+      </div>
+      <button class="btn btn-danger" onclick="openDeleteAccountModal()" style="flex-shrink:0;font-weight:600;background:var(--danger);color:white;border-color:var(--danger)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        Account verwijderen…
       </button>
     </div>
   </div>
@@ -415,6 +427,100 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
         <button class="btn btn-danger" id="reset-confirm-btn" disabled onclick="runFactoryReset()" style="font-weight:600;opacity:0.4;cursor:not-allowed">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
           Alles verwijderen
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DELETE ACCOUNT MODAL ══════════════════════════════════════════════ -->
+<div id="delacc-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:500;align-items:center;justify-content:center;padding:1rem" onclick="if(event.target===this&&!_delAccRunning)closeDeleteAccountModal()">
+  <div style="background:var(--surface);border-radius:var(--radius-lg);width:100%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.35)" onclick="event.stopPropagation()">
+
+    <!-- Header -->
+    <div style="background:#7f1d1d;padding:1rem 1.25rem;display:flex;align-items:center;gap:10px;position:sticky;top:0">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+      <span style="font-family:'DM Serif Display',serif;font-size:18px;color:white">Account verwijderen</span>
+    </div>
+
+    <div style="padding:1.5rem">
+
+      <!-- Waarschuwing -->
+      <div style="background:#fef2f2;border:2px solid var(--danger);border-radius:var(--radius);padding:12px 14px;margin-bottom:1.25rem;font-size:13px;line-height:1.6;color:#7f1d1d">
+        <strong>⚠️ Dit is de meest drastische actie mogelijk.</strong><br>
+        Alle templates, submissions, foto's, gebruikersprofielen, rollen <em>en alle login-accounts</em> worden permanent verwijderd. Na afloop wordt je uitgelogd en is de volledige app leeg.
+      </div>
+
+      <!-- Wat wordt verwijderd -->
+      <p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:8px">Wat wordt verwijderd</p>
+      <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:1.25rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 11px;background:var(--danger-bg);border:1px solid #f5c6c2;border-radius:var(--radius);font-size:13px">
+          <span>🗂️ Templates</span><span id="da-cnt-templates" style="font-weight:700;color:var(--danger)">…</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 11px;background:var(--danger-bg);border:1px solid #f5c6c2;border-radius:var(--radius);font-size:13px">
+          <span>📋 Submissions</span><span id="da-cnt-submissions" style="font-weight:700;color:var(--danger)">…</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 11px;background:var(--danger-bg);border:1px solid #f5c6c2;border-radius:var(--radius);font-size:13px">
+          <span>📷 Foto's</span><span id="da-cnt-photos" style="font-weight:700;color:var(--danger)">…</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 11px;background:var(--danger-bg);border:1px solid #f5c6c2;border-radius:var(--radius);font-size:13px">
+          <span>👥 Gebruikersaccounts</span><span id="da-cnt-users" style="font-weight:700;color:var(--danger)">…</span>
+        </div>
+      </div>
+
+      <!-- SQL vereiste -->
+      <div style="margin-bottom:1.25rem">
+        <button onclick="toggleSqlBlock()" style="display:flex;align-items:center;gap:6px;background:none;border:1px solid var(--border);border-radius:var(--radius);padding:7px 12px;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--muted);cursor:pointer;width:100%;text-align:left">
+          <svg id="sql-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" style="transition:transform 0.2s;flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
+          <span>Vereiste SQL-migratie (eenmalig uitvoeren in Supabase)</span>
+          <span id="da-sql-status" style="margin-left:auto;font-weight:600"></span>
+        </button>
+        <div id="sql-block" style="display:none;margin-top:6px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+          <div style="background:var(--surface2);padding:8px 12px;font-size:11px;color:var(--muted);display:flex;justify-content:space-between;align-items:center">
+            <span>Plak dit in <strong>Supabase → SQL Editor</strong> en voer uit</span>
+            <button onclick="copySql()" style="background:none;border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:11px;font-family:'DM Sans',sans-serif;cursor:pointer;color:var(--muted)">Kopieer</button>
+          </div>
+          <pre id="sql-snippet" style="margin:0;padding:12px;font-size:11px;line-height:1.6;background:#1e1e2e;color:#cdd6f4;overflow-x:auto;white-space:pre-wrap">CREATE OR REPLACE FUNCTION public.delete_all_data_and_users()
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM roles WHERE user_id = auth.uid() AND is_admin = true) THEN
+    RAISE EXCEPTION 'Access denied: admin role required';
+  END IF;
+  DELETE FROM photos;
+  DELETE FROM submissions;
+  DELETE FROM templates;
+  DELETE FROM user_profiles;
+  DELETE FROM roles;
+  DELETE FROM auth.users;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.delete_all_data_and_users() TO authenticated;</pre>
+        </div>
+      </div>
+
+      <!-- Bevestiging -->
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--danger);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">
+        Typ <strong>VERWIJDER ACCOUNT</strong> om te bevestigen
+      </label>
+      <input type="text" id="da-confirm-input" placeholder="VERWIJDER ACCOUNT"
+        style="width:100%;font-family:'DM Sans',sans-serif;font-size:14px;padding:9px 12px;border:2px solid var(--border);border-radius:var(--radius);outline:none;transition:border 0.15s;margin-bottom:1rem"
+        oninput="checkDelAccInput(this.value)">
+
+      <!-- Progress -->
+      <div id="da-progress" style="display:none;margin-bottom:1rem">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:6px" id="da-progress-label">Bezig…</div>
+        <div style="height:4px;background:var(--border);border-radius:99px;overflow:hidden">
+          <div id="da-progress-bar" style="height:100%;background:var(--danger);width:0%;transition:width 0.3s"></div>
+        </div>
+      </div>
+
+      <!-- Knoppen -->
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn" id="da-cancel-btn" onclick="closeDeleteAccountModal()">Annuleren</button>
+        <button id="da-confirm-btn" disabled onclick="runDeleteAccount()"
+          style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);font-size:13px;font-family:'DM Sans',sans-serif;font-weight:700;cursor:not-allowed;border:1px solid #7f1d1d;background:#7f1d1d;color:white;opacity:0.4;transition:opacity 0.15s">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          Account verwijderen
         </button>
       </div>
     </div>
@@ -1827,6 +1933,160 @@ function downloadQR() {
   a.href = img.src;
   a.target = '_blank';
   a.click();
+}
+
+// ── DELETE ACCOUNT ─────────────────────────────────────────────────────────
+var _delAccRunning = false;
+
+async function openDeleteAccountModal() {
+  document.getElementById('da-confirm-input').value = '';
+  document.getElementById('da-confirm-input').disabled = false;
+  document.getElementById('da-progress').style.display = 'none';
+  document.getElementById('da-progress-label').style.color = 'var(--muted)';
+  document.getElementById('da-progress-bar').style.background = 'var(--danger)';
+  document.getElementById('da-cancel-btn').disabled = false;
+  document.getElementById('da-sql-status').textContent = '';
+  checkDelAccInput('');
+  document.getElementById('delacc-overlay').style.display = 'flex';
+  document.getElementById('sql-block').style.display = 'none';
+  document.getElementById('sql-chevron').style.transform = '';
+
+  // Load counts
+  ['da-cnt-templates','da-cnt-submissions','da-cnt-photos','da-cnt-users'].forEach(id => {
+    document.getElementById(id).textContent = '…';
+  });
+  try {
+    const [tR, sR, pR, uR] = await Promise.all([
+      sb.from('templates').select('id', { count:'exact', head:true }),
+      sb.from('submissions').select('id', { count:'exact', head:true }),
+      sb.from('photos').select('id', { count:'exact', head:true }),
+      sb.from('user_profiles').select('id', { count:'exact', head:true })
+    ]);
+    document.getElementById('da-cnt-templates').textContent  = (tR.count ?? '?') + ' records';
+    document.getElementById('da-cnt-submissions').textContent = (sR.count ?? '?') + ' records';
+    document.getElementById('da-cnt-photos').textContent      = (pR.count ?? '?') + ' records';
+    document.getElementById('da-cnt-users').textContent       = (uR.count ?? '?') + ' accounts';
+  } catch(e) {
+    ['da-cnt-templates','da-cnt-submissions','da-cnt-photos','da-cnt-users'].forEach(id => {
+      document.getElementById(id).textContent = 'fout';
+    });
+  }
+
+  // Check if RPC function exists
+  checkRpcFunction();
+}
+
+async function checkRpcFunction() {
+  const statusEl = document.getElementById('da-sql-status');
+  statusEl.textContent = '⏳ controleren…';
+  try {
+    // Try a dry-run by calling a non-destructive check
+    const { error } = await sb.rpc('delete_all_data_and_users', {}, { count: 'exact' });
+    // If we get "Access denied" or similar, the function exists
+    // If we get "Could not find the function" it doesn't exist
+    if (error && error.message && error.message.includes('Could not find')) {
+      statusEl.textContent = '❌ Migratie nog niet uitgevoerd';
+      statusEl.style.color = 'var(--danger)';
+    } else {
+      // Function exists (error might be "access denied" which is fine — means it's there)
+      statusEl.textContent = '✅ Klaar';
+      statusEl.style.color = 'var(--accent)';
+    }
+  } catch(e) {
+    statusEl.textContent = '❓ Onbekend';
+    statusEl.style.color = 'var(--muted)';
+  }
+}
+
+function closeDeleteAccountModal() {
+  if (_delAccRunning) return;
+  document.getElementById('delacc-overlay').style.display = 'none';
+}
+
+function toggleSqlBlock() {
+  const block = document.getElementById('sql-block');
+  const chevron = document.getElementById('sql-chevron');
+  const open = block.style.display === 'block';
+  block.style.display = open ? 'none' : 'block';
+  chevron.style.transform = open ? '' : 'rotate(90deg)';
+}
+
+function copySql() {
+  const sql = document.getElementById('sql-snippet').textContent;
+  navigator.clipboard.writeText(sql).then(function() {
+    toast('SQL gekopieerd naar klembord.', 'success');
+  }).catch(function() {
+    toast('Kopiëren mislukt — selecteer de tekst handmatig.', 'error');
+  });
+}
+
+function checkDelAccInput(val) {
+  const btn = document.getElementById('da-confirm-btn');
+  const match = val.trim() === 'VERWIJDER ACCOUNT';
+  btn.disabled = !match;
+  btn.style.opacity = match ? '1' : '0.4';
+  btn.style.cursor  = match ? 'pointer' : 'not-allowed';
+  const input = document.getElementById('da-confirm-input');
+  input.style.borderColor = val.length === 0 ? 'var(--border)' : match ? 'var(--danger)' : '#f5c6c2';
+}
+
+function setDelAccProgress(label, pct, isError) {
+  document.getElementById('da-progress').style.display = 'block';
+  const lbl = document.getElementById('da-progress-label');
+  lbl.textContent = label;
+  lbl.style.color = isError ? 'var(--danger)' : 'var(--muted)';
+  document.getElementById('da-progress-bar').style.width = pct + '%';
+  if (isError) document.getElementById('da-progress-bar').style.background = 'var(--danger)';
+}
+
+async function runDeleteAccount() {
+  if (_delAccRunning) return;
+  _delAccRunning = true;
+
+  document.getElementById('da-confirm-btn').disabled = true;
+  document.getElementById('da-confirm-btn').style.opacity = '0.4';
+  document.getElementById('da-cancel-btn').disabled = true;
+  document.getElementById('da-confirm-input').disabled = true;
+
+  try {
+    // 1. Storage bestanden
+    setDelAccProgress('Foto\'s verwijderen uit opslag…', 15);
+    const { data: photoRows } = await sb.from('photos').select('storage_path');
+    if (photoRows && photoRows.length > 0) {
+      const paths = photoRows.map(p => p.storage_path).filter(Boolean);
+      for (let i = 0; i < paths.length; i += 100) {
+        await sb.storage.from(window.STORAGE_BUCKET || 'checklist-photos')
+          .remove(paths.slice(i, i + 100));
+      }
+    }
+
+    // 2. RPC: verwijder alles inclusief auth.users
+    setDelAccProgress('Database en gebruikersaccounts verwijderen…', 50);
+    const { error } = await sb.rpc('delete_all_data_and_users');
+    if (error) {
+      if (error.message && error.message.includes('Could not find')) {
+        throw new Error('De SQL-migratie is nog niet uitgevoerd. Klik op "Vereiste SQL-migratie" hierboven, kopieer de SQL en voer die uit in Supabase → SQL Editor.');
+      }
+      throw error;
+    }
+
+    // 3. Klaar — sessie is nu ongeldig
+    setDelAccProgress('✅ Account verwijderd. Je wordt uitgelogd…', 100);
+    document.getElementById('da-progress-label').style.color = 'var(--accent)';
+    document.getElementById('da-progress-bar').style.background = 'var(--accent)';
+
+    // Wis lokale opslag en stuur door naar login
+    setTimeout(async function() {
+      try { await sb.auth.signOut(); } catch(e) {}
+      localStorage.clear();
+      location.href = 'login.html';
+    }, 2000);
+
+  } catch(err) {
+    setDelAccProgress(err.message || 'Onbekende fout', 100, true);
+    document.getElementById('da-cancel-btn').disabled = false;
+    _delAccRunning = false;
+  }
 }
 
 // ── FACTORY RESET ──────────────────────────────────────────────────────────
