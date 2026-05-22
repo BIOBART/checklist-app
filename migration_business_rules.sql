@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS public.business_rules (
   -- send_email:     { to, subject, message, include_report }
   -- homepage_alert: { message, color }  -- color: 'red'|'orange'|'blue'|'green'
   created_at      timestamptz DEFAULT now(),
-  created_by      uuid REFERENCES auth.users(id) ON DELETE SET NULL
+  created_by      uuid  -- auth.users FK niet nodig; Supabase beheert auth apart
 );
 
 -- ─── Tabel: rule_notifications ────────────────────────────────────────────────
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS public.rule_notifications (
   alert_color     text DEFAULT 'orange',
   created_at      timestamptz DEFAULT now(),
   dismissed_at    timestamptz,
-  dismissed_by    uuid REFERENCES auth.users(id) ON DELETE SET NULL
+  dismissed_by    uuid  -- auth.users FK niet nodig; Supabase beheert auth apart
 );
 
 -- ─── RLS: business_rules ─────────────────────────────────────────────────────
