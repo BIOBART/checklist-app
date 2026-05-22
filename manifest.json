@@ -1,0 +1,13 @@
+{
+  "name": "Checklist App",
+  "short_name": "Checklist",
+  "description": "Checklists offline invullen en synchroniseren",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F6F4EF",
+  "theme_color": "#2D5A3D",
+  "icons": [
+    { "src": "favicon.png", "sizes": "any", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

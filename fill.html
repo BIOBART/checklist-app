@@ -5,6 +5,7 @@
 <link rel="icon" type="image/png" href="favicon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Checklist invullen</title>
+<link rel="manifest" href="manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -14,6 +15,7 @@
 <script src="config.js"></script>
 <script src="branding.js"></script>
 <script src="auth.js"></script>
+<script src="offline-db.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -40,6 +42,14 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
 .btn svg { width:14px; height:14px; flex-shrink:0; }
 .save-indicator { font-size:12px; color:var(--light); display:flex; align-items:center; gap:5px; transition:color 0.3s; }
 .save-indicator::before { content:''; width:6px; height:6px; border-radius:50%; background:var(--accent-mid); display:inline-block; }
+
+/* OFFLINE BANNERS */
+.offline-bar { display:none; position:sticky; top:60px; z-index:49; background:#d97706; color:white; padding:8px 1.5rem; font-size:13px; font-weight:500; align-items:center; justify-content:center; gap:8px; }
+.offline-bar.show { display:flex; }
+.offline-bar svg { width:15px; height:15px; flex-shrink:0; }
+.sync-bar { display:none; position:sticky; top:60px; z-index:49; background:var(--accent); color:white; padding:8px 1.5rem; font-size:13px; font-weight:500; align-items:center; justify-content:center; gap:8px; }
+.sync-bar.show { display:flex; }
+.sync-bar svg { width:15px; height:15px; flex-shrink:0; }
 
 /* LAYOUT */
 .container { max-width:760px; margin:0 auto; padding:2rem 1.5rem 6rem; }
@@ -237,6 +247,16 @@ textarea.ff:focus, input.ff:focus { border-color:var(--accent); background:var(-
   </div>
 </header>
 
+<!-- Offline / sync statusbalken -->
+<div class="offline-bar" id="offline-bar">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
+  Offline — wijzigingen worden lokaal opgeslagen en gesynchroniseerd zodra er verbinding is
+</div>
+<div class="sync-bar" id="sync-bar">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+  <span id="sync-bar-msg">Verbinding hersteld — synchroniseren…</span>
+</div>
+
 <div class="container" id="main">
   <div class="loading">
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite;margin-bottom:12px"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
@@ -380,8 +400,25 @@ let answers = {};    // { item_id: { checked, value, photos: [{data,path,name}] 
 let saveTimer = null;
 let dirty = false;
 
+// ── Offline state ──
+let _submissionIsLocal = false; // true als de submission offline aangemaakt is (nog niet in Supabase)
+let _syncRunning = false;
+
 // ── INIT ──
 async function init() {
+  // Service Worker registreren
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(e => console.warn('[SW] Registratie mislukt:', e));
+  }
+
+  // Online/offline banners + auto-sync bij reconnect
+  window.addEventListener('offline', updateOfflineBanner);
+  window.addEventListener('online', function () {
+    updateOfflineBanner();
+    syncQueue();
+  });
+  updateOfflineBanner();
+
   // Auth guard — redirects to login.html if not logged in
   const profile = await AUTH.init({ requireAuth: true });
   if (!profile) return; // redirecting
@@ -400,20 +437,56 @@ async function init() {
   } else {
     showError('Geen template of checklist opgegeven.');
   }
+
+  // Als we online zijn en er wachtrij-items zijn (van vorige offline sessie): sync
+  if (navigator.onLine) {
+    OfflineDB.hasQueuedOps().then(has => { if (has) syncQueue(); }).catch(() => {});
+  }
 }
 
 async function loadTemplate() {
   const { data, error } = await sb.from('templates').select('*').eq('id', templateId).single();
-  if (error || !data) { showError('Template niet gevonden.'); return; }
+  if (error || !data) {
+    // Probeer gecachede versie (offline of netwerk-fout)
+    const cached = await OfflineDB.getCachedTemplate(templateId).catch(() => null);
+    if (cached) {
+      template = cached;
+      fixShowIfValues(template);
+      lang = cached.lang || 'nl';
+      document.getElementById('lang-select').value = lang;
+      return;
+    }
+    showError('Template niet gevonden' + (!navigator.onLine ? ' (je bent offline)' : '') + '.');
+    return;
+  }
   template = data;
   fixShowIfValues(template);
   lang = data.lang || 'nl';
   document.getElementById('lang-select').value = lang;
+  OfflineDB.cacheTemplate(data).catch(() => {}); // cache voor offline gebruik
 }
 
 async function loadSubmission() {
   const { data, error } = await sb.from('submissions').select('*').eq('id', submissionId).single();
-  if (error || !data) { showError('Checklist niet gevonden.'); return; }
+  if (error || !data) {
+    // Probeer gecachede versie (offline of netwerk-fout)
+    const cached = await OfflineDB.getCachedSubmission(submissionId).catch(() => null);
+    if (cached) {
+      submission = cached;
+      answers = cached.answers || {};
+      lang = cached.lang || 'nl';
+      document.getElementById('lang-select').value = lang;
+      if (cached.template_id) {
+        const cachedTpl = await OfflineDB.getCachedTemplate(cached.template_id).catch(() => null);
+        if (cachedTpl) { template = cachedTpl; fixShowIfValues(template); }
+      }
+      // Foto's komen uit browser-cache (service worker) — geen extra actie nodig
+      renderPage();
+      return;
+    }
+    showError('Checklist niet gevonden' + (!navigator.onLine ? ' (je bent offline)' : '') + '.');
+    return;
+  }
   submission = data;
   answers = data.answers || {};
   lang = data.lang || 'nl';
@@ -421,10 +494,16 @@ async function loadSubmission() {
   // load template
   if (data.template_id) {
     const { data: tpl } = await sb.from('templates').select('*').eq('id', data.template_id).single();
-    if (tpl) { template = tpl; fixShowIfValues(template); }
+    if (tpl) {
+      template = tpl;
+      fixShowIfValues(template);
+      OfflineDB.cacheTemplate(tpl).catch(() => {});
+    }
   }
   // load photos from storage paths
   await loadPhotos();
+  // Cache submission voor offline hervatten (antwoorden zonder foto-blobs)
+  OfflineDB.cacheSubmission({ ...data }).catch(() => {});
   renderPage();
 }
 
@@ -1065,21 +1144,36 @@ function toggleCheckUI(id, state) {
 async function handlePhotos(itemId, input) {
   const files = Array.from(input.files);
   if (!files.length) return;
-  // itemId may be 'realId_fu' for follow-up photos
   const a = getAns(itemId);
-  const isFollowUp = itemId.endsWith('_fu');
-  const storageBase = isFollowUp ? itemId : itemId;
+  const storageBase = itemId; // ook voor follow-up (_fu) gewoon itemId gebruiken als map-naam
+
   for (const file of files) {
     const dataUrl = await readFile(file);
     let storagePath = null;
-    if (submission?.id) {
-      const path = `${submission.id}/${storageBase}/${Date.now()}_${file.name}`;
+
+    // Zorg voor een submission-ID (ook offline)
+    if (!submission?.id) {
+      const localId = crypto.randomUUID ? crypto.randomUUID() : ('local-' + Date.now());
+      submission = { id: localId, status: 'open', template_id: template?.id };
+      _submissionIsLocal = true;
+      history.replaceState({}, '', '?submission=' + localId);
+    }
+
+    const path = `${submission.id}/${storageBase}/${Date.now()}_${file.name}`;
+
+    if (navigator.onLine) {
+      // ── Online: direct uploaden ──────────────────────────────────────
       const { error } = await sb.storage.from(STORAGE_BUCKET).upload(path, file, { upsert: true });
       if (!error) {
         storagePath = path;
         await sb.from('photos').insert({ submission_id: submission.id, item_id: itemId, storage_path: path, filename: file.name });
       }
+    } else {
+      // ── Offline: in wachtrij zetten voor later upload ─────────────────
+      storagePath = '__pending__' + path; // markering dat upload nog moet gebeuren
+      await OfflineDB.queuePhoto(submission.id, itemId, dataUrl, file.name, path).catch(() => {});
     }
+
     a.photos.push({ data: dataUrl, path: storagePath, name: file.name });
   }
   scheduleSave();
@@ -1097,9 +1191,19 @@ function readFile(file) {
 async function deletePhoto(itemId, idx) {
   const a = getAns(itemId);
   const photo = a.photos[idx];
-  if (photo.path && submission?.id) {
-    await sb.storage.from(STORAGE_BUCKET).remove([photo.path]);
-    if (photo.dbId) await sb.from('photos').delete().eq('id', photo.dbId);
+
+  if (photo.path) {
+    if (photo.path.startsWith('__pending__')) {
+      // Nog niet geüpload (offline genomen) — verwijder uit wachtrij
+      const realPath = photo.path.replace('__pending__', '');
+      await OfflineDB.removeQueuedPhotoByPath(realPath).catch(() => {});
+    } else if (navigator.onLine && submission?.id) {
+      // Online: verwijder uit Storage en DB
+      await sb.storage.from(STORAGE_BUCKET).remove([photo.path]);
+      if (photo.dbId) await sb.from('photos').delete().eq('id', photo.dbId);
+    }
+    // Offline + al geüpload: we laten de Storage-entry staan en verwijderen bij volgende sync niet.
+    // De foto verdwijnt lokaal uit de weergave; bij volgende online sessie is de verwijdering al zichtbaar.
   }
   a.photos.splice(idx, 1);
   scheduleSave();
@@ -1157,6 +1261,8 @@ async function saveNow() {
   const cleanAnswers = {};
   for (const [k,v] of Object.entries(answers)) {
     cleanAnswers[k] = { checked: v.checked, value: v.value||'' };
+    if (v.items) cleanAnswers[k].items = v.items; // checkgroup sub-items
+    if (v.followNote) cleanAnswers[k].followNote = v.followNote;
   }
 
   const location = document.getElementById('f-location')?.value||'';
@@ -1180,25 +1286,55 @@ async function saveNow() {
     updated_at: new Date().toISOString()
   };
 
+  // ── OFFLINE pad ────────────────────────────────────────────────────────
+  if (!navigator.onLine) {
+    // Genereer een lokale UUID als er nog geen submission is
+    if (!submission?.id) {
+      const localId = crypto.randomUUID ? crypto.randomUUID() : ('local-' + Date.now());
+      submission = { id: localId, status: 'open', template_id: template?.id };
+      _submissionIsLocal = true;
+      history.replaceState({}, '', '?submission=' + localId);
+    }
+    // Sla op in wachtrij
+    await OfflineDB.queueSave(submission.id, _submissionIsLocal, { ...payload, status: submission.status || 'open' }).catch(() => {});
+    // Cache lokaal voor offline hervatten
+    await OfflineDB.cacheSubmission({ ...submission, ...payload, answers: cleanAnswers }).catch(() => {});
+    dirty = false;
+    const ind = document.getElementById('save-indicator');
+    if (ind) {
+      ind.textContent = '⏏ Lokaal opgeslagen';
+      ind.style.color = '#d97706';
+      setTimeout(() => { ind.textContent = ''; ind.style.color = ''; }, 2500);
+    }
+    return;
+  }
+
+  // ── ONLINE pad ─────────────────────────────────────────────────────────
   let error;
-  if (submission?.id) {
+  if (submission?.id && !_submissionIsLocal) {
     ({ error } = await sb.from('submissions').update(payload).eq('id', submission.id));
   } else {
-    const { data, error: err } = await sb.from('submissions').insert({ ...payload, status:'open' }).select().single();
+    // Nieuwe submission of eerder lokaal aangemaakt — gebruik INSERT met id
+    const insertPayload = { ...payload, status: 'open' };
+    if (submission?.id) insertPayload.id = submission.id; // behoud lokale UUID
+    const { data, error: err } = await sb.from('submissions').insert(insertPayload).select().single();
     error = err;
     if (data) {
       submission = data;
-      history.replaceState({}, '', `?submission=${data.id}`);
+      _submissionIsLocal = false;
+      history.replaceState({}, '', '?submission=' + data.id);
     }
   }
 
   dirty = false;
   const ind = document.getElementById('save-indicator');
   if (ind) { ind.textContent = t('saved'); ind.style.color = 'var(--accent)'; setTimeout(()=>ind.style.color='',1500); }
-  if (error) toast('Fout bij opslaan: '+error.message, 'error');
+  if (error) { toast('Fout bij opslaan: ' + error.message, 'error'); return; }
 
-  // Evaluate business rules for 'save' and 'both' triggers (fire-and-forget)
-  if (!error && submission?.id) {
+  // Cache na succesvolle online opslag
+  if (submission?.id) {
+    OfflineDB.cacheSubmission({ ...submission, ...payload, answers: cleanAnswers }).catch(() => {});
+    // Evaluate business rules for 'save' and 'both' triggers (fire-and-forget)
     evaluateRules('save').catch(() => {});
   }
 }
@@ -1242,6 +1378,18 @@ async function markComplete() {
   }
   if (!confirm(t('confirm_complete'))) return;
   await saveNow();
+
+  // ── Offline: wachtrij voor voltooiing ────────────────────────────────────
+  if (!navigator.onLine) {
+    await OfflineDB.queueComplete(submission.id).catch(() => {});
+    submission.status = 'completed';
+    toast('Voltooid — wordt gesynchroniseerd zodra verbinding hersteld is.', 'success');
+    document.getElementById('status-badge').textContent = 'Voltooid';
+    document.getElementById('status-badge').className = 'status-badge status-completed';
+    return;
+  }
+
+  // ── Online: direct voltooien ─────────────────────────────────────────────
   const { error } = await sb.from('submissions').update({ status:'completed' }).eq('id', submission?.id);
   if (!error) {
     submission.status = 'completed';
@@ -1263,6 +1411,7 @@ var _firedRules = {};
 
 async function evaluateRules(triggerContext) {
   // triggerContext = 'save' | 'completed'
+  if (!navigator.onLine) return; // geen regels evalueren wanneer offline
   if (!submission?.id || !template?.id) return;
 
   // Fetch all active rules
@@ -1400,6 +1549,160 @@ async function executeRuleAction(rule, meta) {
 }
 
 // ── END BUSINESS RULES EVALUATOR ─────────────────────────────────────────────
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── OFFLINE HELPERS ───────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+function updateOfflineBanner() {
+  const bar = document.getElementById('offline-bar');
+  if (bar) bar.classList.toggle('show', !navigator.onLine);
+}
+
+function showSyncBar(msg) {
+  const bar = document.getElementById('sync-bar');
+  const txt = document.getElementById('sync-bar-msg');
+  if (txt) txt.textContent = msg || 'Synchroniseren…';
+  if (bar) bar.classList.add('show');
+}
+
+function hideSyncBar() {
+  const bar = document.getElementById('sync-bar');
+  if (bar) setTimeout(() => bar.classList.remove('show'), 2000);
+}
+
+/** Converteert een data-URL naar een Blob voor upload naar Supabase Storage. */
+function dataUrlToBlob(dataUrl) {
+  const [header, base64] = dataUrl.split(',');
+  const mime = header.match(/:(.*?);/)?.[1] || 'image/jpeg';
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
+/**
+ * Synchroniseert de offline wachtrij met Supabase.
+ * Wordt automatisch aangeroepen bij herverbinding en bij init als er items in de wachtrij staan.
+ */
+async function syncQueue() {
+  if (_syncRunning || !navigator.onLine) return;
+  _syncRunning = true;
+
+  try {
+    const queue  = await OfflineDB.getQueue().catch(() => []);
+    const photos = await OfflineDB.getQueuedPhotos().catch(() => []);
+
+    if (!queue.length && !photos.length) { _syncRunning = false; return; }
+
+    showSyncBar('Verbinding hersteld — ' + (queue.length + photos.length) + ' item(s) synchroniseren…');
+
+    let synced = 0;
+    let errors = 0;
+
+    // ── Stap 1: submissions (saves + completes) ────────────────────────────
+    for (const op of queue) {
+      try {
+        if (op.type === 'save') {
+          let dbError;
+          if (op.is_new) {
+            // INSERT — submission bestond nog niet in Supabase
+            const { error } = await sb.from('submissions').insert({
+              id: op.submission_id,
+              ...op.payload,
+              status: op.payload.status || 'open'
+            });
+            dbError = error;
+            if (!error && op.submission_id === submission?.id) _submissionIsLocal = false;
+          } else {
+            // UPDATE — submission bestaat al
+            const { error } = await sb.from('submissions').update(op.payload).eq('id', op.submission_id);
+            dbError = error;
+          }
+          if (!dbError) {
+            await OfflineDB.removeFromQueue(op.qid).catch(() => {});
+            synced++;
+          } else {
+            console.warn('[Sync] save mislukt:', dbError.message);
+            errors++;
+          }
+
+        } else if (op.type === 'complete') {
+          const { error } = await sb.from('submissions').update({ status: 'completed' }).eq('id', op.submission_id);
+          if (!error) {
+            await OfflineDB.removeFromQueue(op.qid).catch(() => {});
+            synced++;
+            // Business rules evalueren na sync van huidig submission
+            if (op.submission_id === submission?.id) evaluateRules('completed').catch(() => {});
+          } else {
+            console.warn('[Sync] complete mislukt:', error.message);
+            errors++;
+          }
+        }
+      } catch (e) {
+        console.warn('[Sync] onverwachte fout bij operatie:', op, e);
+        errors++;
+      }
+    }
+
+    // ── Stap 2: foto's uploaden ────────────────────────────────────────────
+    for (const photo of photos) {
+      try {
+        const blob = dataUrlToBlob(photo.data_url);
+        const { error: uploadErr } = await sb.storage
+          .from(STORAGE_BUCKET)
+          .upload(photo.storage_path, blob, { upsert: true });
+
+        if (!uploadErr) {
+          await sb.from('photos').insert({
+            submission_id: photo.submission_id,
+            item_id: photo.item_id,
+            storage_path: photo.storage_path,
+            filename: photo.filename
+          });
+          await OfflineDB.removeQueuedPhoto(photo.qid).catch(() => {});
+
+          // Update het in-memory pad van de foto (verwijder '__pending__' prefix)
+          if (photo.submission_id === submission?.id) {
+            const pendingPath = '__pending__' + photo.storage_path;
+            const ans = answers[photo.item_id];
+            if (ans?.photos) {
+              const p = ans.photos.find(p => p.path === pendingPath);
+              if (p) p.path = photo.storage_path;
+            }
+          }
+          synced++;
+        } else {
+          console.warn('[Sync] foto upload mislukt:', uploadErr.message);
+          errors++;
+        }
+      } catch (e) {
+        console.warn('[Sync] onverwachte fout bij foto upload:', e);
+        errors++;
+      }
+    }
+
+    // ── Evalueer business rules voor huidig submission na sync ────────────
+    if (synced > 0 && submission?.id) {
+      const currentSynced = queue.some(op => op.submission_id === submission.id && op.type === 'save');
+      if (currentSynced) evaluateRules('save').catch(() => {});
+    }
+
+    hideSyncBar();
+    if (synced > 0) {
+      toast(synced + ' item(s) gesynchroniseerd ✓', 'success');
+    }
+    if (errors > 0) {
+      toast(errors + ' item(s) konden niet gesynchroniseerd worden', 'error');
+    }
+
+  } catch (e) {
+    console.warn('[Sync] Algemene sync-fout:', e);
+    hideSyncBar();
+  } finally {
+    _syncRunning = false;
+  }
+}
 
 function changeLang(l) {
   lang = l;

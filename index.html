@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/png" href="favicon.png">
+<link rel="manifest" href="manifest.json">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Checklist App</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
@@ -762,6 +763,15 @@ async function generateBlankWord() {
     setTimeout(()=>URL.revokeObjectURL(url),5000);
     closeBlankExport();
   } catch(err) { alert('Fout bij Word export: '+err.message); }
+}
+
+// Service Worker registreren
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function (e) {
+      console.warn('[SW] Registratie mislukt:', e);
+    });
+  });
 }
 
 // Init
