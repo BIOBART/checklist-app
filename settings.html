@@ -1,29 +1,32 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/png" href="favicon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Instellingen — Checklist App</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<title>Instellingen — FoldrIQ</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="branding.js"></script>
 <script src="auth.js"></script>
+<script src="sidebar.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --bg:#F6F4EF; --surface:#FFFFFF; --surface2:#EFECE5;
-  --border:#E0DDD5; --border-strong:#C5C0B5;
-  --text:#1A1714; --muted:#7A7168; --light:#B0A898;
-  --accent:#2D5A3D; --accent-bg:#E8F0EB; --accent-mid:#4A8A5E;
-  --danger:#C0392B; --danger-bg:#FDECEA;
-  --radius:10px; --radius-lg:16px;
-  --shadow:0 1px 3px rgba(0,0,0,0.05),0 4px 14px rgba(0,0,0,0.04);
+  --bg:#F3F4F6; --surface:#FFFFFF; --surface2:#F9FAFB;
+  --border:#E5E7EB; --border-strong:#D1D5DB;
+  --text:#111827; --muted:#6B7280; --light:#9CA3AF;
+  --accent:#2563EB; --accent-bg:#EFF6FF; --accent-mid:#3B82F6;
+  --warn:#D97706; --warn-bg:#FFFBEB;
+  --danger:#EF4444; --danger-bg:#FEF2F2;
+  --success:#10B981; --success-bg:#ECFDF5;
+  --radius:8px; --radius-lg:12px;
+  --shadow:0 1px 2px rgba(0,0,0,0.05),0 4px 12px rgba(0,0,0,0.04);
 }
-body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+body { font-family:'Poppins',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
 header { background:var(--surface); border-bottom:1px solid var(--border); height:60px; display:flex; align-items:center; justify-content:space-between; padding:0 2rem; position:sticky; top:0; z-index:50; }
-.logo { font-family:'DM Serif Display',serif; font-size:20px; display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--text); }
+.logo { font-family:'Poppins',sans-serif; font-size:20px; display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--text); }
 .logo-dot { width:8px; height:8px; border-radius:50%; background:var(--accent); }
 nav { display:flex; gap:6px; align-items:center; }
 .nav-link { font-size:13px; color:var(--muted); text-decoration:none; padding:6px 12px; border-radius:var(--radius); transition:all 0.15s; display:flex; align-items:center; gap:5px; }
@@ -33,7 +36,7 @@ nav { display:flex; gap:6px; align-items:center; }
 
 .container { max-width:720px; margin:0 auto; padding:2.5rem 2rem; }
 .page-header { margin-bottom:2rem; }
-.page-title { font-family:'DM Serif Display',serif; font-size:28px; }
+.page-title { font-family:'Poppins',sans-serif; font-size:28px; }
 .page-subtitle { font-size:14px; color:var(--muted); margin-top:6px; }
 
 .settings-group { display:flex; flex-direction:column; gap:1rem; margin-bottom:2.5rem; }
@@ -53,7 +56,7 @@ nav { display:flex; gap:6px; align-items:center; }
   display:flex; flex-direction:column; align-items:center; gap:8px;
   padding:1rem 0.75rem; border:2px solid var(--border); border-radius:var(--radius-lg);
   background:var(--bg); cursor:pointer; transition:all 0.15s;
-  font-family:'DM Sans',sans-serif; color:var(--text);
+  font-family:'Poppins',sans-serif; color:var(--text);
 }
 .lang-btn:hover { border-color:var(--accent-mid); background:var(--accent-bg); }
 .lang-btn.active {
@@ -94,7 +97,7 @@ nav { display:flex; gap:6px; align-items:center; }
 .role-badge.tech { background:var(--surface2); color:var(--muted); }
 
 /* Buttons */
-.btn { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:var(--radius); font-size:13px; font-family:'DM Sans',sans-serif; font-weight:500; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--text); transition:all 0.15s; white-space:nowrap; }
+.btn { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:var(--radius); font-size:13px; font-family:'Poppins',sans-serif; font-weight:500; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--text); transition:all 0.15s; white-space:nowrap; }
 .btn:hover { background:var(--surface2); }
 .btn-primary { background:var(--accent); color:white; border-color:var(--accent); }
 .btn-primary:hover { opacity:.88; }
@@ -110,45 +113,51 @@ nav { display:flex; gap:6px; align-items:center; }
 .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:200; align-items:center; justify-content:center; padding:1rem; }
 .overlay.open { display:flex; }
 .modal { background:var(--surface); border-radius:var(--radius-lg); padding:1.5rem; width:100%; max-width:440px; box-shadow:0 20px 60px rgba(0,0,0,0.2); }
-.modal h2 { font-family:'DM Serif Display',serif; font-size:20px; margin-bottom:1rem; }
+.modal h2 { font-family:'Poppins',sans-serif; font-size:20px; margin-bottom:1rem; }
 .modal-field { margin-bottom:1rem; }
 .modal-label { font-size:12px; color:var(--muted); margin-bottom:4px; font-weight:500; display:block; }
-.modal-input { width:100%; font-family:'DM Sans',sans-serif; font-size:14px; padding:9px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); color:var(--text); outline:none; }
+.modal-input { width:100%; font-family:'Poppins',sans-serif; font-size:14px; padding:9px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg); color:var(--text); outline:none; }
 .modal-input:focus { border-color:var(--accent); background:var(--surface); }
 .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:1.25rem; }
-</style>
+
+/* ═══ APP LAYOUT + SIDEBAR ═══════════════════════════════════════════════ */
+#app-root { display:flex; min-height:100vh; }
+.sidebar {
+  width:240px; background:#0D1B2A; display:flex; flex-direction:column;
+  flex-shrink:0; position:fixed; top:0; left:0; bottom:0; z-index:40;
+  overflow-y:auto;
+}
+.sb-logo { padding:18px 16px 14px; border-bottom:1px solid rgba(255,255,255,0.07); }
+.sb-logo a { display:block; }
+.sb-logo-img { height:28px; width:auto; object-fit:contain; max-width:180px; }
+.sb-nav { flex:1; padding:10px 8px; display:flex; flex-direction:column; gap:1px; }
+.sb-nav-item {
+  display:flex; align-items:center; gap:10px; padding:9px 12px;
+  border-radius:7px; font-size:13.5px; font-weight:500; text-decoration:none;
+  color:rgba(255,255,255,0.52); transition:all 0.15s;
+  border-left:3px solid transparent;
+}
+.sb-nav-item:hover { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.9); }
+.sb-nav-item.active { background:rgba(37,99,235,0.18); color:#fff; border-left-color:#2563EB; }
+.sb-nav-icon { width:18px; height:18px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.sb-nav-icon svg { width:18px; height:18px; }
+.sb-footer { padding:12px; border-top:1px solid rgba(255,255,255,0.07); }
+#main-area { margin-left:240px; flex:1; display:flex; flex-direction:column; min-height:100vh; background:var(--bg); }
+/* User pill — dark sidebar context */
+.user-pill { display:flex; align-items:center; gap:8px; }
+.user-avatar { width:30px; height:30px; border-radius:50%; background:#2563EB; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.user-name { font-size:12px; color:rgba(255,255,255,0.75); max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; line-height:1.2; }
+.user-role-badge { font-size:10px; background:rgba(37,99,235,0.3); color:#93C5FD; padding:1px 6px; border-radius:99px; font-weight:600; white-space:nowrap; }
+.user-logout { background:none; border:none; cursor:pointer; color:rgba(255,255,255,0.3); display:flex; align-items:center; padding:4px; border-radius:6px; transition:color 0.15s; margin-left:auto; flex-shrink:0; }
+.user-logout:hover { color:#EF4444; }
+@media(max-width:768px){
+  .sidebar { transform:translateX(-100%); transition:transform 0.25s; }
+  #main-area { margin-left:0; }
+}</style>
 </head>
 <body>
 
-<header>
-  <a href="index.html" class="logo">
-    <div class="logo-dot"></div>
-    Checklist App
-  </a>
-  <nav>
-    <a href="index.html" class="nav-link">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      Home
-    </a>
-    <a href="reports.html" class="nav-link">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-      Rapporten
-    </a>
-    <a href="admin.html" class="nav-link" data-admin-only>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
-      Admin
-    </a>
-    <a href="help.html" class="nav-link">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      Help
-    </a>
-    <a href="settings.html" class="nav-link active">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      Instellingen
-    </a>
-  </nav>
-  <div id="user-pill"></div>
-</header>
+<div id="app-root"><div id="sidebar-container"></div><div id="main-area">
 
 <div class="container">
   <div class="page-header">
@@ -220,7 +229,7 @@ nav { display:flex; gap:6px; align-items:center; }
         <!-- Search + invite button -->
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:1rem">
           <input id="users-search" type="search" placeholder="Zoeken op naam of e-mail…"
-            style="flex:1;min-width:180px;font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);outline:none"
+            style="flex:1;min-width:180px;font-family:'Poppins',sans-serif;font-size:13px;padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);outline:none"
             oninput="filterUsers(this.value)">
           <button class="btn btn-primary" onclick="openInviteModal()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -276,7 +285,7 @@ nav { display:flex; gap:6px; align-items:center; }
             <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px" id="lbl-company">Bedrijfsnaam</label>
             <input type="text" id="brand-name"
               style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:14px;font-family:inherit;background:var(--bg);color:var(--text);outline:none;transition:border-color 0.15s"
-              placeholder="bv. Foldriq"
+              placeholder="bv. FoldrIQ"
               onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
           </div>
 
@@ -500,7 +509,7 @@ nav { display:flex; gap:6px; align-items:center; }
   <div style="background:var(--surface);border-radius:var(--radius-lg);width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,0.25);overflow:hidden" onclick="event.stopPropagation()">
     <div style="background:var(--danger);padding:1rem 1.25rem;display:flex;align-items:center;gap:10px">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      <span style="font-family:'DM Serif Display',serif;font-size:18px;color:white">Fabrieksreset</span>
+      <span style="font-family:'Poppins',sans-serif;font-size:18px;color:white">Fabrieksreset</span>
     </div>
     <div style="padding:1.5rem">
       <p style="font-size:13px;color:var(--muted);margin-bottom:1rem;line-height:1.6">De volgende data wordt <strong style="color:var(--danger)">permanent en onomkeerbaar</strong> verwijderd:</p>
@@ -522,7 +531,7 @@ nav { display:flex; gap:6px; align-items:center; }
         Typ <strong>VERWIJDER ALLES</strong> om te bevestigen
       </label>
       <input type="text" id="reset-confirm-input" placeholder="VERWIJDER ALLES"
-        style="width:100%;font-family:'DM Sans',sans-serif;font-size:14px;padding:9px 12px;border:2px solid var(--border);border-radius:var(--radius);outline:none;transition:border 0.15s;margin-bottom:1rem"
+        style="width:100%;font-family:'Poppins',sans-serif;font-size:14px;padding:9px 12px;border:2px solid var(--border);border-radius:var(--radius);outline:none;transition:border 0.15s;margin-bottom:1rem"
         oninput="checkResetInput(this.value)">
       <div id="reset-progress" style="display:none;margin-bottom:1rem">
         <div style="font-size:13px;color:var(--muted);margin-bottom:6px" id="reset-progress-label">Bezig…</div>
@@ -546,7 +555,7 @@ nav { display:flex; gap:6px; align-items:center; }
   <div style="background:var(--surface);border-radius:var(--radius-lg);width:100%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.35)" onclick="event.stopPropagation()">
     <div style="background:#7f1d1d;padding:1rem 1.25rem;display:flex;align-items:center;gap:10px;position:sticky;top:0">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-      <span style="font-family:'DM Serif Display',serif;font-size:18px;color:white">Account verwijderen</span>
+      <span style="font-family:'Poppins',sans-serif;font-size:18px;color:white">Account verwijderen</span>
     </div>
     <div style="padding:1.5rem">
       <div style="background:#fef2f2;border:2px solid var(--danger);border-radius:var(--radius);padding:12px 14px;margin-bottom:1.25rem;font-size:13px;line-height:1.6;color:#7f1d1d">
@@ -569,7 +578,7 @@ nav { display:flex; gap:6px; align-items:center; }
         </div>
       </div>
       <div style="margin-bottom:1.25rem">
-        <button onclick="toggleSqlBlock()" style="display:flex;align-items:center;gap:6px;background:none;border:1px solid var(--border);border-radius:var(--radius);padding:7px 12px;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--muted);cursor:pointer;width:100%;text-align:left">
+        <button onclick="toggleSqlBlock()" style="display:flex;align-items:center;gap:6px;background:none;border:1px solid var(--border);border-radius:var(--radius);padding:7px 12px;font-size:12px;font-family:'Poppins',sans-serif;color:var(--muted);cursor:pointer;width:100%;text-align:left">
           <svg id="sql-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" style="transition:transform 0.2s;flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
           <span>Vereiste SQL-migratie (eenmalig uitvoeren in Supabase)</span>
           <span id="da-sql-status" style="margin-left:auto;font-weight:600"></span>
@@ -577,7 +586,7 @@ nav { display:flex; gap:6px; align-items:center; }
         <div id="sql-block" style="display:none;margin-top:6px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
           <div style="background:var(--surface2);padding:8px 12px;font-size:11px;color:var(--muted);display:flex;justify-content:space-between;align-items:center">
             <span>Plak dit in <strong>Supabase → SQL Editor</strong> en voer uit</span>
-            <button onclick="copySql()" style="background:none;border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:11px;font-family:'DM Sans',sans-serif;cursor:pointer;color:var(--muted)">Kopieer</button>
+            <button onclick="copySql()" style="background:none;border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:11px;font-family:'Poppins',sans-serif;cursor:pointer;color:var(--muted)">Kopieer</button>
           </div>
           <pre id="sql-snippet" style="margin:0;padding:12px;font-size:11px;line-height:1.6;background:#1e1e2e;color:#cdd6f4;overflow-x:auto;white-space:pre-wrap">CREATE OR REPLACE FUNCTION public.delete_all_data_and_users()
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
@@ -600,7 +609,7 @@ GRANT EXECUTE ON FUNCTION public.delete_all_data_and_users() TO authenticated;</
         Typ <strong>VERWIJDER ACCOUNT</strong> om te bevestigen
       </label>
       <input type="text" id="da-confirm-input" placeholder="VERWIJDER ACCOUNT"
-        style="width:100%;font-family:'DM Sans',sans-serif;font-size:14px;padding:9px 12px;border:2px solid var(--border);border-radius:var(--radius);outline:none;transition:border 0.15s;margin-bottom:1rem"
+        style="width:100%;font-family:'Poppins',sans-serif;font-size:14px;padding:9px 12px;border:2px solid var(--border);border-radius:var(--radius);outline:none;transition:border 0.15s;margin-bottom:1rem"
         oninput="checkDelAccInput(this.value)">
       <div id="da-progress" style="display:none;margin-bottom:1rem">
         <div style="font-size:13px;color:var(--muted);margin-bottom:6px" id="da-progress-label">Bezig…</div>
@@ -611,7 +620,7 @@ GRANT EXECUTE ON FUNCTION public.delete_all_data_and_users() TO authenticated;</
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn" id="da-cancel-btn" onclick="closeDeleteAccountModal()">Annuleren</button>
         <button id="da-confirm-btn" disabled onclick="runDeleteAccount()"
-          style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);font-size:13px;font-family:'DM Sans',sans-serif;font-weight:700;cursor:not-allowed;border:1px solid #7f1d1d;background:#7f1d1d;color:white;opacity:0.4;transition:opacity 0.15s">
+          style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);font-size:13px;font-family:'Poppins',sans-serif;font-weight:700;cursor:not-allowed;border:1px solid #7f1d1d;background:#7f1d1d;color:white;opacity:0.4;transition:opacity 0.15s">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
           Account verwijderen
         </button>
@@ -1082,7 +1091,7 @@ function renderUsers(users) {
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0">
         <select onchange="changeRole('${u.id}', this.value)" ${isSelf ? 'disabled title="Je kan je eigen rol niet wijzigen"' : ''}
           class="role-select"
-          style="font-family:'DM Sans',sans-serif;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);outline:none;cursor:pointer"
+          style="font-family:'Poppins',sans-serif;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);outline:none;cursor:pointer"
           data-current="${esc(u.role)}">
           ${_rolesCache.map(r => `<option value="${esc(r.id)}" ${u.role===r.id?'selected':''}>${esc(r.label)}</option>`).join('')}
         </select>
@@ -1457,5 +1466,6 @@ AUTH.init({ requireAuth: true }).then(async profile => {
   }
 });
 </script>
+</div></div>
 </body>
 </html>

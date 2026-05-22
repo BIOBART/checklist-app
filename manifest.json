@@ -1,13 +1,14 @@
 {
-  "name": "Checklist App",
-  "short_name": "Checklist",
+  "name": "FoldrIQ",
+  "short_name": "FoldrIQ",
   "description": "Checklists offline invullen en synchroniseren",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#F6F4EF",
-  "theme_color": "#2D5A3D",
+  "background_color": "#F3F4F6",
+  "theme_color": "#0D1B2A",
   "icons": [
-    { "src": "favicon.png", "sizes": "any", "type": "image/png", "purpose": "any maskable" }
+    { "src": "foldriq-logo.png", "sizes": "any", "type": "image/png", "purpose": "any maskable" },
+    { "src": "favicon.png", "sizes": "any", "type": "image/png", "purpose": "any" }
   ]
 }

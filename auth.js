@@ -108,15 +108,15 @@ const AUTH = (() => {
         s.textContent = `
           #auth-pw-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:10000;display:flex;align-items:center;justify-content:center;padding:1rem}
           #auth-pw-card{background:#fff;border-radius:16px;padding:2rem;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
-          #auth-pw-card h2{font-family:'DM Serif Display',serif;font-size:22px;margin-bottom:6px}
-          #auth-pw-card .sub{font-size:13px;color:#7A7168;margin-bottom:1.5rem;line-height:1.6}
+          #auth-pw-card h2{font-family:'Poppins',sans-serif;font-size:20px;font-weight:700;margin-bottom:6px;color:#111827}
+          #auth-pw-card .sub{font-size:13px;color:#6B7280;margin-bottom:1.5rem;line-height:1.6}
           .auth-pw-field{margin-bottom:1rem}
-          .auth-pw-field label{display:block;font-size:12px;font-weight:500;color:#7A7168;margin-bottom:4px}
-          .auth-pw-field input{width:100%;padding:10px 12px;border:1.5px solid #E0DDD5;border-radius:10px;font-family:inherit;font-size:14px;outline:none;background:#F6F4EF;color:#1A1714;box-sizing:border-box;transition:border-color 0.15s}
-          .auth-pw-field input:focus{border-color:var(--accent,#2D5A3D);background:#fff}
-          #auth-pw-error{font-size:13px;color:#C0392B;margin-bottom:12px;padding:8px 12px;background:#FDECEA;border-radius:8px;display:none}
+          .auth-pw-field label{display:block;font-size:12px;font-weight:600;color:#6B7280;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.04em}
+          .auth-pw-field input{width:100%;padding:10px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-family:'Poppins',sans-serif;font-size:14px;outline:none;background:#F3F4F6;color:#111827;box-sizing:border-box;transition:border-color 0.15s}
+          .auth-pw-field input:focus{border-color:var(--accent,#2563EB);background:#fff}
+          #auth-pw-error{font-size:13px;color:#B91C1C;margin-bottom:12px;padding:8px 12px;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;display:none}
           #auth-pw-strength{font-size:12px;margin-top:4px;height:14px}
-          #auth-pw-btn{width:100%;padding:11px;background:var(--accent,#2D5A3D);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:15px;font-weight:500;cursor:pointer;margin-top:4px;transition:opacity 0.15s}
+          #auth-pw-btn{width:100%;padding:11px;background:var(--accent,#2563EB);color:#fff;border:none;border-radius:8px;font-family:'Poppins',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;transition:opacity 0.15s}
           #auth-pw-btn:hover{opacity:0.88}
           #auth-pw-btn:disabled{opacity:0.55;cursor:not-allowed}
         `;
@@ -150,7 +150,7 @@ const AUTH = (() => {
         if (!v) { el.textContent = ''; return; }
         if (v.length < 8) { el.style.color = '#C0392B'; el.textContent = 'Te kort (min. 8 tekens)'; }
         else if (v.length < 12) { el.style.color = '#D4860A'; el.textContent = 'Matig wachtwoord'; }
-        else { el.style.color = '#2D5A3D'; el.textContent = 'Sterk wachtwoord ✓'; }
+        else { el.style.color = '#10B981'; el.textContent = 'Sterk wachtwoord ✓'; }
       });
 
       async function doSave() {

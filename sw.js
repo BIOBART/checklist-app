@@ -17,8 +17,10 @@ const PRECACHE = [
   'config.js',
   'auth.js',
   'branding.js',
+  'sidebar.js',
   'offline-db.js',
   'favicon.png',
+  'foldriq-logo.png',
   'manifest.json',
 ];
 

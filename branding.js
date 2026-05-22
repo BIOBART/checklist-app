@@ -9,8 +9,8 @@
   var BRANDING_KEY = 'appBranding';
 
   var DEF = {
-    companyName: '',
-    accentHex: '#2D5A3D',
+    companyName: 'FoldrIQ',
+    accentHex: '#2563EB',
     logo: null,     // base64 data URL or null
     favicon: null   // base64 data URL or null
   };
@@ -32,7 +32,7 @@
     hex = (hex || '#2D5A3D').replace('#', '');
     if (hex.length === 3) hex = hex.split('').map(function (c) { return c + c; }).join('');
     var n = parseInt(hex, 16);
-    if (isNaN(n)) return [45, 90, 61];
+    if (isNaN(n)) return [37, 99, 235];
     return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
   }
 

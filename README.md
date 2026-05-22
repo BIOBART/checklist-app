@@ -1,4 +1,4 @@
-# Foldriq Commissioning Checklist App
+﻿# FoldrIQ Commissioning Checklist App
 
 A lightweight, mobile-friendly web application for creating, filling in, and exporting commissioning checklists. Built as a static site hosted on **GitHub Pages**, with **Supabase** as the backend (database, auth, file storage).
 
@@ -378,4 +378,4 @@ Na afloop wordt de sessie ongeldig, wordt de gebruiker uitgelogd en omgeleid naa
 
 ## Licentie
 
-Dit project is eigendom van **Foldriq**. Zie `LICENSE` voor details.
+Dit project is eigendom van **FoldrIQ**. Zie `LICENSE` voor details.

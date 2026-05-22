@@ -4,155 +4,147 @@
 <meta charset="UTF-8">
 <link rel="icon" type="image/png" href="favicon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Inloggen — Foldriq</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<title>Inloggen — FoldrIQ</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="branding.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --bg:#F6F4EF; --surface:#FFFFFF; --surface2:#EFECE5;
-  --border:#E0DDD5; --border-strong:#C5C0B5;
-  --text:#1A1714; --muted:#7A7168; --light:#B0A898;
-  --accent:#2D5A3D; --accent-bg:#E8F0EB; --accent-mid:#4A8A5E;
-  --danger:#C0392B; --danger-bg:#FDECEA;
-  --radius:10px; --radius-lg:16px;
-  --shadow:0 4px 24px rgba(0,0,0,0.08);
+  --bg:#F3F4F6; --surface:#FFFFFF;
+  --border:#E5E7EB; --border-strong:#D1D5DB;
+  --text:#111827; --muted:#6B7280;
+  --accent:#2563EB; --accent-bg:#EFF6FF;
+  --danger:#EF4444; --danger-bg:#FEF2F2;
+  --success:#10B981; --success-bg:#ECFDF5;
+  --radius:8px; --radius-lg:12px;
 }
 body {
-  font-family:'DM Sans',sans-serif;
-  background:var(--bg);
-  color:var(--text);
-  min-height:100vh;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  padding:1.5rem;
+  font-family: 'Poppins', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
 }
 
-.login-wrap { width:100%; max-width:400px; }
+.login-wrap { width: 100%; max-width: 400px; }
 
 .logo-block {
-  display:flex;
-  justify-content:center;
-  margin-bottom:2rem;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
 }
-.logo-block img { height:40px; max-width:200px; object-fit:contain; }
-.logo-block .logo-text {
-  font-family:'DM Serif Display',serif;
-  font-size:22px;
-  color:var(--text);
-  display:flex;
-  align-items:center;
-  gap:10px;
+.logo-block img { height: 36px; max-width: 200px; object-fit: contain; }
+.logo-text {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
-.logo-dot { width:9px; height:9px; border-radius:50%; background:var(--accent); display:inline-block; }
+.logo-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); display: inline-block; }
 
 .card {
-  background:var(--surface);
-  border:1px solid var(--border);
-  border-radius:var(--radius-lg);
-  padding:2rem;
-  box-shadow:var(--shadow);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05), 0 8px 32px rgba(0,0,0,0.06);
 }
-.card-title {
-  font-family:'DM Serif Display',serif;
-  font-size:22px;
-  margin-bottom:6px;
-}
-.card-sub {
-  font-size:14px;
-  color:var(--muted);
-  margin-bottom:1.5rem;
-  line-height:1.6;
-}
+.card-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.card-sub { font-size: 14px; color: var(--muted); margin-bottom: 1.5rem; line-height: 1.6; }
 
-.field { margin-bottom:1rem; }
+.field { margin-bottom: 1rem; }
 .field label {
-  display:block;
-  font-size:12px;
-  font-weight:500;
-  color:var(--muted);
-  margin-bottom:4px;
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 .field input {
-  width:100%;
-  font-family:'DM Sans',sans-serif;
-  font-size:14px;
-  padding:10px 12px;
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  background:var(--bg);
-  color:var(--text);
-  outline:none;
-  transition:border-color 0.15s, background 0.15s;
+  width: 100%;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
 }
-.field input:focus { border-color:var(--accent); background:var(--surface); }
+.field input:focus { border-color: var(--accent); background: var(--surface); }
 
 .btn-login {
-  width:100%;
-  padding:11px;
-  background:var(--accent);
-  color:white;
-  border:none;
-  border-radius:var(--radius);
-  font-family:'DM Sans',sans-serif;
-  font-size:15px;
-  font-weight:500;
-  cursor:pointer;
-  transition:background 0.15s;
-  margin-top:0.5rem;
+  width: 100%;
+  padding: 11px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-top: 0.5rem;
 }
-.btn-login:hover { background:#234830; }
-.btn-login:disabled { background:var(--border-strong); cursor:not-allowed; }
+.btn-login:hover { background: #1D4ED8; }
+.btn-login:disabled { background: var(--border-strong, #D1D5DB); cursor: not-allowed; }
 
 .error-msg {
-  background:var(--danger-bg);
-  border:1px solid #FCA5A5;
-  color:var(--danger);
-  border-radius:var(--radius);
-  padding:10px 14px;
-  font-size:13px;
-  margin-bottom:1rem;
-  display:none;
+  background: var(--danger-bg);
+  border: 1px solid #FECACA;
+  color: #B91C1C;
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 1rem;
+  display: none;
 }
-.error-msg.show { display:block; }
-
-.forgot-link {
-  display:block;
-  text-align:center;
-  margin-top:1rem;
-  font-size:13px;
-  color:var(--muted);
-  text-decoration:none;
-  cursor:pointer;
-}
-.forgot-link:hover { color:var(--accent); }
-
-/* Reset password panel */
-.reset-panel { display:none; }
-.reset-panel.show { display:block; }
-.login-panel.hide { display:none; }
+.error-msg.show { display: block; }
 
 .success-msg {
-  background:var(--accent-bg);
-  border:1px solid var(--accent-mid);
-  color:var(--accent);
-  border-radius:var(--radius);
-  padding:10px 14px;
-  font-size:13px;
-  margin-bottom:1rem;
-  display:none;
+  background: var(--success-bg);
+  border: 1px solid #A7F3D0;
+  color: #065F46;
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 1rem;
+  display: none;
 }
-.success-msg.show { display:block; }
+.success-msg.show { display: block; }
+
+.forgot-link {
+  display: block;
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: none;
+  cursor: pointer;
+}
+.forgot-link:hover { color: var(--accent); }
+
+.reset-panel { display: none; }
+.reset-panel.show { display: block; }
+.login-panel.hide { display: none; }
 
 .footer-note {
-  text-align:center;
-  margin-top:1.5rem;
-  font-size:12px;
-  color:var(--light);
+  text-align: center;
+  margin-top: 1.5rem;
+  font-size: 12px;
+  color: #9CA3AF;
 }
 </style>
 </head>
@@ -160,7 +152,7 @@ body {
 
 <div class="login-wrap">
   <div class="logo-block" id="login-logo-block">
-    <!-- filled by branding.js -->
+    <!-- filled by JS below -->
   </div>
 
   <div class="card">
@@ -207,18 +199,16 @@ body {
 
   </div>
 
-  <div class="footer-note">Foldriq Commissioning App · <a href="mailto:info@foldriq.com" style="color:inherit">info@foldriq.com</a></div>
+  <div class="footer-note">FoldrIQ · <a href="mailto:info@foldriq.com" style="color:inherit">info@foldriq.com</a></div>
 </div>
 
 <script>
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-// If already logged in, redirect to home
 sb.auth.getSession().then(({ data: { session } }) => {
   if (session) redirectAfterLogin();
 });
 
-// Listen for password reset confirmation
 sb.auth.onAuthStateChange((event) => {
   if (event === 'SIGNED_IN') redirectAfterLogin();
 });
@@ -246,7 +236,6 @@ async function doLogin() {
     const msg = error.message.includes('Invalid') ? 'Ongeldig e-mailadres of wachtwoord.' : error.message;
     showError(errEl, msg);
   }
-  // onAuthStateChange handles redirect on success
 }
 
 async function doReset() {
@@ -274,7 +263,7 @@ function showLogin() {
 }
 function showError(el, msg) { el.textContent = msg; el.classList.add('show'); }
 
-// Render logo block from branding (no hardcoded image path)
+// Logo from branding or default
 (function () {
   var b = getBranding();
   var block = document.getElementById('login-logo-block');
@@ -282,13 +271,21 @@ function showError(el, msg) { el.textContent = msg; el.classList.add('show'); }
   if (b.logo) {
     var img = document.createElement('img');
     img.src = b.logo;
-    img.alt = b.companyName || 'Logo';
+    img.alt = b.companyName || 'FoldrIQ';
     block.appendChild(img);
   } else {
-    var div = document.createElement('div');
-    div.className = 'logo-text';
-    div.innerHTML = '<span class="logo-dot"></span>' + (b.companyName || 'Checklist App');
-    block.appendChild(div);
+    var img2 = document.createElement('img');
+    img2.src = 'foldriq-logo.png';
+    img2.alt = 'FoldrIQ';
+    img2.style.cssText = 'height:36px;object-fit:contain';
+    img2.onerror = function () {
+      this.style.display = 'none';
+      var span = document.createElement('span');
+      span.className = 'logo-text';
+      span.textContent = b.companyName || 'FoldrIQ';
+      block.appendChild(span);
+    };
+    block.appendChild(img2);
   }
 })();
 </script>
