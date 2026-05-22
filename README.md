@@ -27,7 +27,12 @@ A lightweight, mobile-friendly web application for creating, filling in, and exp
   - Export: PDF (print-venster), Word (.docx), CSV
 
 ### Admin
-- **Template builder** — secties en vragen bouwen met drag-en-drop volgorde
+- **Template builder** — secties en vragen bouwen met drag-en-drop volgorde; elke vraag krijgt een automatische of handmatige **# sleutel** voor gebruik in bedrijfsregels
+- **Bedrijfsregels** — wizard voor het aanmaken van automatische acties op basis van antwoorden:
+  - **Trigger**: bij voltooien / bij elke opslag / beide (instelbaar per regel)
+  - **Templatescope**: alle templates of specifieke selectie
+  - **Condities**: één of meerdere AND/OF condities op vraagsleutels (operator: gelijk aan, niet gelijk aan, bevat, aangevinkt, is een van, groter/kleiner dan…)
+  - **Acties**: e-mail versturen (via EmailJS) of homepage-melding tonen (alleen voor admins)
 - **Vertalingen** — export alle sjabloonteksten naar CSV, vertaal EN/FR/DE kolommen extern, importeer terug
 - **Gebruikersbeheer** — gebruikers uitnodigen, rollen (admin/technieker) instellen
 - **Branding** — bedrijfsnaam, accentkleur, logo en favicon instellen; direct zichtbaar op alle pagina's
@@ -129,6 +134,60 @@ Credentials te vinden via **Supabase → Project Settings → API**.
 
 ---
 
+## Bedrijfsregels
+
+Bedrijfsregels zijn geconfigureerde automatische acties die worden uitgevoerd wanneer een conditie van toepassing is op een ingevulde checklist.
+
+### Vraagsleutels
+
+Elke vraag in de template-editor heeft een **# sleutel** veld (zichtbaar rechts in de `item-card-meta` balk):
+- Bij opslaan van een template wordt de sleutel automatisch afgeleid van het NL-label als het veld leeg is.
+- De sleutel is aanpasbaar — gebruik iets leesbaarders als `motor_status` of `brand_score`.
+- Sleutels worden gebruikt als identifier in de condities van bedrijfsregels.
+
+### Regelstructuur
+
+| Eigenschap | Beschrijving |
+|---|---|
+| Naam | Leesbare naam voor de regel |
+| Trigger | Wanneer evalueren: `Bij voltooien` / `Bij opslaan` / `Beide` |
+| Templatescope | Lege lijst = alle templates; anders specifieke UUIDs |
+| Condities | Array van condities + logica (AND/OR) |
+| Actietype | `send_email` of `homepage_alert` |
+| Actieconfig | JSON met e-mailadres/onderwerp/bericht of meldingstekst/kleur |
+
+### Operators
+
+| Operator | Toepasbaar op |
+|---|---|
+| `equals` | statuscheck, radio, yesno, text, number |
+| `not_equals` | statuscheck, radio, yesno, text |
+| `contains` | text |
+| `is_any_of` | statuscheck, radio, yesno |
+| `is_checked` | check, checkgroup, instruction |
+| `is_not_checked` | check, checkgroup |
+| `is_filled` | text, number, date, photo, signature |
+| `gt`, `gte`, `lt`, `lte` | number |
+
+### Acties
+
+**E-mail versturen (`send_email`)**
+- Ontvanger(s), onderwerp, bericht (ondersteunt variabelen)
+- Optioneel rapport als PDF-bijlage (vereist EmailJS)
+- Variabelen: `{{template_name}}` `{{customer}}` `{{location}}` `{{reference}}` `{{filled_by}}` `{{date}}`
+
+**Homepage melding (`homepage_alert`)**
+- Meldingstekst met variabelen
+- Kleur: `red` / `orange` / `blue` / `green`
+- Alleen zichtbaar voor admins
+- Dismissbaar via de sluitknop
+
+### Vereiste SQL-migratie
+
+Voer `migration_business_rules.sql` eenmalig uit in **Supabase → SQL Editor** om de tabellen en RLS-policies aan te maken.
+
+---
+
 ## Supabase tabellen
 
 | Tabel | Beschrijving |
@@ -138,6 +197,8 @@ Credentials te vinden via **Supabase → Project Settings → API**.
 | `photos` | Metadata van geüploade foto's (verwijst naar Storage) |
 | `user_profiles` | Naam, organisatie, taalvoorkeur per gebruiker |
 | `roles` | `is_admin` vlag per gebruiker (FK op `auth.users`) |
+| `business_rules` | Geconfigureerde automatische regels met condities en acties |
+| `rule_notifications` | Getriggerde homepage-meldingen, dismissbaar door admins |
 
 Belangrijke kolommen van `submissions`:
 
@@ -258,11 +319,13 @@ Template-variabelen beschikbaar in je EmailJS-template:
 ├── settings.html       # Instellingen
 ├── help.html           # In-app gebruikershandleiding
 ├── login.html          # Loginpagina
-├── config.js           # Credentials — NIET committen als repo publiek is
-├── auth.js             # Supabase auth wrapper
-├── branding.js         # Gedeelde branding helper
-├── branding.css        # (optioneel) extra branding stijlen
-├── supabase_setup.sql  # Databaseschema + RLS-policies
+├── config.js                      # Credentials — NIET committen als repo publiek is
+├── auth.js                        # Supabase auth wrapper
+├── branding.js                    # Gedeelde branding helper
+├── branding.css                   # (optioneel) extra branding stijlen
+├── supabase_setup.sql             # Databaseschema + RLS-policies
+├── migration_business_rules.sql   # Migratie: business_rules + rule_notifications tabellen
+├── migration_delete_account.sql   # Migratie: delete_all_data_and_users() functie
 └── README.md
 ```
 
@@ -274,6 +337,42 @@ Template-variabelen beschikbaar in je EmailJS-template:
 - **Row Level Security (RLS)** is actief op alle tabellen — techniekers zien enkel hun eigen submissions
 - De `anon`-sleutel in `config.js` is veilig in de frontend — hij heeft enkel de rechten die in RLS zijn gedefinieerd
 - `config.js` staat in `.gitignore` voor publieke repositories
+
+---
+
+## Gevarenzone (Admin)
+
+Onderaan de admin-pagina bevindt zich een **Gevarenzone** met twee destructieve acties. Beide vereisen een expliciete tekstbevestiging voordat de knop actief wordt.
+
+### Fabrieksreset
+
+Verwijdert permanent:
+- Alle templates
+- Alle submissions
+- Alle foto's (tabelrecords + bestanden in Supabase Storage)
+
+Gebruikersaccounts en rollen blijven bewaard. Bevestigingswoord: **`VERWIJDER ALLES`**
+
+### Account verwijderen
+
+Verwijdert permanent **alles**, inclusief:
+- Alle templates, submissions en foto's (zie Fabrieksreset)
+- Alle gebruikersprofielen en rollen
+- Alle login-accounts (`auth.users`)
+
+Na afloop wordt de sessie ongeldig, wordt de gebruiker uitgelogd en omgeleid naar `login.html`. Bevestigingswoord: **`VERWIJDER ACCOUNT`**
+
+> ⚠️ **Eenmalige vereiste:** voer `migration_delete_account.sql` uit in **Supabase → SQL Editor** voor je "Account verwijderen" kunt gebruiken. De modal toont of de migratie al is uitgevoerd en bevat een kopieerknop voor de SQL.
+
+| | Fabrieksreset | Account verwijderen |
+|---|---|---|
+| Templates | ✅ | ✅ |
+| Submissions | ✅ | ✅ |
+| Foto's | ✅ | ✅ |
+| Gebruikersprofielen & rollen | ❌ | ✅ |
+| Login-accounts | ❌ | ✅ |
+| Na afloop | Kan opnieuw inloggen | Uitgelogd → login.html |
+| Bevestigingswoord | `VERWIJDER ALLES` | `VERWIJDER ACCOUNT` |
 
 ---
 

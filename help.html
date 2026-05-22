@@ -187,6 +187,8 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); hei
       <a href="#statuscheck" class="sidebar-link">Statuscheck type</a>
       <a href="#translations"class="sidebar-link">Vertalingen</a>
       <a href="#users"       class="sidebar-link">Gebruikers</a>
+      <a href="#rules"       class="sidebar-link">Bedrijfsregels</a>
+      <a href="#danger"      class="sidebar-link">Gevarenzone</a>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-title">Instellingen</div>
@@ -588,6 +590,151 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); hei
         </tbody>
       </table>
       <p>Pas de rol aan via het rol-dropdown naast de gebruikersnaam in de gebruikerslijst.</p>
+    </section>
+
+    <hr class="section-divider">
+
+    <!-- ═══ BEDRIJFSREGELS ═══════════════════════════════════════════════════ -->
+    <section class="help-section" id="rules" data-searchable>
+      <h2>
+        <span class="section-icon">⚡</span> Bedrijfsregels
+        <span class="badge badge-admin">Admin</span>
+      </h2>
+      <p class="section-sub">Bedrijfsregels laten je automatische acties koppelen aan antwoorden in checklists — zonder extra software. Ga naar <strong>Admin → Bedrijfsregels</strong> om regels te beheren.</p>
+
+      <h3>Wat doet een bedrijfsregel?</h3>
+      <p>Een regel bestaat uit:</p>
+      <ul>
+        <li><strong>Trigger</strong> — wanneer wordt de regel geëvalueerd? Bij het voltooien, bij elke opslag, of beide.</li>
+        <li><strong>Templatescope</strong> — voor welke templates geldt de regel? Alle of een selectie.</li>
+        <li><strong>Condities</strong> — één of meerdere AND/OF-voorwaarden op vraagantwoorden.</li>
+        <li><strong>Actie</strong> — wat er moet gebeuren als alle condities voldaan zijn.</li>
+      </ul>
+
+      <h3>Vraagsleutels (#)</h3>
+      <p>Elke vraag in de template-editor heeft een <strong># sleutel</strong> — zichtbaar rechts onderaan de vraagkaart. Deze sleutel wordt gebruikt om de vraag te identificeren in een regel.</p>
+      <ul>
+        <li>Bij het opslaan van een template wordt de sleutel automatisch afgeleid van het NL-label als het veld leeg is (bijv. "Motor status" → <code>motor_status</code>).</li>
+        <li>Je kunt de sleutel handmatig aanpassen — gebruik leesbare namen voor beter overzicht in de regelwizard.</li>
+      </ul>
+
+      <div class="callout callout-tip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Geef vragen een duidelijke sleutel <em>voordat</em> je regels aanmaakt. Zo zie je in de wizard direct welke vraag je bedoelt.
+      </div>
+
+      <h3>Een regel aanmaken (wizard)</h3>
+      <div class="step-list">
+        <div class="step-item"><div class="step-num">1</div><div class="step-text">Ga naar <strong>Admin → Bedrijfsregels</strong> en klik <strong>"Nieuwe regel"</strong>.</div></div>
+        <div class="step-item"><div class="step-num">2</div><div class="step-text"><strong>Naam &amp; timing</strong> — geef de regel een naam en kies wanneer hij wordt geëvalueerd.</div></div>
+        <div class="step-item"><div class="step-num">3</div><div class="step-text"><strong>Templates</strong> — kies voor welke templates de regel geldt, of activeer "Alle templates".</div></div>
+        <div class="step-item"><div class="step-num">4</div><div class="step-text"><strong>Condities</strong> — voeg één of meerdere voorwaarden toe. Kies AND (alle moeten gelden) of OF (één volstaat).</div></div>
+        <div class="step-item"><div class="step-num">5</div><div class="step-text"><strong>Actie</strong> — kies het actietype en configureer het.</div></div>
+        <div class="step-item"><div class="step-num">6</div><div class="step-text"><strong>Overzicht</strong> — controleer en sla op.</div></div>
+      </div>
+
+      <h3>Acties</h3>
+      <table class="help-table">
+        <thead><tr><th>Actietype</th><th>Beschrijving</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>📧 E-mail versturen</td>
+            <td>Verstuurt een e-mail via EmailJS naar één of meerdere ontvangers. Onderwerp en bericht ondersteunen variabelen. Optioneel het rapport als PDF-bijlage.</td>
+          </tr>
+          <tr>
+            <td>🔔 Homepage melding</td>
+            <td>Toont een gekleurde melding op de homepage van de admin. Dismissbaar via de sluitknop. Kleuren: rood, oranje, blauw of groen.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Variabelen in berichten</h3>
+      <p>Gebruik deze variabelen in onderwerp, bericht of meldingstekst:</p>
+      <table class="help-table">
+        <thead><tr><th>Variabele</th><th>Inhoud</th></tr></thead>
+        <tbody>
+          <tr><td><code>{{template_name}}</code></td><td>Naam van de template</td></tr>
+          <tr><td><code>{{customer}}</code></td><td>Klantnaam</td></tr>
+          <tr><td><code>{{location}}</code></td><td>Locatie</td></tr>
+          <tr><td><code>{{reference}}</code></td><td>Referentie / dossiernummer</td></tr>
+          <tr><td><code>{{filled_by}}</code></td><td>Naam invuller</td></tr>
+          <tr><td><code>{{date}}</code></td><td>Datum van de invulling</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Operators</h3>
+      <table class="help-table">
+        <thead><tr><th>Operator</th><th>Toepasbaar op</th></tr></thead>
+        <tbody>
+          <tr><td>is gelijk aan</td><td>Statuscheck, radio, ja/nee, tekstveld</td></tr>
+          <tr><td>is niet gelijk aan</td><td>Statuscheck, radio, ja/nee, tekstveld</td></tr>
+          <tr><td>bevat</td><td>Tekstveld</td></tr>
+          <tr><td>is een van</td><td>Statuscheck, radio, ja/nee (meervoudige selectie)</td></tr>
+          <tr><td>is aangevinkt / niet aangevinkt</td><td>Checkbox, checkgroep, instructieblok</td></tr>
+          <tr><td>is ingevuld</td><td>Tekstveld, getal, datum, foto, handtekening</td></tr>
+          <tr><td>=  &gt;  ≥  &lt;  ≤</td><td>Getal</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-info">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div><strong>Vereiste SQL-migratie:</strong> voer <code>migration_business_rules.sql</code> eenmalig uit in <strong>Supabase → SQL Editor</strong> om de tabellen aan te maken.</div>
+      </div>
+    </section>
+
+    <hr class="section-divider">
+
+    <!-- ═══ GEVARENZONE ══════════════════════════════════════════════════════ -->
+    <section class="help-section" id="danger" data-searchable>
+      <h2>
+        <span class="section-icon">⚠️</span> Gevarenzone
+        <span class="badge badge-admin">Admin</span>
+      </h2>
+      <p class="section-sub">Onderaan de Admin-pagina bevinden zich twee destructieve acties. Beide vereisen een expliciete tekstbevestiging en kunnen <strong>niet ongedaan worden gemaakt</strong>.</p>
+
+      <div class="callout callout-warn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Gebruik deze functies alleen als je zeker weet wat je doet. Verwijderde data kan niet worden hersteld.
+      </div>
+
+      <h3>Fabrieksreset</h3>
+      <p>Verwijdert permanent alle applicatiedata:</p>
+      <ul>
+        <li>Alle <strong>templates</strong></li>
+        <li>Alle <strong>submissions</strong> (ingevulde checklists)</li>
+        <li>Alle <strong>foto's</strong> (databaserecords én bestanden in opslag)</li>
+      </ul>
+      <p>Gebruikersaccounts en rollen blijven bewaard — je kunt daarna opnieuw inloggen en van nul beginnen.</p>
+      <p>Bevestigingswoord: <strong><code>VERWIJDER ALLES</code></strong></p>
+
+      <h3>Account verwijderen</h3>
+      <p>Verwijdert permanent <em>alles</em>, inclusief de gebruikersaccounts zelf:</p>
+      <ul>
+        <li>Alle templates, submissions en foto's (zie Fabrieksreset)</li>
+        <li>Alle <strong>gebruikersprofielen en rollen</strong></li>
+        <li>Alle <strong>login-accounts</strong></li>
+      </ul>
+      <p>Na afloop wordt de sessie ongeldig, wordt de gebruiker uitgelogd en omgeleid naar de loginpagina.</p>
+      <p>Bevestigingswoord: <strong><code>VERWIJDER ACCOUNT</code></strong></p>
+
+      <div class="callout callout-info">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div><strong>Eenmalige vereiste voor "Account verwijderen":</strong> voer <code>migration_delete_account.sql</code> eenmalig uit in <strong>Supabase → SQL Editor</strong>. Het scherm toont een ✅ of ❌ indicator of de migratie al is uitgevoerd, inclusief een kopieerknop voor de SQL.</div>
+      </div>
+
+      <h3>Vergelijking</h3>
+      <table class="help-table">
+        <thead><tr><th>Wat wordt verwijderd?</th><th>Fabrieksreset</th><th>Account verwijderen</th></tr></thead>
+        <tbody>
+          <tr><td>Templates</td><td>✅</td><td>✅</td></tr>
+          <tr><td>Submissions</td><td>✅</td><td>✅</td></tr>
+          <tr><td>Foto's</td><td>✅</td><td>✅</td></tr>
+          <tr><td>Gebruikersprofielen &amp; rollen</td><td>❌</td><td>✅</td></tr>
+          <tr><td>Login-accounts</td><td>❌</td><td>✅</td></tr>
+          <tr><td>Na afloop</td><td>Kan opnieuw inloggen</td><td>Uitgelogd → loginpagina</td></tr>
+          <tr><td>Bevestigingswoord</td><td><code>VERWIJDER ALLES</code></td><td><code>VERWIJDER ACCOUNT</code></td></tr>
+        </tbody>
+      </table>
     </section>
 
     <hr class="section-divider">

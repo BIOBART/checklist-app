@@ -44,6 +44,23 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); hei
 .hero p { font-size: 16px; color: var(--muted); max-width: 480px; line-height: 1.7; }
 .hero-actions { display: flex; gap: 10px; margin-top: 1.5rem; flex-wrap: wrap; }
 
+/* RULE NOTIFICATIONS */
+.notif-bar { max-width: 1100px; margin: 0 auto; padding: 0 2rem 1rem; display: flex; flex-direction: column; gap: 8px; }
+.notif-card { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-radius: var(--radius-lg); border: 1.5px solid; font-size: 13px; line-height: 1.5; }
+.notif-card.red    { background: #FEF2F2; border-color: #FECACA; color: #7F1D1D; }
+.notif-card.orange { background: #FFFBEB; border-color: #FDE68A; color: #78350F; }
+.notif-card.blue   { background: #EFF6FF; border-color: #BFDBFE; color: #1E3A5F; }
+.notif-card.green  { background: var(--accent-bg); border-color: #A7C4AF; color: #1A3D26; }
+.notif-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+.notif-body { flex: 1; min-width: 0; }
+.notif-msg  { font-weight: 500; margin-bottom: 2px; }
+.notif-meta { font-size: 11px; opacity: 0.7; }
+.notif-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.notif-dismiss { background: none; border: 1px solid currentColor; border-radius: var(--radius); padding: 3px 10px; font-size: 11px; font-family: 'DM Sans', sans-serif; cursor: pointer; opacity: 0.6; color: inherit; transition: opacity 0.15s; }
+.notif-dismiss:hover { opacity: 1; }
+.notif-link { font-size: 11px; text-decoration: underline; opacity: 0.7; cursor: pointer; color: inherit; }
+.notif-link:hover { opacity: 1; }
+
 /* STATS BAR */
 .stats-bar { max-width: 1100px; margin: 0 auto 2rem; padding: 0 2rem; display: flex; gap: 1rem; flex-wrap: wrap; }
 .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; flex: 1; min-width: 140px; box-shadow: var(--shadow); }
@@ -197,6 +214,9 @@ header { background: var(--surface); border-bottom: 1px solid var(--border); hei
     </a>
   </div>
 </div>
+
+<!-- Rule notifications (admin only) -->
+<div class="notif-bar" id="notif-bar" style="display:none"></div>
 
 <!-- Stats -->
 <div class="stats-bar" id="stats-bar">
@@ -748,11 +768,59 @@ async function generateBlankWord() {
 applyUiTranslations();
 AUTH.init({ requireAuth: true }).then(profile => {
   if (!profile) return;
-  Promise.all([loadStats(), loadTemplates(), loadRecent()]).catch(e => {
+  const tasks = [loadStats(), loadTemplates(), loadRecent()];
+  if (AUTH.isAdmin()) tasks.push(loadNotifications());
+  Promise.all(tasks).catch(e => {
     toast('Kan geen verbinding maken met de database. Controleer config.js');
     console.error(e);
   });
 });
+
+// ── Rule notifications (admin only) ──────────────────────────────────────────
+async function loadNotifications() {
+  const bar = document.getElementById('notif-bar');
+  if (!bar) return;
+  const { data, error } = await sb
+    .from('rule_notifications')
+    .select('*')
+    .is('dismissed_at', null)
+    .order('created_at', { ascending: false })
+    .limit(20);
+  if (error || !data?.length) return;
+
+  bar.style.display = 'flex';
+  const colorIcon = { red: '🔴', orange: '🟠', blue: '🔵', green: '🟢' };
+  bar.innerHTML = data.map(n => {
+    const icon = colorIcon[n.alert_color] || '🔔';
+    const meta = [n.template_name, n.customer, n.location].filter(Boolean).join(' · ');
+    const dt = n.created_at ? new Date(n.created_at).toLocaleString('nl-BE', { dateStyle:'short', timeStyle:'short' }) : '';
+    return `<div class="notif-card ${n.alert_color||'orange'}" id="notif-${n.id}">
+      <div class="notif-icon">${icon}</div>
+      <div class="notif-body">
+        <div class="notif-msg">${esc(n.message || n.rule_name)}</div>
+        <div class="notif-meta">${esc(meta)}${meta && dt ? ' · ' : ''}${dt}
+          ${n.submission_id ? ` · <a class="notif-link" href="fill.html?submission=${n.submission_id}">Bekijk checklist →</a>` : ''}
+        </div>
+      </div>
+      <div class="notif-actions">
+        <button class="notif-dismiss" onclick="dismissNotification('${n.id}')">Sluiten</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function dismissNotification(id) {
+  const el = document.getElementById('notif-' + id);
+  if (el) { el.style.opacity = '0'; el.style.transition = 'opacity 0.2s'; setTimeout(() => el.remove(), 200); }
+  await sb.from('rule_notifications').update({
+    dismissed_at: new Date().toISOString(),
+    dismissed_by: AUTH.getUserId()
+  }).eq('id', id);
+  // Hide bar if no more notifications
+  const bar = document.getElementById('notif-bar');
+  if (bar && !bar.querySelector('.notif-card')) bar.style.display = 'none';
+}
+
 </script>
 <!-- Blank Export Modal -->
 <div class="blank-overlay" id="blank-overlay" onclick="closeBlankExport()">

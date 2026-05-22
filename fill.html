@@ -1196,6 +1196,11 @@ async function saveNow() {
   const ind = document.getElementById('save-indicator');
   if (ind) { ind.textContent = t('saved'); ind.style.color = 'var(--accent)'; setTimeout(()=>ind.style.color='',1500); }
   if (error) toast('Fout bij opslaan: '+error.message, 'error');
+
+  // Evaluate business rules for 'save' and 'both' triggers (fire-and-forget)
+  if (!error && submission?.id) {
+    evaluateRules('save').catch(() => {});
+  }
 }
 
 async function markComplete() {
@@ -1243,8 +1248,158 @@ async function markComplete() {
     toast(t('completed'), 'success');
     document.getElementById('status-badge').textContent = 'Voltooid';
     document.getElementById('status-badge').className = 'status-badge status-completed';
+    // Evaluate business rules for 'completed' and 'both' triggers
+    evaluateRules('completed').catch(() => {});
   }
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── BUSINESS RULES EVALUATOR ─────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Track which rules have already fired for this submission in this session
+// (prevents duplicate e-mails/alerts from auto-save spam)
+var _firedRules = {};
+
+async function evaluateRules(triggerContext) {
+  // triggerContext = 'save' | 'completed'
+  if (!submission?.id || !template?.id) return;
+
+  // Fetch all active rules
+  const { data: rules, error } = await sb.from('business_rules').select('*').eq('active', true);
+  if (error || !rules?.length) return;
+
+  const subMeta = {
+    template_name: template.name || '',
+    customer:  document.getElementById('f-customer')?.value || '',
+    location:  document.getElementById('f-location')?.value || '',
+    reference: document.getElementById('f-ref')?.value || '',
+    filled_by: document.getElementById('f-filled-by')?.value || '',
+    date:      document.getElementById('f-date')?.value || ''
+  };
+
+  for (const rule of rules) {
+    // Check trigger timing
+    const matches_trigger = rule.trigger_on === 'both' ||
+      rule.trigger_on === triggerContext ||
+      (triggerContext === 'completed' && rule.trigger_on === 'completed') ||
+      (triggerContext === 'save'      && rule.trigger_on === 'save');
+    if (!matches_trigger) continue;
+
+    // Check template scope
+    if (rule.template_scope && rule.template_scope.length > 0 &&
+        !rule.template_scope.includes(template.id)) continue;
+
+    // De-dupe: for 'save' context don't re-fire same rule in same session
+    const fireKey = rule.id + '_' + (triggerContext === 'completed' ? 'C' : 'S');
+    if (triggerContext === 'save' && _firedRules[fireKey]) continue;
+
+    // Evaluate conditions
+    const condMet = evaluateConditions(rule.conditions || [], rule.condition_logic || 'AND');
+    if (!condMet) continue;
+
+    // Mark as fired
+    _firedRules[fireKey] = true;
+
+    // Execute action
+    try {
+      await executeRuleAction(rule, subMeta);
+    } catch(e) {
+      console.warn('Rule action failed:', rule.name, e);
+    }
+  }
+}
+
+function evaluateConditions(conditions, logic) {
+  if (!conditions.length) return false;
+  const results = conditions.map(c => evaluateSingleCondition(c));
+  return logic === 'OR' ? results.some(Boolean) : results.every(Boolean);
+}
+
+function evaluateSingleCondition(cond) {
+  const { question_key, operator, value } = cond;
+  if (!question_key || !operator) return false;
+
+  // Find the question item in the template schema by key
+  let item = null;
+  for (const sec of (template.schema?.sections || [])) {
+    item = (sec.items || []).find(i => (i.key || i.id) === question_key);
+    if (item) break;
+  }
+  if (!item) return false;
+
+  const ans = answers[item.id] || {};
+
+  switch (operator) {
+    case 'is_checked':     return !!ans.checked;
+    case 'is_not_checked': return !ans.checked;
+    case 'is_filled':      return !!(ans.checked || ans.value);
+    case 'equals':         return String(ans.value || '').trim() === String(value || '').trim();
+    case 'not_equals':     return String(ans.value || '').trim() !== String(value || '').trim();
+    case 'contains':       return String(ans.value || '').toLowerCase().includes(String(value || '').toLowerCase());
+    case 'is_any_of': {
+      const vals = Array.isArray(value) ? value : [value];
+      return vals.includes(String(ans.value || '').trim());
+    }
+    case 'gt':  return Number(ans.value) >  Number(value);
+    case 'gte': return Number(ans.value) >= Number(value);
+    case 'lt':  return Number(ans.value) <  Number(value);
+    case 'lte': return Number(ans.value) <= Number(value);
+    default:    return false;
+  }
+}
+
+function renderVars(template_str, meta) {
+  return (template_str || '').replace(/\{\{(\w+)\}\}/g, (_, k) => meta[k] || '');
+}
+
+async function executeRuleAction(rule, meta) {
+  if (rule.action_type === 'homepage_alert') {
+    // Insert a notification record
+    const msg = renderVars(rule.action_config?.message || rule.name, meta);
+    await sb.from('rule_notifications').insert({
+      rule_id:       rule.id,
+      rule_name:     rule.name,
+      submission_id: submission.id,
+      template_name: meta.template_name,
+      customer:      meta.customer,
+      location:      meta.location,
+      message:       msg,
+      alert_color:   rule.action_config?.color || 'orange'
+    });
+
+  } else if (rule.action_type === 'send_email') {
+    // Send via EmailJS (requires emailjs configured in config.js)
+    const cfg = rule.action_config || {};
+    if (!cfg.to) return;
+    if (typeof emailjs === 'undefined') { console.warn('EmailJS niet geconfigureerd'); return; }
+
+    const subject = renderVars(cfg.subject || 'Bedrijfsregel: ' + rule.name, meta);
+    const msg     = renderVars(cfg.message || '', meta);
+    const recipients = cfg.to.split(',').map(s => s.trim()).filter(Boolean);
+
+    for (const recipient of recipients) {
+      await emailjs.send(
+        window.EMAILJS_SERVICE_ID,
+        window.EMAILJS_TEMPLATE_ID,
+        {
+          to_email:     recipient,
+          subject:      subject,
+          doc_title:    meta.template_name,
+          filled_by:    meta.filled_by,
+          location:     meta.location,
+          date:         meta.date,
+          message:      msg,
+          from_name:    meta.filled_by || 'Checklist App',
+          pdf_base64:   '',
+          pdf_filename: ''
+        }
+      );
+    }
+  }
+}
+
+// ── END BUSINESS RULES EVALUATOR ─────────────────────────────────────────────
 
 function changeLang(l) {
   lang = l;

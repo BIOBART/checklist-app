@@ -207,6 +207,84 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
 .modal-input:focus { border-color:var(--accent); background:var(--surface); }
 .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:1.25rem; }
 
+/* QUESTION KEY */
+.item-key-field { font-size:11px; padding:2px 7px; border:1px solid var(--border); border-radius:4px;
+  background:var(--surface); font-family:monospace; width:150px; color:var(--muted); outline:none; }
+.item-key-field:focus { border-color:var(--accent); background:var(--surface2); }
+.item-key-label { font-size:10px; color:var(--light); font-weight:600; text-transform:uppercase;
+  letter-spacing:0.06em; white-space:nowrap; }
+
+/* RULES LIST */
+.rule-row { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
+  padding:1rem 1.25rem; display:flex; align-items:center; gap:14px; box-shadow:var(--shadow); }
+.rule-info { flex:1; min-width:0; }
+.rule-name { font-weight:600; font-size:15px; }
+.rule-meta { font-size:12px; color:var(--muted); margin-top:3px; display:flex; gap:8px; flex-wrap:wrap; }
+.rule-badge { padding:2px 8px; border-radius:99px; font-size:11px; font-weight:500; }
+.rb-email   { background:#EFF6FF; color:#1D4ED8; }
+.rb-alert   { background:#FEF3C7; color:#92400E; }
+.rb-save    { background:var(--surface2); color:var(--muted); }
+.rb-complete{ background:var(--accent-bg); color:var(--accent); }
+.rb-both    { background:#F3E8FF; color:#6B21A8; }
+.rule-inactive { opacity:0.55; }
+
+/* RULE WIZARD */
+.rw-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:300;
+  align-items:center; justify-content:center; padding:1rem; }
+.rw-overlay.open { display:flex; }
+.rw-modal { background:var(--surface); border-radius:var(--radius-lg); width:100%; max-width:640px;
+  max-height:90vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.25); overflow:hidden; }
+.rw-header { padding:1.25rem 1.5rem 0; border-bottom:1px solid var(--border); flex-shrink:0; }
+.rw-title  { font-family:'DM Serif Display',serif; font-size:20px; margin-bottom:0.75rem; display:flex; align-items:center; gap:8px; }
+.rw-steps  { display:flex; gap:0; margin:0 -1.5rem; padding:0 1.5rem; overflow-x:auto; }
+.rw-step   { display:flex; align-items:center; gap:6px; padding:8px 12px 10px; font-size:12px;
+  color:var(--light); white-space:nowrap; border-bottom:2px solid transparent; transition:all 0.15s; cursor:default; }
+.rw-step.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+.rw-step.done   { color:var(--muted); }
+.rw-step-num { width:18px; height:18px; border-radius:50%; background:var(--surface2); color:var(--muted);
+  font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.rw-step.active .rw-step-num { background:var(--accent); color:white; }
+.rw-step.done   .rw-step-num { background:var(--border-strong); color:var(--muted); }
+.rw-body { flex:1; overflow-y:auto; padding:1.5rem; display:flex; flex-direction:column; gap:1rem; }
+.rw-footer { padding:1rem 1.5rem; border-top:1px solid var(--border); display:flex;
+  justify-content:space-between; align-items:center; flex-shrink:0; gap:8px; }
+.rw-field  { display:flex; flex-direction:column; gap:4px; }
+.rw-label  { font-size:12px; font-weight:500; color:var(--muted); }
+.rw-input  { font-family:'DM Sans',sans-serif; font-size:14px; padding:9px 12px; border:1px solid var(--border);
+  border-radius:var(--radius); background:var(--bg); color:var(--text); outline:none; width:100%; }
+.rw-input:focus { border-color:var(--accent); background:var(--surface); }
+.rw-select { font-family:'DM Sans',sans-serif; font-size:13px; padding:8px 10px; border:1px solid var(--border);
+  border-radius:var(--radius); background:var(--surface); color:var(--text); outline:none; cursor:pointer; }
+.rw-select:focus { border-color:var(--accent); }
+.rw-toggle { display:flex; gap:4px; }
+.rw-tog-btn { font-family:'DM Sans',sans-serif; font-size:12px; padding:5px 12px; border:1px solid var(--border);
+  border-radius:var(--radius); background:var(--surface); color:var(--muted); cursor:pointer; transition:all 0.12s; }
+.rw-tog-btn.active { background:var(--accent); color:white; border-color:var(--accent); }
+.rw-tpl-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:6px; }
+.rw-tpl-chip { padding:7px 11px; border:1.5px solid var(--border); border-radius:var(--radius);
+  cursor:pointer; font-size:13px; transition:all 0.12s; display:flex; align-items:center; gap:6px; }
+.rw-tpl-chip.selected { border-color:var(--accent); background:var(--accent-bg); color:var(--accent); font-weight:500; }
+.rw-tpl-chip svg { width:12px; height:12px; flex-shrink:0; }
+.cond-card { background:var(--bg); border:1px solid var(--border); border-radius:var(--radius);
+  padding:12px; display:flex; flex-direction:column; gap:8px; }
+.cond-selects { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+.cond-selects .rw-select { flex:1; min-width:120px; }
+.cond-del { background:none; border:none; cursor:pointer; color:var(--light); font-size:18px;
+  line-height:1; padding:0 4px; transition:color 0.12s; flex-shrink:0; }
+.cond-del:hover { color:var(--danger); }
+.act-type-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.act-type-card { border:2px solid var(--border); border-radius:var(--radius-lg); padding:1rem;
+  cursor:pointer; transition:all 0.15s; }
+.act-type-card.selected { border-color:var(--accent); background:var(--accent-bg); }
+.act-type-card .icon { font-size:22px; margin-bottom:6px; }
+.act-type-card .lbl  { font-weight:600; font-size:14px; margin-bottom:3px; }
+.act-type-card .sub  { font-size:12px; color:var(--muted); }
+.rw-summary-row { display:flex; gap:8px; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; }
+.rw-summary-row:last-child { border-bottom:none; }
+.rw-sum-lbl  { font-weight:600; width:140px; flex-shrink:0; color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:0.04em; }
+.rw-sum-val  { color:var(--text); flex:1; }
+.var-hint { font-size:11px; color:var(--light); margin-top:3px; line-height:1.5; }
+
 /* USER PILL */
 .user-pill { display:flex; align-items:center; gap:8px; }
 .user-avatar { width:28px; height:28px; border-radius:50%; background:var(--accent); color:white; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
@@ -256,6 +334,10 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
         <button class="btn" id="tab-templates" onclick="switchTab('templates')" style="font-weight:600;color:var(--accent)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
           Templates
+        </button>
+        <button class="btn" id="tab-rules" onclick="switchTab('rules')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Bedrijfsregels
         </button>
         <button class="btn" onclick="exportTranslationCSV()" title="Exporteer alle labelteksten naar CSV voor vertaling">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -335,6 +417,24 @@ header { background:var(--surface); border-bottom:1px solid var(--border); heigh
       </button>
     </div>
     </div><!-- /tab-panel-templates -->
+
+    <!-- Rules tab -->
+    <div id="tab-panel-rules" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-weight:600;font-size:15px">Bedrijfsregels</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:2px">Automatische acties op basis van antwoorden in checklists</div>
+        </div>
+        <button class="btn btn-primary" onclick="openRuleWizard(null)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nieuwe regel
+        </button>
+      </div>
+      <div id="rules-list" style="display:flex;flex-direction:column;gap:10px"></div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-top:1rem;font-size:12px;color:var(--muted);line-height:1.6">
+        <strong>ℹ️ Vereiste SQL-migratie:</strong> voer <code>migration_business_rules.sql</code> eenmalig uit in <strong>Supabase → SQL Editor</strong> voordat regels werken.
+      </div>
+    </div><!-- /tab-panel-rules -->
 
   </div>
 </div>
@@ -527,6 +627,39 @@ GRANT EXECUTE ON FUNCTION public.delete_all_data_and_users() TO authenticated;</
   </div>
 </div>
 
+<!-- ═══ RULE WIZARD MODAL ═════════════════════════════════════════════════ -->
+<div class="rw-overlay" id="rw-overlay" onclick="if(event.target===this)closeRuleWizard()">
+  <div class="rw-modal" onclick="event.stopPropagation()">
+
+    <!-- Header + steps -->
+    <div class="rw-header">
+      <div class="rw-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <span id="rw-modal-title">Nieuwe bedrijfsregel</span>
+      </div>
+      <div class="rw-steps" id="rw-steps">
+        <div class="rw-step active" data-step="1"><div class="rw-step-num">1</div>Naam</div>
+        <div class="rw-step" data-step="2"><div class="rw-step-num">2</div>Templates</div>
+        <div class="rw-step" data-step="3"><div class="rw-step-num">3</div>Condities</div>
+        <div class="rw-step" data-step="4"><div class="rw-step-num">4</div>Actie</div>
+        <div class="rw-step" data-step="5"><div class="rw-step-num">5</div>Overzicht</div>
+      </div>
+    </div>
+
+    <!-- Body (rendered by JS) -->
+    <div class="rw-body" id="rw-body"></div>
+
+    <!-- Footer -->
+    <div class="rw-footer">
+      <button class="btn" id="rw-prev-btn" onclick="rwStep(-1)">← Vorige</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeRuleWizard()">Annuleren</button>
+        <button class="btn btn-primary" id="rw-next-btn" onclick="rwStep(1)">Volgende →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- QR Modal -->
 <div class="qr-overlay" id="qr-overlay" onclick="closeQR()">
   <div class="qr-modal" onclick="event.stopPropagation()">
@@ -552,12 +685,16 @@ let currentId = null;
 let sections = [];
 let idN = 100;
 
-// ── TABS (templates only) ──
+// ── TABS ──
 function switchTab(tab) {
-  document.getElementById('tab-panel-templates').style.display = 'block';
-  const btn = document.getElementById('tab-templates');
-  if (btn) { btn.style.fontWeight = '600'; btn.style.color = 'var(--accent)'; }
-  document.getElementById('new-template-btn').style.display = 'flex';
+  ['templates','rules'].forEach(t => {
+    const panel = document.getElementById('tab-panel-' + t);
+    const btn   = document.getElementById('tab-' + t);
+    if (panel) panel.style.display = t === tab ? 'block' : 'none';
+    if (btn) { btn.style.fontWeight = t === tab ? '600' : ''; btn.style.color = t === tab ? 'var(--accent)' : ''; }
+  });
+  document.getElementById('new-template-btn').style.display = tab === 'templates' ? 'flex' : 'none';
+  if (tab === 'rules') loadRules();
 }
 const uid = () => 's' + (++idN) + Date.now().toString(36);
 
@@ -1194,6 +1331,12 @@ function renderItem(si, ii, item) {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11" style="flex-shrink:0"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
         Verbergen in rapport
       </label>
+      <div style="display:flex;align-items:center;gap:5px;margin-left:auto">
+        <span class="item-key-label" title="Unieke sleutel voor gebruik in bedrijfsregels"># sleutel</span>
+        <input class="item-key-field" value="${esc(item.key||'')}" placeholder="auto"
+          title="Unieke sleutel voor bedrijfsregels. Laat leeg voor automatisch."
+          oninput="sections[${si}].items[${ii}].key=this.value.toLowerCase().replace(/[^a-z0-9_]/g,'_')">
+      </div>
     </div>
     ${extraHtml || followHtml || condHtml ? `<div class="item-extra" style="padding-left:0">${extraHtml}${followHtml}${condHtml}</div>` : ''}`;
   return el;
@@ -1216,7 +1359,7 @@ function moveSection(si, dir) {
   renderSections();
 }
 function addItem(si, type) {
-  const ni = { id:uid(), label:'', hint:'', type, required:false };
+  const ni = { id:uid(), key:'', label:'', hint:'', type, required:false };
   if (type==='radio') ni.options=['Ja','Nee','N/A'];
   if (type==='checkgroup') ni.subitems = [{ id:uid(), label:{nl:'',en:'',fr:'',de:''} }, { id:uid(), label:{nl:'',en:'',fr:'',de:''} }];
   sections[si].items.push(ni);
@@ -1596,8 +1739,9 @@ async function saveTemplate(silent = false) {
   const name = document.getElementById('e-name').value.trim();
   if (!name) { toast('Geef een naam op', 'error'); return; }
 
-  // Normalise all labels/hints to multilingual objects, and fix showIf values
+  // Normalise all labels/hints to multilingual objects, fix showIf values, auto-generate keys
   const allItems = sections.flatMap(s => s.items);
+  const usedKeys = {};
   sections.forEach(sec => {
     if (typeof sec.title !== 'object' || !sec.title)
       sec.title = { nl: sec.title||'', en:'', fr:'', de:'' };
@@ -1610,6 +1754,21 @@ async function saveTemplate(silent = false) {
         const srcItem = allItems.find(it => it.id === item.showIf.itemId);
         if (srcItem?.type === 'check') item.showIf.value = 'aangevinkt';
       }
+      // Auto-generate key from NL label if empty (non-structural types only)
+      const skipKeyTypes = ['label','instruction','link'];
+      if (!skipKeyTypes.includes(item.type) && !item.key) {
+        const nl = item.label?.nl || '';
+        if (nl) {
+          let base = nl.toLowerCase()
+            .normalize('NFD').replace(/[̀-ͯ]/g,'')
+            .replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'').substring(0,40);
+          let k = base || ('item_' + item.id.slice(0,6));
+          let n = 1;
+          while (usedKeys[k]) { k = base + '_' + (n++); }
+          item.key = k;
+        }
+      }
+      if (item.key) usedKeys[item.key] = true;
     });
   });
 
@@ -1910,6 +2069,559 @@ function _parseCSV(text) {
     headers.forEach((h, j) => { obj[h] = (r[j] != null ? r[j] : ''); });
     return obj;
   });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── BUSINESS RULES ──────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+var _allTplsCache = [];   // [{id,name,schema}] used in wizard
+
+// ── Rule list ──
+async function loadRules() {
+  const el = document.getElementById('rules-list');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0">Laden…</div>';
+  const { data, error } = await sb.from('business_rules').select('*').order('created_at', { ascending: false });
+  if (error) { el.innerHTML = '<div style="color:var(--danger);font-size:13px">Fout: ' + esc(error.message) + '</div>'; return; }
+  if (!data?.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0">Nog geen regels. Maak er een aan via de knop hierboven.</div>';
+    return;
+  }
+  el.innerHTML = data.map(r => {
+    const inactive = !r.active;
+    const actionBadge = r.action_type === 'send_email'
+      ? '<span class="rule-badge rb-email">📧 E-mail</span>'
+      : '<span class="rule-badge rb-alert">🔔 Homepage melding</span>';
+    const triggerBadge = r.trigger_on === 'completed'
+      ? '<span class="rule-badge rb-complete">Bij voltooien</span>'
+      : r.trigger_on === 'save'
+        ? '<span class="rule-badge rb-save">Bij opslaan</span>'
+        : '<span class="rule-badge rb-both">Bij voltooien + opslaan</span>';
+    const scopeLabel = (!r.template_scope || r.template_scope.length === 0)
+      ? 'Alle templates'
+      : r.template_scope.length + ' template(s)';
+    const condCount = (r.conditions || []).length;
+    return `<div class="rule-row ${inactive ? 'rule-inactive' : ''}">
+      <div class="rule-info">
+        <div class="rule-name">${esc(r.name)}${inactive ? ' <span style="font-size:11px;color:var(--muted);font-weight:400">(inactief)</span>' : ''}</div>
+        <div class="rule-meta">
+          ${actionBadge} ${triggerBadge}
+          <span>${scopeLabel}</span>
+          <span>${condCount} conditie${condCount !== 1 ? 's' : ''} (${esc(r.condition_logic)})</span>
+          ${r.description ? '<span>' + esc(r.description) + '</span>' : ''}
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn${r.active ? '' : ' btn-primary'}" onclick="toggleRule('${r.id}',${r.active})" title="${r.active ? 'Deactiveer' : 'Activeer'}">
+          ${r.active
+            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg> Deactiveer'
+            : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="10"/><polyline points="9 11 12 14 22 4"/></svg> Activeer'}
+        </button>
+        <button class="btn" onclick="openRuleWizard('${r.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Bewerken
+        </button>
+        <button class="btn btn-danger" onclick="deleteRule('${r.id}','${esc(r.name)}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function toggleRule(id, active) {
+  const { error } = await sb.from('business_rules').update({ active: !active }).eq('id', id);
+  if (error) { toast('Fout: ' + error.message, 'error'); return; }
+  toast(active ? 'Regel gedeactiveerd' : 'Regel geactiveerd', 'success');
+  loadRules();
+}
+
+async function deleteRule(id, name) {
+  if (!confirm(`Regel "${name}" verwijderen?`)) return;
+  const { error } = await sb.from('business_rules').delete().eq('id', id);
+  if (error) { toast('Fout: ' + error.message, 'error'); return; }
+  toast('Regel verwijderd', 'success');
+  loadRules();
+}
+
+// ── Wizard state ──
+var _rw = {
+  step: 1,
+  id: null,
+  name: '', description: '', active: true,
+  trigger_on: 'completed',
+  template_scope: [],     // [] = all
+  condition_logic: 'AND',
+  conditions: [],         // [{question_key, operator, value}]
+  action_type: 'send_email',
+  action_config: {}
+};
+
+var OPERATORS = {
+  yesno:       [['equals','is gelijk aan'],['not_equals','is niet gelijk aan']],
+  statuscheck: [['equals','is gelijk aan'],['not_equals','is niet gelijk aan'],['is_any_of','is een van']],
+  radio:       [['equals','is gelijk aan'],['not_equals','is niet gelijk aan'],['is_any_of','is een van']],
+  check:       [['is_checked','is aangevinkt'],['is_not_checked','is niet aangevinkt']],
+  checkgroup:  [['is_checked','is aangevinkt'],['is_not_checked','is niet aangevinkt']],
+  text:        [['is_filled','is ingevuld'],['equals','is gelijk aan'],['contains','bevat']],
+  number:      [['is_filled','is ingevuld'],['equals','='],['gt','>'],['gte','≥'],['lt','<'],['lte','≤']],
+  date:        [['is_filled','is ingevuld']],
+  photo:       [['is_filled','is ingevuld']],
+  signature:   [['is_filled','is ingevuld']],
+  instruction: [['is_checked','is aangevinkt']]
+};
+
+function getAllQuestionsFromTemplates(scopeIds) {
+  // Returns [{key, label, type, options, statusLabels, templateName}]
+  const result = [];
+  const tpls = scopeIds.length === 0 ? _allTplsCache : _allTplsCache.filter(t => scopeIds.includes(t.id));
+  tpls.forEach(tpl => {
+    (tpl.schema?.sections || []).forEach(sec => {
+      (sec.items || []).forEach(item => {
+        if (['label','link'].includes(item.type)) return;
+        const key = item.key || item.id;
+        const label = typeof item.label === 'object' ? (item.label.nl || item.label.en || '?') : (item.label || '?');
+        result.push({ key, label, type: item.type, options: item.options || [], statusLabels: item.statusLabels || [], templateName: tpl.name });
+      });
+    });
+  });
+  // Deduplicate by key
+  const seen = {};
+  return result.filter(q => {
+    if (seen[q.key]) return false;
+    seen[q.key] = true;
+    return true;
+  });
+}
+
+function getQuestionValueOptions(q) {
+  if (!q) return [];
+  if (q.type === 'yesno') return ['Ja','Nee','N.v.t.'];
+  if (q.type === 'statuscheck') return q.statusLabels.length ? q.statusLabels : ['OK','Niet OK','Onderdelen nodig','Niet gecheckt'];
+  if (q.type === 'radio') return q.options;
+  return [];
+}
+
+// ── Open / close wizard ──
+async function openRuleWizard(ruleId) {
+  // Load templates
+  const { data: tpls } = await sb.from('templates').select('id,name,schema').order('name');
+  _allTplsCache = tpls || [];
+
+  if (ruleId) {
+    // Load existing rule
+    const { data: r } = await sb.from('business_rules').select('*').eq('id', ruleId).single();
+    if (r) {
+      _rw = {
+        step: 1, id: r.id,
+        name: r.name, description: r.description || '', active: r.active,
+        trigger_on: r.trigger_on || 'completed',
+        template_scope: r.template_scope || [],
+        condition_logic: r.condition_logic || 'AND',
+        conditions: JSON.parse(JSON.stringify(r.conditions || [])),
+        action_type: r.action_type,
+        action_config: JSON.parse(JSON.stringify(r.action_config || {}))
+      };
+      document.getElementById('rw-modal-title').textContent = 'Regel bewerken';
+    }
+  } else {
+    _rw = { step:1, id:null, name:'', description:'', active:true, trigger_on:'completed',
+      template_scope:[], condition_logic:'AND', conditions:[], action_type:'send_email', action_config:{} };
+    document.getElementById('rw-modal-title').textContent = 'Nieuwe bedrijfsregel';
+  }
+
+  document.getElementById('rw-overlay').classList.add('open');
+  rwRender();
+}
+
+function closeRuleWizard() {
+  document.getElementById('rw-overlay').classList.remove('open');
+}
+
+async function rwStep(dir) {
+  if (dir > 0 && _rw.step === 5) { await rwSave(); return; }
+  if (dir > 0 && !rwValidate()) return;
+  rwCollect();
+  _rw.step = Math.max(1, Math.min(5, _rw.step + dir));
+  rwRender();
+}
+
+function rwRender() {
+  // Update step indicators
+  document.querySelectorAll('.rw-step').forEach(el => {
+    const s = +el.dataset.step;
+    el.classList.toggle('active', s === _rw.step);
+    el.classList.toggle('done', s < _rw.step);
+  });
+  // Prev button
+  document.getElementById('rw-prev-btn').style.visibility = _rw.step === 1 ? 'hidden' : 'visible';
+  // Next button label
+  const nextBtn = document.getElementById('rw-next-btn');
+  nextBtn.textContent = _rw.step === 5 ? '💾 Opslaan' : 'Volgende →';
+
+  const body = document.getElementById('rw-body');
+  if (_rw.step === 1) body.innerHTML = rwStep1Html();
+  else if (_rw.step === 2) body.innerHTML = rwStep2Html();
+  else if (_rw.step === 3) body.innerHTML = rwStep3Html();
+  else if (_rw.step === 4) body.innerHTML = rwStep4Html();
+  else body.innerHTML = rwStep5Html();
+  rwBindEvents();
+}
+
+// ── Validate ──
+function rwValidate() {
+  if (_rw.step === 1) {
+    const name = document.getElementById('rw-name')?.value?.trim();
+    if (!name) { alert('Geef een naam op.'); return false; }
+  }
+  if (_rw.step === 3 && _rw.conditions.length === 0) {
+    alert('Voeg minstens één conditie toe.'); return false;
+  }
+  return true;
+}
+
+// ── Collect form values ──
+function rwCollect() {
+  if (_rw.step === 1) {
+    _rw.name        = document.getElementById('rw-name')?.value?.trim() || _rw.name;
+    _rw.description = document.getElementById('rw-desc')?.value?.trim() || '';
+  }
+  if (_rw.step === 4) {
+    if (_rw.action_type === 'send_email') {
+      _rw.action_config.to      = document.getElementById('rw-email-to')?.value?.trim() || '';
+      _rw.action_config.subject = document.getElementById('rw-email-subj')?.value?.trim() || '';
+      _rw.action_config.message = document.getElementById('rw-email-msg')?.value?.trim() || '';
+    } else {
+      _rw.action_config.message = document.getElementById('rw-alert-msg')?.value?.trim() || '';
+    }
+  }
+}
+
+// ── Step renderers ──
+function rwStep1Html() {
+  const trigBtns = [['completed','Bij voltooien'],['save','Bij opslaan'],['both','Beide']].map(([v,l]) =>
+    `<button class="rw-tog-btn${_rw.trigger_on===v?' active':''}" onclick="_rw.trigger_on='${v}';document.querySelectorAll('.rw-tog-btn').forEach(b=>b.classList.toggle('active',b.textContent.trim()==='${l}'))">${l}</button>`
+  ).join('');
+  return `
+    <div class="rw-field">
+      <label class="rw-label">Naam *</label>
+      <input class="rw-input" id="rw-name" value="${esc(_rw.name)}" placeholder="bv. Notificeer bij Niet OK" autofocus>
+    </div>
+    <div class="rw-field">
+      <label class="rw-label">Beschrijving (optioneel)</label>
+      <input class="rw-input" id="rw-desc" value="${esc(_rw.description)}" placeholder="Korte omschrijving van deze regel">
+    </div>
+    <div class="rw-field">
+      <label class="rw-label">Wanneer activeren?</label>
+      <div class="rw-toggle" id="rw-trigger-btns">${trigBtns}</div>
+    </div>
+    <div class="rw-field">
+      <label class="rw-label">Status</label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px">
+          <input type="checkbox" id="rw-active" ${_rw.active?'checked':''} style="width:16px;height:16px;accent-color:var(--accent)">
+          Regel is actief
+        </label>
+      </div>
+    </div>`;
+}
+
+function rwStep2Html() {
+  const allSelected = _rw.template_scope.length === 0;
+  const chips = _allTplsCache.map(t => {
+    const sel = _rw.template_scope.includes(t.id);
+    return `<div class="rw-tpl-chip${sel?' selected':''}" onclick="rwToggleTpl('${t.id}',this)" data-id="${t.id}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+      ${esc(t.name)}
+    </div>`;
+  }).join('');
+  return `
+    <div class="rw-field">
+      <label class="rw-label">Voor welke templates geldt deze regel?</label>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;font-size:14px">
+        <input type="checkbox" id="rw-all-tpls" ${allSelected?'checked':''} style="width:15px;height:15px;accent-color:var(--accent)"
+          onchange="rwAllTemplates(this.checked)">
+        Alle templates (inclusief toekomstige)
+      </label>
+      <div class="rw-tpl-grid" id="rw-tpl-grid" style="${allSelected?'opacity:0.4;pointer-events:none':''}">${chips}</div>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-top:8px">
+      De regel wordt enkel geëvalueerd voor submissions van de geselecteerde templates.
+      Laat leeg (alle) om de regel voor elk sjabloon te laten gelden.
+    </p>`;
+}
+
+function rwAllTemplates(checked) {
+  if (checked) _rw.template_scope = [];
+  const grid = document.getElementById('rw-tpl-grid');
+  if (grid) { grid.style.opacity = checked ? '0.4' : ''; grid.style.pointerEvents = checked ? 'none' : ''; }
+  if (checked) document.querySelectorAll('.rw-tpl-chip').forEach(c => c.classList.remove('selected'));
+}
+
+function rwToggleTpl(id, el) {
+  const idx = _rw.template_scope.indexOf(id);
+  if (idx >= 0) { _rw.template_scope.splice(idx,1); el.classList.remove('selected'); }
+  else { _rw.template_scope.push(id); el.classList.add('selected'); }
+  // Uncheck "all" checkbox
+  const allCb = document.getElementById('rw-all-tpls');
+  if (allCb) allCb.checked = false;
+}
+
+function rwStep3Html() {
+  const questions = getAllQuestionsFromTemplates(_rw.template_scope);
+  const qOpts = questions.length
+    ? questions.map(q => `<option value="${esc(q.key)}">${esc(q.label)} <small>(${esc(q.key)})</small></option>`).join('')
+    : '<option value="">— geen vragen met sleutel gevonden —</option>';
+
+  const condCards = _rw.conditions.map((c, ci) => rwCondCard(ci, c, questions)).join('');
+  const logicBtn = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+    <span style="font-size:12px;color:var(--muted)">Meerdere condities verbinden met:</span>
+    <div class="rw-toggle">
+      <button class="rw-tog-btn${_rw.condition_logic==='AND'?' active':''}" onclick="_rw.condition_logic='AND';this.classList.add('active');this.nextElementSibling.classList.remove('active')">EN (alle)</button>
+      <button class="rw-tog-btn${_rw.condition_logic==='OR'?' active':''}" onclick="_rw.condition_logic='OR';this.classList.add('active');this.previousElementSibling.classList.remove('active')">OF (één)</button>
+    </div>
+  </div>`;
+
+  return `
+    ${_rw.conditions.length > 1 ? logicBtn : ''}
+    <div id="rw-cond-list">${condCards}</div>
+    <button class="btn" style="margin-top:8px" onclick="rwAddCondition()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Conditie toevoegen
+    </button>
+    ${questions.length === 0 ? `<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:var(--radius);padding:10px 12px;font-size:12px;color:#92400E;margin-top:8px">
+      ⚠️ Geen vragen met een sleutel gevonden. Geef vragen een <strong># sleutel</strong> in de template-editor.
+    </div>` : ''}`;
+}
+
+function rwCondCard(ci, cond, questions) {
+  const selQ = questions.find(q => q.key === cond.question_key);
+  const ops = selQ ? (OPERATORS[selQ.type] || []) : [];
+  const vals = selQ ? getQuestionValueOptions(selQ) : [];
+  const needsValue = cond.operator && !['is_checked','is_not_checked','is_filled'].includes(cond.operator);
+  const isAnyOf = cond.operator === 'is_any_of';
+  const isNumber = selQ?.type === 'number';
+
+  const qSelect = `<select class="rw-select" onchange="rwSetCondQ(${ci},this.value)" style="flex:2;min-width:140px">
+    <option value="">— vraag —</option>
+    ${questions.map(q => `<option value="${esc(q.key)}"${q.key===cond.question_key?' selected':''}>${esc(q.label)} [${esc(q.key)}]</option>`).join('')}
+  </select>`;
+
+  const opSelect = cond.question_key ? `<select class="rw-select" onchange="rwSetCondOp(${ci},this.value)" style="flex:1;min-width:100px">
+    <option value="">— operator —</option>
+    ${ops.map(([v,l]) => `<option value="${v}"${v===cond.operator?' selected':''}>${l}</option>`).join('')}
+  </select>` : '';
+
+  let valueHtml = '';
+  if (cond.operator && needsValue) {
+    if (isAnyOf && vals.length) {
+      const selectedVals = Array.isArray(cond.value) ? cond.value : [];
+      valueHtml = `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">
+        ${vals.map(v => `<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;padding:3px 8px;border:1px solid var(--border);border-radius:var(--radius);background:${selectedVals.includes(v)?'var(--accent-bg)':'var(--surface)'}">
+          <input type="checkbox" ${selectedVals.includes(v)?'checked':''} value="${esc(v)}" onchange="rwSetCondAnyOf(${ci})" style="accent-color:var(--accent);width:12px;height:12px">
+          ${esc(v)}
+        </label>`).join('')}
+      </div>`;
+    } else if (vals.length && !isNumber) {
+      valueHtml = `<select class="rw-select" onchange="rwSetCondVal(${ci},this.value)" style="flex:1;min-width:100px">
+        <option value="">— waarde —</option>
+        ${vals.map(v => `<option value="${esc(v)}"${v===cond.value?' selected':''}>${esc(v)}</option>`).join('')}
+      </select>`;
+    } else {
+      valueHtml = `<input class="rw-select" type="${isNumber?'number':'text'}" value="${esc(Array.isArray(cond.value)?cond.value.join(','):cond.value||'')}"
+        placeholder="Waarde…" onchange="rwSetCondVal(${ci},this.value)" style="flex:1;min-width:100px">`;
+    }
+  }
+
+  return `<div class="cond-card" id="rw-cond-${ci}">
+    <div class="cond-selects">
+      ${qSelect} ${opSelect}
+      <button class="cond-del" onclick="rwDelCondition(${ci})" title="Verwijder conditie">×</button>
+    </div>
+    ${valueHtml ? `<div>${valueHtml}</div>` : ''}
+  </div>`;
+}
+
+function rwAddCondition() {
+  _rw.conditions.push({ question_key:'', operator:'', value:'' });
+  rwRender();
+}
+function rwDelCondition(ci) {
+  _rw.conditions.splice(ci, 1);
+  rwRender();
+}
+function rwSetCondQ(ci, key) {
+  _rw.conditions[ci].question_key = key;
+  _rw.conditions[ci].operator = '';
+  _rw.conditions[ci].value = '';
+  rwRender();
+}
+function rwSetCondOp(ci, op) {
+  _rw.conditions[ci].operator = op;
+  _rw.conditions[ci].value = ['is_checked','is_not_checked','is_filled'].includes(op) ? '' : _rw.conditions[ci].value;
+  rwRender();
+}
+function rwSetCondVal(ci, val) { _rw.conditions[ci].value = val; }
+function rwSetCondAnyOf(ci) {
+  const card = document.getElementById('rw-cond-' + ci);
+  if (!card) return;
+  _rw.conditions[ci].value = Array.from(card.querySelectorAll('input[type=checkbox]:checked')).map(cb => cb.value);
+}
+
+function rwStep4Html() {
+  const mailCfg = _rw.action_config;
+  const alertCfg = _rw.action_config;
+  const colors = [['red','🔴 Rood'],['orange','🟠 Oranje'],['blue','🔵 Blauw'],['green','🟢 Groen']];
+  const varHint = `<div class="var-hint">Variabelen: <code>{{template_name}}</code> <code>{{customer}}</code> <code>{{location}}</code> <code>{{reference}}</code> <code>{{filled_by}}</code> <code>{{date}}</code></div>`;
+
+  return `
+    <div class="rw-field">
+      <label class="rw-label">Actietype</label>
+      <div class="act-type-row">
+        <div class="act-type-card${_rw.action_type==='send_email'?' selected':''}" onclick="rwSetActionType('send_email')">
+          <div class="icon">📧</div>
+          <div class="lbl">E-mail versturen</div>
+          <div class="sub">Stuur een e-mail via EmailJS met optioneel het rapport als bijlage</div>
+        </div>
+        <div class="act-type-card${_rw.action_type==='homepage_alert'?' selected':''}" onclick="rwSetActionType('homepage_alert')">
+          <div class="icon">🔔</div>
+          <div class="lbl">Homepage melding</div>
+          <div class="sub">Toon een gekleurde melding op de homepage (alleen zichtbaar voor admins)</div>
+        </div>
+      </div>
+    </div>
+    ${_rw.action_type === 'send_email' ? `
+      <div class="rw-field">
+        <label class="rw-label">Ontvanger(s) *</label>
+        <input class="rw-input" id="rw-email-to" value="${esc(mailCfg.to||'')}" placeholder="email@voorbeeld.be, tweede@mail.com">
+      </div>
+      <div class="rw-field">
+        <label class="rw-label">Onderwerp</label>
+        <input class="rw-input" id="rw-email-subj" value="${esc(mailCfg.subject||'')}" placeholder="Melding: {{template_name}} — {{customer}}">
+        ${varHint}
+      </div>
+      <div class="rw-field">
+        <label class="rw-label">Bericht (optioneel)</label>
+        <textarea class="rw-input" id="rw-email-msg" rows="3" placeholder="Geef een toelichting bij de melding…">${esc(mailCfg.message||'')}</textarea>
+        ${varHint}
+      </div>
+      <div class="rw-field">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px">
+          <input type="checkbox" id="rw-email-report" ${mailCfg.include_report?'checked':''} style="width:15px;height:15px;accent-color:var(--accent)"
+            onchange="_rw.action_config.include_report=this.checked">
+          Rapport als PDF-bijlage meesturen (vereist EmailJS-configuratie)
+        </label>
+      </div>
+    ` : `
+      <div class="rw-field">
+        <label class="rw-label">Meldingstekst *</label>
+        <input class="rw-input" id="rw-alert-msg" value="${esc(alertCfg.message||'')}" placeholder="Afkeuring vastgesteld: {{template_name}} bij {{customer}}">
+        ${varHint}
+      </div>
+      <div class="rw-field">
+        <label class="rw-label">Kleur</label>
+        <div class="rw-toggle" id="rw-color-btns">
+          ${colors.map(([v,l]) => `<button class="rw-tog-btn${(_rw.action_config.color||'orange')===v?' active':''}"
+            onclick="rwSetColor('${v}')">${l}</button>`).join('')}
+        </div>
+      </div>
+    `}`;
+}
+
+function rwSetActionType(type) {
+  _rw.action_type = type;
+  _rw.action_config = {};
+  rwRender();
+}
+function rwSetColor(color) {
+  _rw.action_config.color = color;
+  document.querySelectorAll('#rw-color-btns .rw-tog-btn').forEach(b => b.classList.toggle('active', b.textContent.includes(color==='red'?'Rood':color==='orange'?'Oranje':color==='blue'?'Blauw':'Groen')));
+}
+
+function rwStep5Html() {
+  const scopeLabel = _rw.template_scope.length === 0 ? 'Alle templates'
+    : _allTplsCache.filter(t => _rw.template_scope.includes(t.id)).map(t => t.name).join(', ') || 'Onbekend';
+  const trigLabel = _rw.trigger_on === 'completed' ? 'Bij voltooien' : _rw.trigger_on === 'save' ? 'Bij elke opslag' : 'Bij voltooien én opslaan';
+  const condsSummary = _rw.conditions.map(c => {
+    const q = getAllQuestionsFromTemplates(_rw.template_scope).find(q => q.key === c.question_key);
+    const qLabel = q ? q.label : (c.question_key || '?');
+    const opLabel = (OPERATORS[q?.type || 'text'] || []).find(o => o[0] === c.operator)?.[1] || c.operator;
+    const val = Array.isArray(c.value) ? c.value.join(', ') : (c.value || '');
+    return `<div style="margin:2px 0;font-size:13px">▸ <strong>${esc(qLabel)}</strong> <em>${esc(opLabel)}</em>${val ? ' <strong>' + esc(val) + '</strong>' : ''}</div>`;
+  }).join('');
+
+  let actionSummary = '';
+  if (_rw.action_type === 'send_email') {
+    actionSummary = `📧 E-mail naar <strong>${esc(_rw.action_config.to || '?')}</strong>`;
+    if (_rw.action_config.subject) actionSummary += `<br>Onderwerp: ${esc(_rw.action_config.subject)}`;
+    if (_rw.action_config.include_report) actionSummary += '<br>+ PDF-rapport als bijlage';
+  } else {
+    const colorDot = {red:'🔴',orange:'🟠',blue:'🔵',green:'🟢'}[_rw.action_config.color||'orange'] || '🔔';
+    actionSummary = `${colorDot} Homepage melding: "${esc(_rw.action_config.message || '?')}"`;
+  }
+
+  return `
+    <p style="font-size:14px;color:var(--muted);margin-bottom:4px">Controleer de instellingen en sla op.</p>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem">
+      <div class="rw-summary-row"><span class="rw-sum-lbl">Naam</span><span class="rw-sum-val">${esc(_rw.name)}</span></div>
+      ${_rw.description ? `<div class="rw-summary-row"><span class="rw-sum-lbl">Beschrijving</span><span class="rw-sum-val">${esc(_rw.description)}</span></div>` : ''}
+      <div class="rw-summary-row"><span class="rw-sum-lbl">Status</span><span class="rw-sum-val">${_rw.active ? '✅ Actief' : '⏸ Inactief'}</span></div>
+      <div class="rw-summary-row"><span class="rw-sum-lbl">Trigger</span><span class="rw-sum-val">${trigLabel}</span></div>
+      <div class="rw-summary-row"><span class="rw-sum-lbl">Templates</span><span class="rw-sum-val">${esc(scopeLabel)}</span></div>
+      <div class="rw-summary-row"><span class="rw-sum-lbl">Condities (${_rw.condition_logic})</span><span class="rw-sum-val">${condsSummary}</span></div>
+      <div class="rw-summary-row"><span class="rw-sum-lbl">Actie</span><span class="rw-sum-val">${actionSummary}</span></div>
+    </div>`;
+}
+
+// ── Bind dynamic events after render ──
+function rwBindEvents() {
+  // Trigger toggle buttons (step 1)
+  document.querySelectorAll('#rw-trigger-btns .rw-tog-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#rw-trigger-btns .rw-tog-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      _rw.trigger_on = ['completed','save','both'][Array.from(btn.parentNode.children).indexOf(btn)];
+    });
+  });
+  // Active checkbox
+  const activeCb = document.getElementById('rw-active');
+  if (activeCb) activeCb.addEventListener('change', () => { _rw.active = activeCb.checked; });
+}
+
+// ── Save rule ──
+async function rwSave() {
+  rwCollect();
+  if (!_rw.name) { alert('Geef een naam op.'); return; }
+  if (_rw.conditions.length === 0) { alert('Voeg minstens één conditie toe.'); return; }
+  if (_rw.action_type === 'send_email' && !_rw.action_config.to) {
+    alert('Vul een ontvanger in voor de e-mail actie.'); return;
+  }
+  if (_rw.action_type === 'homepage_alert' && !_rw.action_config.message) {
+    alert('Vul een meldingstekst in.'); return;
+  }
+
+  const payload = {
+    name:            _rw.name,
+    description:     _rw.description,
+    active:          _rw.active,
+    trigger_on:      _rw.trigger_on,
+    template_scope:  _rw.template_scope,
+    condition_logic: _rw.condition_logic,
+    conditions:      _rw.conditions,
+    action_type:     _rw.action_type,
+    action_config:   _rw.action_config
+  };
+
+  let error;
+  if (_rw.id) {
+    ({ error } = await sb.from('business_rules').update(payload).eq('id', _rw.id));
+  } else {
+    ({ error } = await sb.from('business_rules').insert({ ...payload, created_by: (await sb.auth.getUser()).data.user?.id }));
+  }
+  if (error) { toast('Fout bij opslaan: ' + error.message, 'error'); return; }
+  toast('Regel opgeslagen!', 'success');
+  closeRuleWizard();
+  loadRules();
 }
 
 // ── QR CODE ──
