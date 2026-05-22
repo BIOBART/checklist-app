@@ -1,4 +1,4 @@
-# Biolectric Commissioning Checklist App
+# Foldriq Commissioning Checklist App
 
 A lightweight, mobile-friendly web application for creating, filling in, and exporting commissioning checklists. Built as a static site hosted on **GitHub Pages**, with **Supabase** as the backend (database, auth, file storage).
 
@@ -89,7 +89,7 @@ Rollen worden beheerd via **Admin → Gebruikers**. De `is_admin` vlag staat in 
 Een gebruiker promoveren tot admin via SQL Editor:
 ```sql
 update roles set is_admin = true
-where user_id = (select id from auth.users where email = 'admin@biolectric.com');
+where user_id = (select id from auth.users where email = 'admin@foldriq.com');
 ```
 
 Nieuwe gebruikers worden uitgenodigd via **Admin → Gebruikers → Gebruiker uitnodigen**. Ze ontvangen een magic link per e-mail en stellen hun wachtwoord in bij de eerste login.
@@ -378,4 +378,4 @@ Na afloop wordt de sessie ongeldig, wordt de gebruiker uitgelogd en omgeleid naa
 
 ## Licentie
 
-Dit project is eigendom van **Biolectric**. Zie `LICENSE` voor details.
+Dit project is eigendom van **Foldriq**. Zie `LICENSE` voor details.
